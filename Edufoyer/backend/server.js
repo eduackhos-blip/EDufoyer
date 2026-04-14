@@ -72,7 +72,7 @@ app.set('trust proxy', true);
 
 // Create HTTP server and attach Socket.IO for real-time updates
 import http from 'http';
-import { initSocket } from './socket.js';
+import { initSocket } from './socket/socket.js';
 const server = http.createServer(app);
 
 // Enhanced server configuration for stability

@@ -7,13 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "monitor": "node server-monitor.js",
-    "stable": "node server-monitor.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "stress-test": "node stress-test.js",
-    "stress-test:light": "CONCURRENT_USERS=10 TEST_DURATION=30 node stress-test.js",
-    "stress-test:medium": "CONCURRENT_USERS=50 TEST_DURATION=60 node stress-test.js",
-    "stress-test:heavy": "CONCURRENT_USERS=100 TEST_DURATION=120 node stress-test.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

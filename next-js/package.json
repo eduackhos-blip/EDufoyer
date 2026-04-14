@@ -9,18 +9,46 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@livekit/components-react": "^2.9.20",
+    "@livekit/components-styles": "^1.2.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "livekit-client": "^2.18.1",
+    "livekit-server-sdk": "^2.15.1",
+    "lucide-react": "^1.8.0",
+    "mongoose": "^9.4.1",
+    "multer": "^2.1.1",
     "next": "16.2.3",
+    "node-mocks-http": "^1.17.2",
+    "nodemailer": "^8.0.5",
+    "openai": "^6.34.0",
+    "razorpay": "^2.9.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^2.0.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.5.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
-    "tailwindcss": "^4",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
 }

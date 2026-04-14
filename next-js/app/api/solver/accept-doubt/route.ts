@@ -1,0 +1,29 @@
+import { NextRequest, NextResponse } from "next/server";
+import { connectDb } from "@/src/server/db";
+import { getAuthenticatedUser } from "@/src/server/currentUser";
+import { authErrorResponse } from "@/src/server/errorResponse";
+import { acceptDoubtAssignment } from "@/src/server/ported-backend/controllers/solver/acceptDoubtAssignment.js";
+
+export const runtime = "nodejs";
+
+export async function POST(req: NextRequest) {
+  try {
+    await connectDb();
+    const user = await getAuthenticatedUser(req);
+    const body = await req.json();
+    const result = await acceptDoubtAssignment(body, user.id);
+    if (!result || typeof result !== "object") {
+      return NextResponse.json(
+        { success: false, message: "Unexpected server response while accepting doubt" },
+        { status: 500 }
+      );
+    }
+    if (result.success) return NextResponse.json({ success: true, message: result.message }, { status: 200 });
+    return NextResponse.json({ success: false, message: result.error, fieldErrors: result.fieldErrors }, { status: 400 });
+  } catch (error) {
+    const authRes = authErrorResponse(error);
+    if (authRes) return authRes;
+    const message = error instanceof Error ? error.message : "Server error";
+    return NextResponse.json({ success: false, message: "Server error", error: message }, { status: 500 });
+  }
+}
