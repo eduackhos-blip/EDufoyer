@@ -3,10 +3,16 @@ import { Users, Target, Award, Heart, ArrowLeft, Mail, Phone, MapPin } from 'luc
 import { useRouter } from 'next/navigation';
 import DarkModeToggle from './DarkModeToggle';
 
+type FeatureItem = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+};
+
 const AboutUs = () => {
   const router = useRouter();
 
-  const features = [
+  const features: FeatureItem[] = [
     {
       icon: Users,
       title: 'Peer-to-Peer Learning',

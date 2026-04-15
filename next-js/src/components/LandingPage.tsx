@@ -5,17 +5,39 @@ import Link from 'next/link';
 import RatingFeedbackForm from './RatingFeedbackForm';
 import DarkModeToggle from './DarkModeToggle';
 
+type PublicRating = {
+  _id: string;
+  user_name?: string;
+  feedback?: string;
+  createdAt?: string;
+  createdAtLabel?: string;
+};
+
+type PublicRatingsResponse = {
+  success?: boolean;
+  data?: PublicRating[];
+  stats?: {
+    averageRating?: number;
+  };
+};
+
+type SubjectPill = {
+  label: string;
+  bg: string;
+  text: string;
+};
+
 const LandingPage = () => {
   const router = useRouter();
   const [showRatingForm, setShowRatingForm] = useState(false);
-  const [publicRatings, setPublicRatings] = useState([]);
+  const [publicRatings, setPublicRatings] = useState<PublicRating[]>([]);
   const [averageRating, setAverageRating] = useState(0);
 
   useEffect(() => {
-    fetchPublicRatings();
+    void fetchPublicRatings();
   }, []);
 
-  const fetchPublicRatings = async () => {
+  const fetchPublicRatings = async (): Promise<void> => {
     try {
       const response = await fetch('/api/rating/public?limit=3');
       
@@ -34,7 +56,7 @@ const LandingPage = () => {
         return;
       }
 
-      let data;
+      let data: PublicRatingsResponse;
       try {
         data = JSON.parse(text);
       } catch (parseError) {
@@ -58,11 +80,11 @@ const LandingPage = () => {
     }
   };
 
-  const handleButtonClick = () => {
+  const handleButtonClick = (): void => {
     router.push('/auth');
   };
 
-  const formatTimeAgo = (createdAt) => {
+  const formatTimeAgo = (createdAt: string | number | Date | null | undefined): string => {
     try {
       if (!createdAt) return '';
       const date = new Date(createdAt);
@@ -86,7 +108,7 @@ const LandingPage = () => {
   const avatarColorsByIndex = ['bg-purple-500', 'bg-green-500', 'bg-pink-500'];
 
   // Subject chips below each testimonial (UI-only mapping based on card index)
-  const subjectPillsByIndex = [
+  const subjectPillsByIndex: SubjectPill[][] = [
     [
       { label: 'Programming', bg: 'bg-blue-50', text: 'text-blue-600' },
       { label: 'Algorithms', bg: 'bg-purple-50', text: 'text-purple-600' },
@@ -101,7 +123,7 @@ const LandingPage = () => {
     ],
   ];
 
-  const screenshotTestimonials = [
+  const screenshotTestimonials: PublicRating[] = [
     {
       _id: 'sarah-khan',
       user_name: 'Sarah Khan',
@@ -280,7 +302,7 @@ const LandingPage = () => {
               {/* Pinned note - Yellow (single sticky note, tilted counter-clockwise) */}
               <div
                 className="absolute left-0 sm:left-2 top-4 sm:top-5 md:top-6 z-30 rotate-[-6deg] bg-[#FFF7CC] rounded-[18px] px-4 sm:px-5 py-3 sm:py-4 max-w-[220px] sm:max-w-[260px] border border-[#F3E29A] text-left note-hover"
-                style={{ boxShadow: '0 18px 45px rgba(15,23,42,0.1), 0 8px 24px rgba(255,247,204,0.6)', ['--note-rot']: '-6deg' }}
+                style={{ boxShadow: '0 18px 45px rgba(15,23,42,0.1), 0 8px 24px rgba(255,247,204,0.6)', ['--note-rot' as any]: '-6deg' }}
               >
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#E85D4C] shadow-md" />
                 <p className="text-xs md:text-sm font-semibold text-gray-800">
@@ -292,7 +314,7 @@ const LandingPage = () => {
               {/* Top-right light purple note */}
               <div
                 className="absolute right-0 sm:right-2 top-2 sm:top-4 md:top-6 z-30 rotate-[4deg] bg-[#F8E9FF] rounded-[18px] px-3 sm:px-4 py-2.5 sm:py-3 max-w-[200px] sm:max-w-[230px] border border-[#E1C0FF] text-left note-hover"
-                style={{ boxShadow: '0 18px 45px rgba(15,23,42,0.08), 0 8px 22px rgba(248,233,255,0.8)', ['--note-rot']: '4deg' }}
+                style={{ boxShadow: '0 18px 45px rgba(15,23,42,0.08), 0 8px 22px rgba(248,233,255,0.8)', ['--note-rot' as any]: '4deg' }}
               >
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#F472B6] shadow-md" />
                 <p className="text-xs md:text-sm font-semibold text-gray-800">
@@ -306,7 +328,7 @@ const LandingPage = () => {
                 style={{
                   boxShadow:
                     'rgba(15, 23, 42, 0.08) 0px 18px 45px, rgba(224, 249, 255, 0.85) 0px 8px 22px',
-                  ['--note-rot']: '3deg',
+                  ['--note-rot' as any]: '3deg',
                   top: '-2rem',
                   left: '32rem',
                 }}
@@ -323,7 +345,7 @@ const LandingPage = () => {
                 style={{
                   boxShadow:
                     'rgba(15, 23, 42, 0.08) 0px 18px 45px, rgba(255, 229, 242, 0.85) 0px 8px 22px',
-                  ['--note-rot']: '-4deg',
+                  ['--note-rot' as any]: '-4deg',
                   top: '7rem',
                   right: '1.5rem',
                 }}
@@ -594,7 +616,7 @@ const LandingPage = () => {
                   className="relative top-8 -rotate-[22deg] bg-[#FFF7CC] rounded-[18px] px-5 py-3.5 border border-[#F3E29A] text-left note-hover max-w-[280px] transition-transform duration-200"
                   style={{
                     boxShadow: 'rgba(15, 23, 42, 0.08) 0px 18px 45px, rgba(255, 247, 204, 0.6) 0px 8px 24px',
-                    ['--note-rot']: '-25deg',
+                    ['--note-rot' as any]: '-25deg',
                   }}
                 >
                   <p className="text-sm font-semibold text-gray-800 leading-tight">
@@ -605,7 +627,7 @@ const LandingPage = () => {
                   className="relative -top-4 rotate-0 bg-[#E0F9FF] rounded-[18px] px-5 py-3.5 border border-[#B9E6F2] text-center note-hover max-w-[300px] transition-transform duration-200"
                   style={{
                     boxShadow: 'rgba(15, 23, 42, 0.08) 0px 18px 45px, rgba(224, 249, 255, 0.6) 0px 8px 24px',
-                    ['--note-rot']: '3deg',
+                    ['--note-rot' as any]: '3deg',
                   }}
                 >
                   <p className="text-sm font-semibold text-gray-800 leading-tight">
@@ -616,7 +638,7 @@ const LandingPage = () => {
                   className="relative top-8 rotate-[22deg] bg-[#F8E9FF] rounded-[18px] px-5 py-3.5 border border-[#E1C0FF] text-right note-hover max-w-[280px] transition-transform duration-200"
                   style={{
                     boxShadow: 'rgba(15, 23, 42, 0.08) 0px 18px 45px, rgba(248, 233, 255, 0.6) 0px 8px 24px',
-                    ['--note-rot']: '25deg',
+                    ['--note-rot' as any]: '25deg',
                   }}
                 >
                   <p className="text-sm font-semibold text-gray-800 leading-tight">

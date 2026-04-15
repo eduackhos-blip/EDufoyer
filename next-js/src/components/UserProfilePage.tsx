@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  MapPin, 
-  BookOpen, 
-  Award, 
-  Edit3, 
-  Save, 
+import {
+  User,
+  Mail,
+  Calendar,
+  MapPin,
+  BookOpen,
+  Award,
+  Edit3,
+  Save,
   X,
   Camera,
-  Settings,
   Heart,
   MessageCircle,
   Share2
@@ -18,10 +17,35 @@ import {
 import authService from '../services/authService';
 import socialService from '../services/socialService';
 
-const UserProfilePage = ({ user, onUserUpdate }) => {
+type UserProfile = {
+  id?: string;
+  name?: string;
+  email?: string;
+  avatar?: string;
+  membership?: string;
+  [key: string]: unknown;
+};
+
+type UserStats = {
+  posts: number;
+  friends: number;
+  stories: number;
+  likes: number;
+};
+
+type StatsResponse = {
+  data?: unknown[];
+};
+
+type UserProfilePageProps = {
+  user: UserProfile | null;
+  onUserUpdate: (updatedUser: UserProfile) => void;
+};
+
+const UserProfilePage: React.FC<UserProfilePageProps> = ({ user, onUserUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedUser, setEditedUser] = useState({});
-  const [userStats, setUserStats] = useState({
+  const [editedUser, setEditedUser] = useState<UserProfile>({});
+  const [userStats, setUserStats] = useState<UserStats>({
     posts: 0,
     friends: 0,
     stories: 0,
@@ -32,15 +56,15 @@ const UserProfilePage = ({ user, onUserUpdate }) => {
   useEffect(() => {
     if (user) {
       setEditedUser({ ...user });
-      loadUserStats();
+      void loadUserStats();
     }
   }, [user]);
 
-  const loadUserStats = async () => {
+  const loadUserStats = async (): Promise<void> => {
     try {
       setIsLoading(true);
       // Load user statistics
-      const [postsRes, friendsRes, storiesRes] = await Promise.all([
+      const [postsRes, friendsRes, storiesRes] = await Promise.all<StatsResponse>([
         socialService.getUserPosts().catch(() => ({ data: [] })),
         socialService.getFriends().catch(() => ({ data: [] })),
         socialService.getUserStories().catch(() => ({ data: [] }))
@@ -59,7 +83,7 @@ const UserProfilePage = ({ user, onUserUpdate }) => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     try {
       // Update user profile
       await authService.updateProfile(editedUser);
@@ -70,8 +94,8 @@ const UserProfilePage = ({ user, onUserUpdate }) => {
     }
   };
 
-  const handleCancel = () => {
-    setEditedUser({ ...user });
+  const handleCancel = (): void => {
+    setEditedUser({ ...(user || {}) });
     setIsEditing(false);
   };
 
@@ -90,9 +114,9 @@ const UserProfilePage = ({ user, onUserUpdate }) => {
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-6">
             <div className="relative">
-              <img 
-                src={editedUser.avatar || 'https://via.placeholder.com/120'} 
-                alt="Profile" 
+              <img
+                src={editedUser.avatar || 'https://via.placeholder.com/120'}
+                alt="Profile"
                 className="w-24 h-24 rounded-full object-cover border-4 border-purple-100"
               />
               {isEditing && (
@@ -106,7 +130,9 @@ const UserProfilePage = ({ user, onUserUpdate }) => {
                 <input
                   type="text"
                   value={editedUser.name || ''}
-                  onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEditedUser({ ...editedUser, name: e.target.value })
+                  }
                   className="text-2xl font-bold text-gray-900 border border-gray-300 rounded px-3 py-1"
                 />
               ) : (
@@ -116,7 +142,9 @@ const UserProfilePage = ({ user, onUserUpdate }) => {
                 <input
                   type="text"
                   value={editedUser.email || ''}
-                  onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEditedUser({ ...editedUser, email: e.target.value })
+                  }
                   className="text-gray-600 border border-gray-300 rounded px-3 py-1 mt-1"
                 />
               ) : (

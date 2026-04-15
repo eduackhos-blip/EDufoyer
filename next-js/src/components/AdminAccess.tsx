@@ -3,13 +3,17 @@ import { useRouter } from 'next/navigation';
 import authService from '../services/authService';
 import { ShieldOff, Loader2 } from 'lucide-react';
 
+type AdminUser = {
+  role: string;
+};
+
 const AdminAccess = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const checkAdminAccess = async () => {
+    const checkAdminAccess = async (): Promise<void> => {
       try {
         // Allow dev bypass and admin authenticated flag
         const isBypass = localStorage.getItem('adminBypass') === 'true';
@@ -20,7 +24,7 @@ const AdminAccess = () => {
           return;
         }
 
-        let userProfile = null;
+        let userProfile: AdminUser | null = null;
         if (isBypass || isAdminAuthenticated) {
           userProfile = { role: 'admin' };
         } else {

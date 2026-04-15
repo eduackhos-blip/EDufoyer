@@ -25,6 +25,37 @@ const bad = (message: string, status = 400, extra?: Record<string, unknown>) =>
 const ok = (data: unknown, message?: string, status = 200) =>
   NextResponse.json({ success: true, ...(message ? { message } : {}), data }, { status });
 
+const normalizeOrigin = (origin: string) => origin.replace(/\/+$/, "");
+
+const proxyToBackendAuth = async (req: NextRequest, path: string[]) => {
+  const backendOrigin = normalizeOrigin(serverEnv.backendApiOrigin || "http://localhost:5000");
+  const authPath = path.length ? `/${path.join("/")}` : "";
+  const targetUrl = `${backendOrigin}/api/auth${authPath}`;
+
+  const headers = new Headers(req.headers);
+  // Let fetch set these for the upstream request.
+  headers.delete("host");
+  headers.delete("content-length");
+
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+    cache: "no-store",
+  };
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    init.body = await req.text();
+  }
+
+  const upstream = await fetch(targetUrl, init);
+  const body = await upstream.text();
+  const contentType = upstream.headers.get("content-type");
+  return new NextResponse(body, {
+    status: upstream.status,
+    headers: contentType ? { "content-type": contentType } : undefined,
+  });
+};
+
 async function handleRegister(req: NextRequest) {
   const { name, email, password } = await req.json();
   if (!name || !email || !password) return bad("Name, email and password are required");
@@ -196,8 +227,23 @@ async function handleAdminOnboardSolver(req: NextRequest) {
 
 const run = async (req: NextRequest, ctx: Ctx) => {
   try {
-    await connectDb();
     const path = await getPath(ctx);
+    if (!serverEnv.mongoUri) {
+      try {
+        return await proxyToBackendAuth(req, path);
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Auth backend unavailable. Set MONGODB_URI for local auth or run backend at BACKEND_API_ORIGIN.",
+          },
+          { status: 503 }
+        );
+      }
+    }
+
+    await connectDb();
     const key = path.join("/");
     if (req.method === "POST" && key === "register") return handleRegister(req);
     if (req.method === "POST" && key === "login") return handleLogin(req);

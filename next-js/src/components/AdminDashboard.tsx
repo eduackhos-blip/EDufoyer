@@ -25,10 +25,26 @@ import {
 
 const ADMIN_AUTH_KEY = 'admin_authenticated';
 
+type AdminTab = 'requests' | 'solver' | 'doubts' | 'purchases' | 'ratings' | 'withdrawals';
+
+type AdminStats = {
+  totalSolvers: number;
+  totalDoubtPacks: number;
+  loading: boolean;
+};
+
+type SolverSummary = {
+  isActive?: boolean;
+};
+
+type DashboardNotification = {
+  content?: string;
+};
+
 const AdminDashboard = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('requests');
-  const [stats, setStats] = useState({
+  const [activeTab, setActiveTab] = useState<AdminTab>('requests');
+  const [stats, setStats] = useState<AdminStats>({
     totalSolvers: 0,
     totalDoubtPacks: 0,
     loading: true
@@ -38,7 +54,7 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (): Promise<void> => {
     try {
       setStats(prev => ({ ...prev, loading: true }));
       
@@ -49,8 +65,14 @@ const AdminDashboard = () => {
       ]);
 
       // Extract data from results, handling both success and failure
-      const solvers = solversResult.status === 'fulfilled' ? (solversResult.value || []) : [];
-      const doubtPacks = doubtPacksResult.status === 'fulfilled' ? (doubtPacksResult.value || []) : [];
+      const solvers: SolverSummary[] =
+        solversResult.status === 'fulfilled' && Array.isArray(solversResult.value)
+          ? (solversResult.value as SolverSummary[])
+          : [];
+      const doubtPacks: unknown[] =
+        doubtPacksResult.status === 'fulfilled' && Array.isArray(doubtPacksResult.value)
+          ? doubtPacksResult.value
+          : [];
 
       // Count active solvers (isActive: true)
       const activeSolvers = Array.isArray(solvers) 
@@ -68,7 +90,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     localStorage.removeItem(ADMIN_AUTH_KEY);
     localStorage.removeItem('token');
     router.push('/admin/login');
@@ -165,8 +187,8 @@ const AdminDashboard = () => {
           {/* Notifications Sidebar */}
           <div className="lg:col-span-1">
             <AdminNotifications 
-              onNotificationClick={(notification) => {
-                if (notification.content.includes('solver request')) {
+              onNotificationClick={(notification: DashboardNotification) => {
+                if (notification.content?.includes('solver request')) {
                   setActiveTab('requests');
                 }
               }}
