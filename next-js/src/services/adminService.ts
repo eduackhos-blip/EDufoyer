@@ -1,7 +1,6 @@
 // @ts-nocheck
 // Admin service for managing users and solvers
-import { buildApiUrl } from "@/src/config/env";
-const API_BASE_URL = buildApiUrl("/admin");
+const API_BASE_URL = "/api/admin";
 
 class AdminService {
   constructor() {

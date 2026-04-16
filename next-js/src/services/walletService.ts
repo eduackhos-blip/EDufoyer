@@ -1,6 +1,5 @@
 // @ts-nocheck
-import { buildApiUrl } from "@/src/config/env";
-const API_BASE_URL = buildApiUrl("/wallet");
+const API_BASE_URL = "/api/wallet";
 
 class WalletService {
   constructor() {

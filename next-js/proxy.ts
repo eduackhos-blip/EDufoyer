@@ -47,7 +47,7 @@ const applySecurityHeaders = (response: NextResponse) => {
   response.headers.set("Content-Security-Policy", csp);
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const origin = request.headers.get("origin");
 
   // Mirror backend CORS allowlist behavior for browser clients.
@@ -75,4 +75,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/api/:path*"],
 };
-

@@ -1,7 +1,6 @@
 // @ts-nocheck
 // Use relative URLs for same-origin requests
-import { buildApiUrl } from "@/src/config/env";
-const API_BASE_URL = buildApiUrl("/profile");
+const API_BASE_URL = "/api/profile";
 
 class ProfileService {
   constructor() {

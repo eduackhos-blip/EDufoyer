@@ -1,7 +1,6 @@
 // @ts-nocheck
 // Use relative URLs for same-origin requests
-import { buildApiUrl } from "@/src/config/env";
-const API_BASE_URL = buildApiUrl("/social");
+const API_BASE_URL = "/api/social";
 
 class SocialService {
   constructor() {
