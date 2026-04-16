@@ -55,10 +55,9 @@ const WalletSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
-WalletSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+// Mongoose 7+ hook style (no `next` callback with async/sync middleware signature issues)
+WalletSchema.pre("save", function () {
+  this.set("updatedAt", new Date());
 });
 
 // Indexes

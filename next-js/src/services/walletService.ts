@@ -1,26 +1,26 @@
-// @ts-nocheck
 const API_BASE_URL = "/api/wallet";
 
 class WalletService {
+  private token: string | null;
+
   constructor() {
-    this.token = localStorage.getItem('token');
+    this.token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   }
 
-  makeAuthenticatedRequest(url, options = {}) {
-    const token = this.token || localStorage.getItem('token');
+  makeAuthenticatedRequest(url: string, options: RequestInit = {}) {
+    const token =
+      this.token || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
     if (!token) {
-      throw new Error('No authentication token found');
+      throw new Error("No authentication token found");
     }
 
-    const defaultOptions = {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers
-      }
-    };
+    const headers = new Headers(options.headers);
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+    headers.set("Authorization", `Bearer ${token}`);
 
-    return fetch(url, { ...defaultOptions, ...options });
+    return fetch(url, { ...options, headers });
   }
 
   // Get wallet balance and transactions
@@ -58,7 +58,7 @@ class WalletService {
   }
 
   // Create withdrawal request
-  async createWithdrawalRequest(withdrawalData) {
+  async createWithdrawalRequest(withdrawalData: Record<string, unknown>) {
     try {
       const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/withdraw`, {
         method: 'POST',
