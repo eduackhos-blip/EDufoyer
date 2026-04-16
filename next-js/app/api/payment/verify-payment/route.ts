@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Doubt pack not found" }, { status: 404 });
     }
 
-    let userId = null;
+    let userId: mongoose.Types.ObjectId | null = null;
     if (university_id && mongoose.Types.ObjectId.isValid(university_id)) {
       const userExists = await User.findById(university_id);
-      if (userExists) userId = university_id;
+      if (userExists) userId = new mongoose.Types.ObjectId(university_id);
     }
     if (!userId && university_email) {
       const existingUser = await User.findOne({ email: university_email });

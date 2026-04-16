@@ -14,7 +14,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<{ role: string } | null>(null);
   const [accessLoading, setAccessLoading] = useState(true);
   const router = useRouter();
 
@@ -72,7 +72,9 @@ const AdminPanel = () => {
     );
   }
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -80,7 +82,7 @@ const AdminPanel = () => {
     }));
   };
 
-  const handleSpecialityChange = (index, value) => {
+  const handleSpecialityChange = (index: number, value: string) => {
     const newSpecialities = [...formData.specialities];
     newSpecialities[index] = value;
     setFormData(prev => ({
@@ -96,7 +98,7 @@ const AdminPanel = () => {
     }));
   };
 
-  const removeSpeciality = (index) => {
+  const removeSpeciality = (index: number) => {
     if (formData.specialities.length > 1) {
       const newSpecialities = formData.specialities.filter((_, i) => i !== index);
       setFormData(prev => ({
@@ -106,7 +108,7 @@ const AdminPanel = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');

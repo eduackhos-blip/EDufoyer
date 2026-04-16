@@ -41,7 +41,7 @@ const AdminAccess = () => {
         }
         setUser(userProfile);
 
-        if (userProfile.role !== 'admin') {
+        if (!userProfile || userProfile.role !== 'admin') {
           router.push('/dashboard');
           return;
         }

@@ -9,8 +9,20 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-const AdminNotifications = ({ onNotificationClick }) => {
-  const [notifications, setNotifications] = useState([]);
+type AdminNotification = {
+  _id: string;
+  message_type: string;
+  content: string;
+  is_read: boolean;
+  createdAt: string;
+};
+
+type AdminNotificationsProps = {
+  onNotificationClick?: (notification: AdminNotification) => void;
+};
+
+const AdminNotifications = ({ onNotificationClick }: AdminNotificationsProps) => {
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -21,15 +33,15 @@ const AdminNotifications = ({ onNotificationClick }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (): Promise<void> => {
     try {
       const data = await adminService.getAdminNotifications();
       // Filter only SOLVER_REQUEST notifications
       const solverRequestNotifications = (data || []).filter(
-        n => n.message_type === 'SOLVER_REQUEST'
+        (n: AdminNotification) => n.message_type === 'SOLVER_REQUEST'
       );
       setNotifications(solverRequestNotifications);
-      setUnreadCount(solverRequestNotifications.filter(n => !n.is_read).length || 0);
+      setUnreadCount(solverRequestNotifications.filter((n: AdminNotification) => !n.is_read).length || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -37,7 +49,7 @@ const AdminNotifications = ({ onNotificationClick }) => {
     }
   };
 
-  const markAsRead = async (notificationId) => {
+  const markAsRead = async (notificationId: string): Promise<void> => {
     try {
       await adminService.markNotificationAsRead(notificationId);
       setNotifications(prev =>
@@ -49,10 +61,10 @@ const AdminNotifications = ({ onNotificationClick }) => {
     }
   };
 
-  const formatTimeAgo = (dateString) => {
+  const formatTimeAgo = (dateString: string): string => {
     const now = new Date();
     const date = new Date(dateString);
-    const diffInSeconds = Math.floor((now - date) / 1000);
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
@@ -61,7 +73,7 @@ const AdminNotifications = ({ onNotificationClick }) => {
     return date.toLocaleDateString();
   };
 
-  const getNotificationIcon = (messageType) => {
+  const getNotificationIcon = (messageType: string): React.ReactNode => {
     if (messageType === 'DOUBT_SUBMITTED' || messageType.includes('SOLVER') || messageType === 'SOLVER_REQUEST') {
       return <UserPlus className="w-5 h-5 text-indigo-600" />;
     }
