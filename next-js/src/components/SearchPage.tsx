@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { debounce } from '../utils/debounce';
+import { debounce } from '../utils/client/debounce';
 import { 
   Search, 
   Filter, 

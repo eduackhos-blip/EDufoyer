@@ -6,8 +6,8 @@ import { CheckCircle, Star, Clock, AlertCircle, Shield } from 'lucide-react';
 import livekitService from '../services/livekitService';
 import doubtService from '../services/doubtService';
 import authService from '../services/authService';
-import { containsProfanity, getProfanityErrorMessage } from '../utils/profanityFilter';
-import { detectRecordingAttempts, detectVisibilityChanges, getRecordingWarningMessage, addAntiRecordingIndicators } from '../utils/screenRecordingDetector';
+import { containsProfanity, getProfanityErrorMessage } from '../utils/client/profanityFilter';
+import { detectRecordingAttempts, detectVisibilityChanges, getRecordingWarningMessage, addAntiRecordingIndicators } from '../utils/client/screenRecordingDetector';
 
 // A compact LiveKit meeting page built for React (Vite) + Node backend
 // - Requires: VITE_LIVEKIT_URL in final/.env

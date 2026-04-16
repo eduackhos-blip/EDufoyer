@@ -9,7 +9,7 @@ import {
   validateCategory, 
   validateImage,
   validateDoubtForm 
-} from '../utils/doubtValidation';
+} from '../utils/client/doubtValidation';
 
 const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
