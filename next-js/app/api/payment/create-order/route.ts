@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Razorpay from "razorpay";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
-import DoubtPack from "@/src/models/DoubtPack.js";
+import DoubtPack from "@/src/models/DoubtPack";
 
 export const runtime = "nodejs";
 

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Doubt from "@/src/models/Doubt.js";
-import SolverDoubts from "@/src/models/SolverDoubts.js";
-import User from "@/src/models/User.js";
+import Doubt from "@/src/models/Doubt";
+import SolverDoubts from "@/src/models/SolverDoubts";
+import User from "@/src/models/User";
 import mongoose from "mongoose";
 
 export const runtime = "nodejs";

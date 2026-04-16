@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
-import User from "@/src/models/User.js";
-import Doubt from "@/src/models/Doubt.js";
+import User from "@/src/models/User";
+import Doubt from "@/src/models/Doubt";
 
 export const runtime = "nodejs";
 

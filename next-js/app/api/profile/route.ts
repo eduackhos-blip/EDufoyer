@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
-import Profile from "@/src/models/Profile.js";
+import Profile from "@/src/models/Profile";
 import cache from "@/src/server/utils/cache.js";
 
 export const runtime = "nodejs";

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Doubt from "@/src/models/Doubt.js";
-import SolverDoubts from "@/src/models/SolverDoubts.js";
-import Solver from "@/src/models/Solver.js";
+import Doubt from "@/src/models/Doubt";
+import SolverDoubts from "@/src/models/SolverDoubts";
+import Solver from "@/src/models/Solver";
 
 export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };

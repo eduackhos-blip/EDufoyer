@@ -1,7 +1,7 @@
 import { AccessToken } from "livekit-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
-import Doubt from "@/src/models/Doubt.js";
+import Doubt from "@/src/models/Doubt";
 
 export const runtime = "nodejs";
 

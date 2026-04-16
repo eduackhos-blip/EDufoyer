@@ -2,11 +2,11 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
-import DoubtPackPurchase from "@/src/models/DoubtPackPurchase.js";
-import DoubtPack from "@/src/models/DoubtPack.js";
-import User from "@/src/models/User.js";
-import Notification from "@/src/models/Notification.js";
-import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance.js";
+import DoubtPackPurchase from "@/src/models/DoubtPackPurchase";
+import DoubtPack from "@/src/models/DoubtPack";
+import User from "@/src/models/User";
+import Notification from "@/src/models/Notification";
+import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance";
 
 export const runtime = "nodejs";
 

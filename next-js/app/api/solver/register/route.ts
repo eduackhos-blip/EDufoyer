@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Solver from "@/src/models/Solver.js";
-import User from "@/src/models/User.js";
+import Solver from "@/src/models/Solver";
+import User from "@/src/models/User";
 import cache from "@/src/server/utils/cache.js";
 
 export const runtime = "nodejs";

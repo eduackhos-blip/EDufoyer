@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import WithdrawalRequest from "@/src/models/WithdrawalRequest.js";
+import WithdrawalRequest from "@/src/models/WithdrawalRequest";
 
 export const runtime = "nodejs";
 

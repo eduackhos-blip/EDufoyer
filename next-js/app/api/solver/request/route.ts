@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Solver from "@/src/models/Solver.js";
-import SolverRequest from "@/src/models/SolverRequest.js";
-import Notification from "@/src/models/Notification.js";
-import User from "@/src/models/User.js";
+import Solver from "@/src/models/Solver";
+import SolverRequest from "@/src/models/SolverRequest";
+import Notification from "@/src/models/Notification";
+import User from "@/src/models/User";
 
 export const runtime = "nodejs";
 

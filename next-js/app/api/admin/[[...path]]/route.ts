@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { generateVerificationCode, sendVerificationEmail } from "@/src/server/utils/emailVerification.js";
-import Solver from "@/src/models/Solver.js";
-import User from "@/src/models/User.js";
-import DoubtPack from "@/src/models/DoubtPack.js";
-import SolverRequest from "@/src/models/SolverRequest.js";
-import Notification from "@/src/models/Notification.js";
-import DoubtPackPurchase from "@/src/models/DoubtPackPurchase.js";
-import RatingFeedback from "@/src/models/RatingFeedback.js";
-import WithdrawalRequest from "@/src/models/WithdrawalRequest.js";
-import Wallet from "@/src/models/Wallet.js";
+import Solver from "@/src/models/Solver";
+import User from "@/src/models/User";
+import DoubtPack from "@/src/models/DoubtPack";
+import SolverRequest from "@/src/models/SolverRequest";
+import Notification from "@/src/models/Notification";
+import DoubtPackPurchase from "@/src/models/DoubtPackPurchase";
+import RatingFeedback from "@/src/models/RatingFeedback";
+import WithdrawalRequest from "@/src/models/WithdrawalRequest";
+import Wallet from "@/src/models/Wallet";
 
 export const runtime = "nodejs";
 

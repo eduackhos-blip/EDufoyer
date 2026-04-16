@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireAuthFromHeaders } from "@/src/server/auth";
-import User from "@/src/models/User.js";
+import User from "@/src/models/User";
 
 export const getAuthenticatedUser = async (req: NextRequest) => {
   const authorization = req.headers.get("authorization");

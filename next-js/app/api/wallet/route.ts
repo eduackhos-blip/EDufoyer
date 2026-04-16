@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Wallet from "@/src/models/Wallet.js";
-import SolverDoubts from "@/src/models/SolverDoubts.js";
+import Wallet from "@/src/models/Wallet";
+import SolverDoubts from "@/src/models/SolverDoubts";
 
 export const runtime = "nodejs";
 

@@ -3,9 +3,9 @@ import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
 import { z } from "zod";
-import Doubt from "@/src/models/Doubt.js";
-import SolverDoubts from "@/src/models/SolverDoubts.js";
-import Notification from "@/src/models/Notification.js";
+import Doubt from "@/src/models/Doubt";
+import SolverDoubts from "@/src/models/SolverDoubts";
+import Notification from "@/src/models/Notification";
 
 export const runtime = "nodejs";
 

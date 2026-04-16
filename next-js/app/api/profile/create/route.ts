@@ -3,9 +3,9 @@ import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import cache from "@/src/server/utils/cache.js";
 import { z } from "zod";
-import Profile from "@/src/models/Profile.js";
-import Solver from "@/src/models/Solver.js";
-import User from "@/src/models/User.js";
+import Profile from "@/src/models/Profile";
+import Solver from "@/src/models/Solver";
+import User from "@/src/models/User";
 
 export const runtime = "nodejs";
 

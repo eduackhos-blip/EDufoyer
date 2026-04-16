@@ -3,11 +3,11 @@ import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
 import { z } from "zod";
-import Doubt from "@/src/models/Doubt.js";
-import SolverDoubts from "@/src/models/SolverDoubts.js";
-import Solver from "@/src/models/Solver.js";
-import Wallet from "@/src/models/Wallet.js";
-import Notification from "@/src/models/Notification.js";
+import Doubt from "@/src/models/Doubt";
+import SolverDoubts from "@/src/models/SolverDoubts";
+import Solver from "@/src/models/Solver";
+import Wallet from "@/src/models/Wallet";
+import Notification from "@/src/models/Notification";
 import { publishSocketEvent } from "@/src/server/socketPublisher";
 
 export const runtime = "nodejs";
