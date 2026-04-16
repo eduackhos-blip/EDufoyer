@@ -7,6 +7,7 @@ const EmailVerification = ({ email, onVerificationSuccess, onResendVerification 
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const getApiErrorMessage = (data, fallback) => data?.error || data?.message || fallback;
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -45,13 +46,13 @@ const EmailVerification = ({ email, onVerificationSuccess, onResendVerification 
         return;
       }
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setSuccess('Email verified successfully!');
         setTimeout(() => {
           onVerificationSuccess(data.data);
         }, 1500);
       } else {
-        setError(data.message || 'Verification failed');
+        setError(getApiErrorMessage(data, 'Verification failed'));
       }
     } catch (error) {
       setError('Network error. Please try again.');
@@ -88,10 +89,10 @@ const EmailVerification = ({ email, onVerificationSuccess, onResendVerification 
         return;
       }
 
-      if (data.success) {
-        setSuccess('Verification email sent successfully!');
+      if (response.ok && data.success) {
+        setSuccess(data.message || 'Verification email sent successfully!');
       } else {
-        setError(data.message || 'Failed to resend verification email');
+        setError(getApiErrorMessage(data, 'Failed to resend verification email'));
       }
     } catch (error) {
       setError('Network error. Please try again.');

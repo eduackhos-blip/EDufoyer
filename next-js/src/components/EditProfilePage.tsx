@@ -115,17 +115,10 @@ const EditProfilePage = () => {
       setProfileFormError('Please choose an image file');
       return;
     }
-    if (file.size > 700 * 1024) {
-      setProfileFormError('Profile photo must be under 700 KB');
-      return;
-    }
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
-      if (typeof result === 'string' && result.length > 1050000) {
-        setProfileFormError('Encoded profile photo is too large; try a smaller image');
-        return;
-      }
+      if (typeof result !== 'string') return;
       setProfileFormError('');
       setEditProfile((prev) => ({ ...prev, avatarUrl: result }));
     };
@@ -140,17 +133,10 @@ const EditProfilePage = () => {
       setProfileFormError('Please choose an image file for the cover');
       return;
     }
-    if (file.size > 900 * 1024) {
-      setProfileFormError('Cover image must be under 900 KB');
-      return;
-    }
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
-      if (typeof result === 'string' && result.length > 1050000) {
-        setProfileFormError('Encoded cover image is too large; try a smaller image');
-        return;
-      }
+      if (typeof result !== 'string') return;
       setProfileFormError('');
       setEditProfile((prev) => ({ ...prev, coverImageUrl: result }));
     };
@@ -193,11 +179,18 @@ const EditProfilePage = () => {
       }));
       try {
         const forStorage = { ...fresh };
-        if (forStorage.avatarUrl && forStorage.avatarUrl.length > 12000) delete forStorage.avatarUrl;
-        if (forStorage.coverImageUrl && forStorage.coverImageUrl.length > 12000) {
-          delete forStorage.coverImageUrl;
+        try {
+          localStorage.setItem('user', JSON.stringify(forStorage));
+        } catch {
+          const lean = { ...forStorage };
+          delete lean.avatarUrl;
+          delete lean.coverImageUrl;
+          try {
+            localStorage.setItem('user', JSON.stringify(lean));
+          } catch {
+            /* ignore */
+          }
         }
-        localStorage.setItem('user', JSON.stringify(forStorage));
       } catch (_) {
         /* ignore */
       }

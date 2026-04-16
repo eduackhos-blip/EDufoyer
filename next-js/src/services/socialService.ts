@@ -176,20 +176,28 @@ class SocialService {
   // ==================== FRIEND METHODS ====================
 
   // Send friend request
-  async sendFriendRequest(recipientEmail, message = '') {
+  async sendFriendRequest(recipient, message = '') {
     try {
-      // First, try to find user by email
-      const findUserResponse = await this.makeAuthenticatedRequest(`${API_BASE_URL}/users/find-by-email`, {
-        method: 'POST',
-        body: JSON.stringify({ email: recipientEmail }),
-      });
+      const looksLikeEmail = typeof recipient === 'string' && recipient.includes('@');
+      let recipientId = recipient;
 
-      if (!findUserResponse.ok) {
-        throw new Error('User not found with this email address');
+      if (looksLikeEmail) {
+        const findUserResponse = await this.makeAuthenticatedRequest(`${API_BASE_URL}/users/find-by-email`, {
+          method: 'POST',
+          body: JSON.stringify({ email: recipient }),
+        });
+
+        if (!findUserResponse.ok) {
+          throw new Error('User not found with this email address');
+        }
+
+        const userData = await findUserResponse.json();
+        recipientId = userData?.data?.id;
       }
 
-      const userData = await findUserResponse.json();
-      const recipientId = userData.data.id;
+      if (!recipientId) {
+        throw new Error('Recipient is required');
+      }
 
       // Now send the friend request
       const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/friends/request`, {
@@ -359,30 +367,6 @@ class SocialService {
     }
   }
 
-  // Search users by name
-  async searchUsers(name) {
-    try {
-      console.log('socialService.searchUsers called with:', name);
-      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/users/search`, {
-        method: 'POST',
-        body: JSON.stringify({ name }),
-      });
-
-      console.log('Search users response status:', response.status);
-      const data = await response.json();
-      console.log('Search users response data:', data);
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to search users');
-      }
-
-      return data.data;
-    } catch (error) {
-      console.error('Search users error:', error);
-      throw error;
-    }
-  }
-
   // ==================== STUDY GROUP METHODS ====================
 
   // Create study group
@@ -546,7 +530,17 @@ class SocialService {
         throw new Error(data.message || 'Failed to search users');
       }
 
-      return data.data;
+      const users = (data.data || []).map((u) => ({
+        _id: u.id || u._id,
+        id: u.id || u._id,
+        name: u.name || 'User',
+        avatar: u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}&background=3b82f6&color=fff`,
+        subjects: u.subjects || [],
+        mutualFriends: u.mutualFriends || 0,
+        isFriend: Boolean(u.isFriend),
+      }));
+
+      return { users };
     } catch (error) {
       console.error('Search users error:', error);
       throw error;
@@ -569,7 +563,8 @@ class SocialService {
         throw new Error(data.message || 'Failed to search posts');
       }
 
-      return data.data;
+      const posts = data?.data?.posts || [];
+      return { posts };
     } catch (error) {
       console.error('Search posts error:', error);
       throw error;

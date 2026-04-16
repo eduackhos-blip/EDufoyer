@@ -28,6 +28,8 @@ export const connectDb = async () => {
   if (!globalCache.promise) {
     globalCache.promise = mongoose.connect(serverEnv.mongoUri, {
       maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
     });
   }
 

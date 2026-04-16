@@ -72,6 +72,53 @@ const run = async (req: NextRequest, ctx: Ctx) => {
       });
     }
 
+    if (method === "GET" && key === "search/posts") {
+      const queryText = req.nextUrl.searchParams.get("q");
+      if (!queryText || queryText.trim().length < 2) {
+        return json({ success: false, message: "Search query must be at least 2 characters long" }, 400);
+      }
+      const page = Number(req.nextUrl.searchParams.get("page") || "1");
+      const limit = Number(req.nextUrl.searchParams.get("limit") || "10");
+      const skip = (page - 1) * limit;
+      const normalizedQuery = queryText.trim();
+
+      const posts = await Post.find({
+        isActive: true,
+        $or: [
+          { content: { $regex: normalizedQuery, $options: "i" } },
+          { hashtags: { $in: [normalizedQuery.toLowerCase()] } },
+          { subject: { $regex: normalizedQuery, $options: "i" } },
+        ],
+      })
+        .populate("author", "name email avatar")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+      const total = await Post.countDocuments({
+        isActive: true,
+        $or: [
+          { content: { $regex: normalizedQuery, $options: "i" } },
+          { hashtags: { $in: [normalizedQuery.toLowerCase()] } },
+          { subject: { $regex: normalizedQuery, $options: "i" } },
+        ],
+      });
+
+      return json({
+        success: true,
+        data: {
+          posts,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalPosts: total,
+            hasNextPage: page < Math.ceil(total / limit),
+            hasPrevPage: page > 1,
+          },
+        },
+      });
+    }
+
     if (method === "GET" && key === "test/stories") {
       const stories = await Story.find({ isActive: true }).populate("author", "name email avatar").sort({ createdAt: -1 });
       return json({ success: true, data: stories, message: "Test route - showing all stories" });

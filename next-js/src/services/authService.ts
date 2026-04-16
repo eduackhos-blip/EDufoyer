@@ -54,6 +54,23 @@ class AuthService {
     return response;
   }
 
+  getApiErrorMessage(data, fallbackMessage) {
+    return data?.error || data?.message || fallbackMessage;
+  }
+
+  /** Avoids `response.json()` on empty/non-JSON bodies (e.g. truncated large payloads). */
+  async parseJsonResponse(response, emptyMessage) {
+    const text = await response.text();
+    if (text == null || String(text).trim() === '') {
+      throw new Error(emptyMessage || `Empty response (HTTP ${response.status})`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`Invalid JSON from server (HTTP ${response.status})`);
+    }
+  }
+
   // Login user
   async login(email, password) {
     try {
@@ -91,7 +108,7 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(this.getApiErrorMessage(data, 'Login failed'));
       }
 
       // Final safety check before accessing data.success
@@ -150,7 +167,7 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(this.getApiErrorMessage(data, 'Registration failed'));
       }
 
       // Final safety check before accessing data.success
@@ -179,7 +196,7 @@ class AuthService {
         }
       }
 
-      throw new Error(data.message || 'Invalid response from server');
+      throw new Error(this.getApiErrorMessage(data, 'Invalid response from server'));
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -190,10 +207,13 @@ class AuthService {
   async getProfile() {
     try {
       const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/profile`);
-      const data = await response.json();
+      const data = await this.parseJsonResponse(
+        response,
+        `No profile data (HTTP ${response.status}).`
+      );
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch profile');
+        throw new Error(this.getApiErrorMessage(data, 'Failed to fetch profile'));
       }
 
       return data.data.user;
@@ -211,10 +231,13 @@ class AuthService {
         body: JSON.stringify(profileData),
       });
 
-      const data = await response.json();
+      const data = await this.parseJsonResponse(
+        response,
+        'Profile update returned an empty response. Very large images can exceed server limits—try smaller files, or save without huge photos first.'
+      );
 
       if (!response.ok) {
-        throw new Error(data.message || 'Profile update failed');
+        throw new Error(this.getApiErrorMessage(data, 'Profile update failed'));
       }
 
       return data.data.user;
@@ -232,7 +255,7 @@ class AuthService {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to change password');
+        throw new Error(this.getApiErrorMessage(data, 'Failed to change password'));
       }
       return data.data?.user ?? null;
     } catch (error) {
@@ -286,7 +309,7 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to send password reset email');
+        throw new Error(this.getApiErrorMessage(data, 'Failed to send password reset email'));
       }
 
       return {
@@ -334,7 +357,7 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to verify OTP');
+        throw new Error(this.getApiErrorMessage(data, 'Failed to verify OTP'));
       }
 
       return {
@@ -380,7 +403,7 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to reset password');
+        throw new Error(this.getApiErrorMessage(data, 'Failed to reset password'));
       }
 
       return {
@@ -409,7 +432,7 @@ class AuthService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to onboard solver');
+        throw new Error(this.getApiErrorMessage(data, 'Failed to onboard solver'));
       }
 
       return data;

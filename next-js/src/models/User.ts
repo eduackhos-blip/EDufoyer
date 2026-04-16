@@ -70,12 +70,10 @@ const userSchema = new mongoose.Schema(
     avatarUrl: {
       type: String,
       default: null,
-      maxlength: [1200000, "Avatar data is too large"],
     },
     coverImageUrl: {
       type: String,
       default: null,
-      maxlength: [1200000, "Cover image data is too large"],
     },
     bio: {
       type: String,
