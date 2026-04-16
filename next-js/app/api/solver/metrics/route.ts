@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import SolverDoubts from "@/src/server/ported-backend/models/SolverDoubts.js";
+import SolverDoubts from "@/src/models/SolverDoubts.js";
 
 export const runtime = "nodejs";
 

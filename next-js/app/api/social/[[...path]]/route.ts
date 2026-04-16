@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Post from "@/src/server/ported-backend/models/Post.js";
-import Friend from "@/src/server/ported-backend/models/Friend.js";
-import StudyGroup from "@/src/server/ported-backend/models/StudyGroup.js";
-import Story from "@/src/server/ported-backend/models/Story.js";
-import User from "@/src/server/ported-backend/models/User.js";
+import Post from "@/src/models/Post.js";
+import Friend from "@/src/models/Friend.js";
+import StudyGroup from "@/src/models/StudyGroup.js";
+import Story from "@/src/models/Story.js";
+import User from "@/src/models/User.js";
 
 export const runtime = "nodejs";
 

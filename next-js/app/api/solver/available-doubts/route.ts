@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import Solver from "@/src/server/ported-backend/models/Solver.js";
-import Doubt from "@/src/server/ported-backend/models/Doubt.js";
-import cache from "@/src/server/ported-backend/utils/cache.js";
+import Solver from "@/src/models/Solver.js";
+import Doubt from "@/src/models/Doubt.js";
+import cache from "@/src/server/utils/cache.js";
 
 export const runtime = "nodejs";
 

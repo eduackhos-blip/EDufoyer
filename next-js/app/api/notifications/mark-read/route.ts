@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
-import Notification from "@/src/server/ported-backend/models/Notification.js";
+import Notification from "@/src/models/Notification.js";
 
 export const runtime = "nodejs";
 

@@ -4,11 +4,11 @@ import { connectDb } from "@/src/server/db";
 import { serverEnv } from "@/src/server/env";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
-import User from "@/src/server/ported-backend/models/User.js";
-import Solver from "@/src/server/ported-backend/models/Solver.js";
-import { validateEmail, normalizeEmail } from "@/src/server/ported-backend/utils/emailValidator.js";
-import { checkEmailWhitelist } from "@/src/server/ported-backend/utils/emailWhitelist.js";
-import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/server/ported-backend/utils/emailVerification.js";
+import User from "@/src/models/User.js";
+import Solver from "@/src/models/Solver.js";
+import { validateEmail, normalizeEmail } from "@/src/server/utils/emailValidator.js";
+import { checkEmailWhitelist } from "@/src/server/utils/emailWhitelist.js";
+import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/server/utils/emailVerification.js";
 
 export const runtime = "nodejs";
 

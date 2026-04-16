@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
-import UniversityDoubtBalance from "@/src/server/ported-backend/models/UniversityDoubtBalance.js";
+import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance.js";
 
 export const runtime = "nodejs";
 

@@ -2,16 +2,16 @@ import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { generateVerificationCode, sendVerificationEmail } from "@/src/server/ported-backend/utils/emailVerification.js";
-import Solver from "@/src/server/ported-backend/models/Solver.js";
-import User from "@/src/server/ported-backend/models/User.js";
-import DoubtPack from "@/src/server/ported-backend/models/DoubtPack.js";
-import SolverRequest from "@/src/server/ported-backend/models/SolverRequest.js";
-import Notification from "@/src/server/ported-backend/models/Notification.js";
-import DoubtPackPurchase from "@/src/server/ported-backend/models/DoubtPackPurchase.js";
-import RatingFeedback from "@/src/server/ported-backend/models/RatingFeedback.js";
-import WithdrawalRequest from "@/src/server/ported-backend/models/WithdrawalRequest.js";
-import Wallet from "@/src/server/ported-backend/models/Wallet.js";
+import { generateVerificationCode, sendVerificationEmail } from "@/src/server/utils/emailVerification.js";
+import Solver from "@/src/models/Solver.js";
+import User from "@/src/models/User.js";
+import DoubtPack from "@/src/models/DoubtPack.js";
+import SolverRequest from "@/src/models/SolverRequest.js";
+import Notification from "@/src/models/Notification.js";
+import DoubtPackPurchase from "@/src/models/DoubtPackPurchase.js";
+import RatingFeedback from "@/src/models/RatingFeedback.js";
+import WithdrawalRequest from "@/src/models/WithdrawalRequest.js";
+import Wallet from "@/src/models/Wallet.js";
 
 export const runtime = "nodejs";
 

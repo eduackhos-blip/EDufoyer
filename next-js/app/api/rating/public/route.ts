@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
-import RatingFeedback from "@/src/server/ported-backend/models/RatingFeedback.js";
+import RatingFeedback from "@/src/models/RatingFeedback.js";
 
 export const runtime = "nodejs";
 
