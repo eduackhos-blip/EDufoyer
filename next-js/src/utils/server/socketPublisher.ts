@@ -1,4 +1,4 @@
-import { serverEnv } from "@/src/server/env";
+import { serverEnv } from "@/src/utils/server/env";
 
 export type SocketEmitInput = {
   event: string;
@@ -45,3 +45,4 @@ export const publishSocketEvents = async (events: SocketEmitInput[]) => {
     console.error("[socketPublisher] emit-many failed:", error);
   }
 };
+

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuthFromHeaders } from "@/src/server/auth";
+import { requireAuthFromHeaders } from "@/src/utils/server/auth";
 import User from "@/src/models/User";
 
 export const getAuthenticatedUser = async (req: NextRequest) => {
@@ -18,3 +18,4 @@ export const getAuthenticatedUser = async (req: NextRequest) => {
 
   return user;
 };
+

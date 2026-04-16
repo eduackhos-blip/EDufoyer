@@ -20,3 +20,4 @@ export const fail = (status: number, message: string, extra?: Record<string, unk
     },
     { status }
   );
+

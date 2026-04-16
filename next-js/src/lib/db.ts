@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { serverEnv } from "@/src/server/env";
+import { serverEnv } from "@/src/utils/server/env";
 
 declare global {
   // eslint-disable-next-line no-var

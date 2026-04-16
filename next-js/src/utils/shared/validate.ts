@@ -13,3 +13,4 @@ export const validateBody = <T>(schema: ZodSchema<T>, payload: unknown) => {
     data: parsed.data,
   };
 };
+

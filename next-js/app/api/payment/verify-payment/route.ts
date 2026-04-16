@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
+import { connectDb } from "@/src/lib/db";
 import DoubtPackPurchase from "@/src/models/DoubtPackPurchase";
 import DoubtPack from "@/src/models/DoubtPack";
 import User from "@/src/models/User";

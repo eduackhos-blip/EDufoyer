@@ -1,5 +1,5 @@
-import type { SocketEmitInput } from "@/src/server/socketPublisher";
-import { publishSocketEvent } from "@/src/server/socketPublisher";
+import type { SocketEmitInput } from "@/src/utils/server/socketPublisher";
+import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
 
 type EmitFn = (event: string, payload?: unknown) => void;
 

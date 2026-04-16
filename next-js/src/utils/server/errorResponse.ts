@@ -10,3 +10,4 @@ export const authErrorResponse = (error: unknown) => {
   }
   return null;
 };
+

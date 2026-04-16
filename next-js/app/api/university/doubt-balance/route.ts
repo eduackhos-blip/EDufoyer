@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
+import { connectDb } from "@/src/lib/db";
 import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance";
 
 export const runtime = "nodejs";

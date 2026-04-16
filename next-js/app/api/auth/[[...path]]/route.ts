@@ -1,14 +1,14 @@
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { serverEnv } from "@/src/server/env";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
+import { connectDb } from "@/src/lib/db";
+import { serverEnv } from "@/src/utils/server/env";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
 import User from "@/src/models/User";
 import Solver from "@/src/models/Solver";
-import { validateEmail, normalizeEmail } from "@/src/server/utils/emailValidator";
-import { checkEmailWhitelist } from "@/src/server/utils/emailWhitelist";
-import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/server/utils/emailVerification";
+import { validateEmail, normalizeEmail } from "@/src/utils/server/emailValidator";
+import { checkEmailWhitelist } from "@/src/utils/server/emailWhitelist";
+import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/utils/server/emailVerification";
 
 export const runtime = "nodejs";
 

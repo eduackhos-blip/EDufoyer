@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
 import { z } from "zod";
 import Doubt from "@/src/models/Doubt";
 import Solver from "@/src/models/Solver";
 import Notification from "@/src/models/Notification";
 import User from "@/src/models/User";
 import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance";
-import { sendEmail } from "@/src/server/utils/email";
-import { validateSubjectRelevance } from "@/src/server/utils/openaiValidation";
-import { publishSocketEvent, publishSocketEvents } from "@/src/server/socketPublisher";
+import { sendEmail } from "@/src/utils/server/email";
+import { validateSubjectRelevance } from "@/src/utils/server/openaiValidation";
+import { publishSocketEvent, publishSocketEvents } from "@/src/utils/server/socketPublisher";
 
 export const runtime = "nodejs";
 

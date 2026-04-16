@@ -1,5 +1,5 @@
-import { connectDb } from "@/src/server/db";
-import { ok } from "@/src/server/http";
+import { connectDb } from "@/src/lib/db";
+import { ok } from "@/src/utils/server/http";
 
 export const runtime = "nodejs";
 

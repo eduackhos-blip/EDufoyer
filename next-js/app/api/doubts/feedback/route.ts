@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
 import { z } from "zod";
 import Doubt from "@/src/models/Doubt";
 import SolverDoubts from "@/src/models/SolverDoubts";
 import Solver from "@/src/models/Solver";
 import Wallet from "@/src/models/Wallet";
 import Notification from "@/src/models/Notification";
-import { publishSocketEvent } from "@/src/server/socketPublisher";
+import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
 
 export const runtime = "nodejs";
 

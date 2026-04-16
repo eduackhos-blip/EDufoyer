@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { serverEnv } from "@/src/server/env";
+import { serverEnv } from "@/src/utils/server/env";
 
 type JwtPayload = {
   id?: string;
@@ -37,3 +37,4 @@ export const requireAdminFromHeaders = (authorizationHeader: string | null) => {
   }
   return payload;
 };
+

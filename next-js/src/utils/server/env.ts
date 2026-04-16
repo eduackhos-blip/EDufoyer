@@ -19,3 +19,4 @@ export const getBackendApiUrl = (path: string) => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${serverEnv.backendApiOrigin}${normalized}`;
 };
+

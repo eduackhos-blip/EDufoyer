@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { generateVerificationCode, sendVerificationEmail } from "@/src/server/utils/emailVerification";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { generateVerificationCode, sendVerificationEmail } from "@/src/utils/server/emailVerification";
 import Solver from "@/src/models/Solver";
 import User from "@/src/models/User";
 import DoubtPack from "@/src/models/DoubtPack";
