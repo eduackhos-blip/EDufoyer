@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/server/db";
 import { getAuthenticatedUser } from "@/src/server/currentUser";
-import cache from "@/src/server/utils/cache.js";
+import cache from "@/src/server/utils/cache";
 import { z } from "zod";
 import Profile from "@/src/models/Profile";
 import Solver from "@/src/models/Solver";

@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
 import Solver from "@/src/models/Solver";
 import Doubt from "@/src/models/Doubt";
-import cache from "@/src/server/utils/cache.js";
+import cache from "@/src/server/utils/cache";
 
 export const runtime = "nodejs";
 

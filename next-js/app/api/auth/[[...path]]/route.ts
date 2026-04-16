@@ -6,9 +6,9 @@ import { getAuthenticatedUser } from "@/src/server/currentUser";
 import { authErrorResponse } from "@/src/server/errorResponse";
 import User from "@/src/models/User";
 import Solver from "@/src/models/Solver";
-import { validateEmail, normalizeEmail } from "@/src/server/utils/emailValidator.js";
-import { checkEmailWhitelist } from "@/src/server/utils/emailWhitelist.js";
-import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/server/utils/emailVerification.js";
+import { validateEmail, normalizeEmail } from "@/src/server/utils/emailValidator";
+import { checkEmailWhitelist } from "@/src/server/utils/emailWhitelist";
+import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/server/utils/emailVerification";
 
 export const runtime = "nodejs";
 

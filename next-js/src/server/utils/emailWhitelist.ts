@@ -9,10 +9,7 @@ const APPROVED_EMAILS = [
 ];
 
 // List of approved domains - ONLY KIIT domains allowed
-const APPROVED_DOMAINS = [
-  'kiit.ac.in',
-  'kiit.edu.in'
-];
+const APPROVED_DOMAINS = ["kiit.ac.in", "kiit.edu.in"];
 
 /**
  * Check if email is in the whitelist
@@ -20,10 +17,10 @@ const APPROVED_DOMAINS = [
  * @returns {object} - Validation result
  */
 export const checkEmailWhitelist = (email) => {
-  if (!email || typeof email !== 'string') {
+  if (!email || typeof email !== "string") {
     return {
       isApproved: false,
-      message: 'Email is required'
+      message: "Email is required",
     };
   }
 
@@ -33,22 +30,22 @@ export const checkEmailWhitelist = (email) => {
   if (APPROVED_EMAILS.includes(normalizedEmail)) {
     return {
       isApproved: true,
-      message: 'Email is approved'
+      message: "Email is approved",
     };
   }
 
   // Check if domain is in the approved domains list
-  const domain = normalizedEmail.split('@')[1];
+  const domain = normalizedEmail.split("@")[1];
   if (domain && APPROVED_DOMAINS.includes(domain)) {
     return {
       isApproved: true,
-      message: 'Email domain is approved'
+      message: "Email domain is approved",
     };
   }
 
   return {
     isApproved: false,
-    message: 'Only @kiit.ac.in or @kiit.edu.in email addresses are allowed for registration.'
+    message: "Only @kiit.ac.in or @kiit.edu.in email addresses are allowed for registration.",
   };
 };
 
@@ -92,3 +89,4 @@ export const getApprovedEmails = () => {
 export const getApprovedDomains = () => {
   return [...APPROVED_DOMAINS];
 };
+

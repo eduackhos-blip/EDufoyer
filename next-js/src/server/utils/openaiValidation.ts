@@ -1,36 +1,38 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 // Initialize OpenAI client
 const getOpenAIClient = () => {
   const apiKey = process.env.OPENAI_API_KEY;
-  
+
   // Debug: Log what we're getting
-  console.log('🔍 Checking OpenAI API key...');
-  console.log('API Key exists:', !!apiKey);
-  console.log('API Key type:', typeof apiKey);
-  console.log('API Key length:', apiKey ? apiKey.length : 0);
-  console.log('API Key first 20 chars:', apiKey ? apiKey.substring(0, 20) : 'N/A');
-  console.log('API Key last 20 chars:', apiKey ? apiKey.substring(apiKey.length - 20) : 'N/A');
-  console.log('All env vars with OPENAI:', Object.keys(process.env).filter(k => k.includes('OPENAI')));
-  
-  if (!apiKey || apiKey === 'your-openai-api-key-here' || apiKey.trim() === '') {
-    console.warn('⚠️ OpenAI API key not found or not configured. Subject validation will be skipped.');
-    console.warn('Please add OPENAI_API_KEY to your .env file in the backend folder.');
-    console.warn('Current process.env.OPENAI_API_KEY value:', apiKey || 'undefined');
+  console.log("🔍 Checking OpenAI API key...");
+  console.log("API Key exists:", !!apiKey);
+  console.log("API Key type:", typeof apiKey);
+  console.log("API Key length:", apiKey ? apiKey.length : 0);
+  console.log("API Key first 20 chars:", apiKey ? apiKey.substring(0, 20) : "N/A");
+  console.log("API Key last 20 chars:", apiKey ? apiKey.substring(apiKey.length - 20) : "N/A");
+  console.log("All env vars with OPENAI:", Object.keys(process.env).filter((k) => k.includes("OPENAI")));
+
+  if (!apiKey || apiKey === "your-openai-api-key-here" || apiKey.trim() === "") {
+    console.warn("⚠️ OpenAI API key not found or not configured. Subject validation will be skipped.");
+    console.warn("Please add OPENAI_API_KEY to your .env file in the backend folder.");
+    console.warn("Current process.env.OPENAI_API_KEY value:", apiKey || "undefined");
     return null;
   }
 
   // Trim any whitespace
   const trimmedKey = apiKey.trim();
-  
+
   if (trimmedKey.length < 20) {
-    console.error('❌ OpenAI API key seems too short. Expected length: ~200+ characters');
+    console.error("❌ OpenAI API key seems too short. Expected length: ~200+ characters");
     return null;
   }
 
-  console.log('✅ OpenAI API key found. Validation enabled.');
-  console.log('✅ Using API key:', trimmedKey.substring(0, 20) + '...' + trimmedKey.substring(trimmedKey.length - 10));
-  
+  console.log(
+    "✅ OpenAI API key found. Validation enabled.",
+    trimmedKey.substring(0, 20) + "..." + trimmedKey.substring(trimmedKey.length - 10)
+  );
+
   return new OpenAI({
     apiKey: trimmedKey,
   });
@@ -44,21 +46,21 @@ const getOpenAIClient = () => {
  */
 export async function validateSubjectRelevance(subject, description) {
   console.log(`🔍 Starting subject validation: Subject="${subject}", Description="${description?.substring(0, 50)}..."`);
-  
+
   const client = getOpenAIClient();
-  
+
   // If OpenAI is not configured, allow submission (fail-open approach)
   if (!client) {
-    console.warn('⚠️ OpenAI client not available. Allowing submission (validation skipped).');
+    console.warn("⚠️ OpenAI client not available. Allowing submission (validation skipped).");
     return {
       isRelated: true,
       confidence: 1.0,
-      reason: 'OpenAI validation not configured - submission allowed',
+      reason: "OpenAI validation not configured - submission allowed",
     };
   }
 
   try {
-    console.log('📤 Sending validation request to OpenAI...');
+    console.log("📤 Sending validation request to OpenAI...");
     const systemPrompt = `You are an expert validator for an educational doubt-solving platform. 
 Your task is to check if a student's doubt/question description is actually related to the subject they selected.
 
@@ -80,57 +82,47 @@ Doubt Description: "${description}"
 Is this doubt description related to the selected subject? Please analyze and respond with JSON.`;
 
     const completion = await client.chat.completions.create({
-      model: 'gpt-5-nano', // Using cost-effective model
+      model: "gpt-5-nano",
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
       ],
-      response_format: { type: 'json_object' },
-      temperature: 0.3, // Lower temperature for more consistent results
+      response_format: { type: "json_object" },
+      temperature: 0.3,
       max_tokens: 150,
     });
 
     const responseContent = completion.choices[0]?.message?.content;
-    
+
     if (!responseContent) {
-      console.error('OpenAI returned empty response');
-      // Default to allowing submission if API fails
+      console.error("OpenAI returned empty response");
       return {
         isRelated: true,
         confidence: 0.5,
-        reason: 'Validation service unavailable',
+        reason: "Validation service unavailable",
       };
     }
 
-    // Parse JSON response
     const validationResult = JSON.parse(responseContent);
-    
-    const isRelated = validationResult.isRelated === true || validationResult.isRelated === 'true';
+
+    const isRelated = validationResult.isRelated === true || validationResult.isRelated === "true";
     const confidence = parseFloat(validationResult.confidence) || 0.5;
-    const reason = validationResult.reason || 'No reason provided';
-    
+    const reason = validationResult.reason || "No reason provided";
+
     console.log(`📥 Validation result: isRelated=${isRelated}, confidence=${confidence}, reason="${reason}"`);
-    
+
     return {
       isRelated,
       confidence,
       reason,
     };
-
   } catch (error) {
-    console.error('❌ OpenAI validation error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      type: error.constructor.name,
-      status: error.status || 'N/A',
-    });
-    
-    // On error, allow submission (fail-open approach) to avoid blocking users
-    console.warn('⚠️ Allowing submission despite validation error (fail-open approach)');
+    console.error("❌ OpenAI validation error:", error);
+    console.warn("⚠️ Allowing submission despite validation error (fail-open approach)");
     return {
       isRelated: true,
       confidence: 0.5,
-      reason: `Validation service error: ${error.message || 'Unknown error'}. Submission allowed.`,
+      reason: `Validation service error: ${error.message || "Unknown error"}. Submission allowed.`,
     };
   }
 }
@@ -142,14 +134,14 @@ Is this doubt description related to the selected subject? Please analyze and re
  * @param {string} description - Optional text description
  * @returns {Promise<{isRelated: boolean, confidence: number, reason: string}>}
  */
-export async function validateImageSubjectRelevance(subject, imageBase64, description = '') {
+export async function validateImageSubjectRelevance(subject, imageBase64, description = "") {
   const client = getOpenAIClient();
-  
+
   if (!client) {
     return {
       isRelated: true,
       confidence: 1.0,
-      reason: 'OpenAI validation not configured',
+      reason: "OpenAI validation not configured",
     };
   }
 
@@ -158,29 +150,29 @@ export async function validateImageSubjectRelevance(subject, imageBase64, descri
 Respond with JSON: {"isRelated": true/false, "confidence": 0-1, "reason": "brief explanation"}`;
 
     const userPrompt = `Subject: "${subject}"
-${description ? `Description: "${description}"` : ''}
+${description ? `Description: "${description}"` : ""}
 
 Analyze the image and check if it's related to the subject.`;
 
     const completion = await client.chat.completions.create({
-      model: 'gpt-5-nano',
+      model: "gpt-5-nano",
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: "system", content: systemPrompt },
         {
-          role: 'user',
+          role: "user",
           content: [
-            { type: 'text', text: userPrompt },
+            { type: "text", text: userPrompt },
             {
-              type: 'image_url',
+              type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${imageBase64}`,
-                detail: 'low', // Use low detail for cost optimization
+                detail: "low",
               },
             },
           ],
         },
       ],
-      response_format: { type: 'json_object' },
+      response_format: { type: "json_object" },
       temperature: 0.3,
       max_tokens: 150,
     });
@@ -189,17 +181,16 @@ Analyze the image and check if it's related to the subject.`;
     const validationResult = JSON.parse(responseContent);
 
     return {
-      isRelated: validationResult.isRelated === true || validationResult.isRelated === 'true',
+      isRelated: validationResult.isRelated === true || validationResult.isRelated === "true",
       confidence: parseFloat(validationResult.confidence) || 0.5,
-      reason: validationResult.reason || 'No reason provided',
+      reason: validationResult.reason || "No reason provided",
     };
-
   } catch (error) {
-    console.error('OpenAI image validation error:', error);
+    console.error("OpenAI image validation error:", error);
     return {
       isRelated: true,
       confidence: 0.5,
-      reason: 'Validation service error - submission allowed',
+      reason: "Validation service error - submission allowed",
     };
   }
 }

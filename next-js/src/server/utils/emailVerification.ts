@@ -3,13 +3,9 @@
  * Verifies that email addresses actually exist before allowing signup
  */
 
-import nodemailer from 'nodemailer';
-import dns from 'dns';
-import { promisify } from 'util';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
+import nodemailer from "nodemailer";
+import dns from "dns";
+import { promisify } from "util";
 
 const resolveMx = promisify(dns.resolveMx);
 
@@ -20,12 +16,8 @@ const resolveMx = promisify(dns.resolveMx);
  */
 export const isKnownEmailProvider = (email) => {
   // ONLY allow KIIT domains
-  const knownProviders = [
-    'kiit.ac.in',
-    'kiit.edu.in'
-  ];
-
-  const domain = email.split('@')[1]?.toLowerCase();
+  const knownProviders = ["kiit.ac.in", "kiit.edu.in"];
+  const domain = email.split("@")[1]?.toLowerCase();
   return knownProviders.includes(domain);
 };
 
@@ -36,66 +28,38 @@ export const isKnownEmailProvider = (email) => {
  */
 export const verifyEmailDomain = async (email) => {
   try {
-    if (!email || typeof email !== 'string') {
-      return {
-        isValid: false,
-        message: 'Email is required'
-      };
+    if (!email || typeof email !== "string") {
+      return { isValid: false, message: "Email is required" };
     }
 
-    const domain = email.split('@')[1];
+    const domain = email.split("@")[1];
     if (!domain) {
-      return {
-        isValid: false,
-        message: 'Invalid email format'
-      };
+      return { isValid: false, message: "Invalid email format" };
     }
 
     // If it's a known provider, skip DNS lookup
     if (isKnownEmailProvider(email)) {
-      return {
-        isValid: true,
-        message: 'Email domain is from known provider',
-        isKnownProvider: true
-      };
+      return { isValid: true, message: "Email domain is from known provider", isKnownProvider: true };
     }
 
     // For other domains, try DNS lookup with timeout
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('DNS lookup timeout')), 5000)
-    );
-
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("DNS lookup timeout")), 5000));
     const mxPromise = resolveMx(domain);
     const mxRecords = await Promise.race([mxPromise, timeoutPromise]);
-    
+
     if (mxRecords && mxRecords.length > 0) {
-      return {
-        isValid: true,
-        message: 'Email domain is valid',
-        mxRecords: mxRecords
-      };
-    } else {
-      return {
-        isValid: false,
-        message: 'Email domain does not exist or cannot receive emails'
-      };
+      return { isValid: true, message: "Email domain is valid", mxRecords: mxRecords };
     }
+    return { isValid: false, message: "Email domain does not exist or cannot receive emails" };
   } catch (error) {
-    console.error('DNS lookup error:', error);
-    
+    console.error("DNS lookup error:", error);
+
     // If DNS lookup fails but it's a known provider, still allow it
     if (isKnownEmailProvider(email)) {
-      return {
-        isValid: true,
-        message: 'Email domain is from known provider (DNS lookup failed)',
-        isKnownProvider: true
-      };
+      return { isValid: true, message: "Email domain is from known provider (DNS lookup failed)", isKnownProvider: true };
     }
-    
-    return {
-      isValid: false,
-      message: 'Email domain verification failed'
-    };
+
+    return { isValid: false, message: "Email domain verification failed" };
   }
 };
 
@@ -107,21 +71,20 @@ export const verifyEmailDomain = async (email) => {
  */
 export const sendVerificationEmail = async (email, verificationCode) => {
   try {
-    // Create transporter (you can configure this with your SMTP settings)
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: process.env.SMTP_PORT || 587,
       secure: false,
       auth: {
-        user: process.env.SMTP_USER || 'your-email@gmail.com',
-        pass: process.env.SMTP_PASS || 'your-app-password'
-      }
+        user: process.env.SMTP_USER || "your-email@gmail.com",
+        pass: process.env.SMTP_PASS || "your-app-password",
+      },
     });
 
     const mailOptions = {
-      from: process.env.SMTP_USER || 'your-email@gmail.com',
+      from: process.env.SMTP_USER || "your-email@gmail.com",
       to: email,
-      subject: 'Email Verification - EDUF OYER',
+      subject: "Email Verification - EDUF OYER",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">Email Verification</h2>
@@ -136,38 +99,23 @@ export const sendVerificationEmail = async (email, verificationCode) => {
           <p style="color: #6b7280; font-size: 14px;">EDUF OYER - Learn together and Earn together</p>
         </div>
       `,
-      // Add headers to help with bounce detection
       headers: {
-        'Return-Path': process.env.SMTP_USER || 'your-email@gmail.com',
-        'X-Mailer': 'EDUF OYER Verification System'
-      }
+        "Return-Path": process.env.SMTP_USER || "your-email@gmail.com",
+        "X-Mailer": "EDUF OYER Verification System",
+      },
     };
 
     const result = await transporter.sendMail(mailOptions);
-    
-    // For now, we'll assume if the email was accepted by SMTP, it's valid
-    // In a production system, you'd want to implement bounce handling
-    return {
-      success: true,
-      message: 'Verification email sent successfully',
-      messageId: result.messageId
-    };
+
+    return { success: true, message: "Verification email sent successfully", messageId: result.messageId };
   } catch (error) {
-    console.error('Email sending error:', error);
-    
-    // Check for specific error types that indicate invalid email
-    if (error.code === 'EENVELOPE' || error.responseCode === 550) {
-      return {
-        success: false,
-        message: 'Email address does not exist or cannot receive emails'
-      };
+    console.error("Email sending error:", error);
+
+    if (error.code === "EENVELOPE" || error.responseCode === 550) {
+      return { success: false, message: "Email address does not exist or cannot receive emails" };
     }
-    
-    return {
-      success: false,
-      message: 'Failed to send verification email',
-      error: error.message
-    };
+
+    return { success: false, message: "Failed to send verification email", error: error.message };
   }
 };
 
@@ -186,19 +134,19 @@ export const generateVerificationCode = () => {
  */
 export const isFakeEmailService = (email) => {
   const fakeServices = [
-    '10minutemail.com',
-    'tempmail.org',
-    'guerrillamail.com',
-    'mailinator.com',
-    'throwaway.email',
-    'temp-mail.org',
-    'getnada.com',
-    'maildrop.cc',
-    'yopmail.com',
-    'sharklasers.com'
+    "10minutemail.com",
+    "tempmail.org",
+    "guerrillamail.com",
+    "mailinator.com",
+    "throwaway.email",
+    "temp-mail.org",
+    "getnada.com",
+    "maildrop.cc",
+    "yopmail.com",
+    "sharklasers.com",
   ];
 
-  const domain = email.split('@')[1];
+  const domain = email.split("@")[1];
   return fakeServices.includes(domain?.toLowerCase());
 };
 
@@ -209,37 +157,24 @@ export const isFakeEmailService = (email) => {
  */
 export const verifyEmail = async (email) => {
   try {
-    // Check for fake email services
     if (isFakeEmailService(email)) {
-      return {
-        isValid: false,
-        message: 'Temporary email services are not allowed'
-      };
+      return { isValid: false, message: "Temporary email services are not allowed" };
     }
 
     // Only allow KIIT email domains
     if (!isKnownEmailProvider(email)) {
-      return {
-        isValid: false,
-        message: 'Only @kiit.ac.in email addresses are allowed for registration.'
-      };
+      return { isValid: false, message: "Only @kiit.ac.in email addresses are allowed for registration." };
     }
 
-    // Verify domain exists
     const domainCheck = await verifyEmailDomain(email);
     if (!domainCheck.isValid) {
       return domainCheck;
     }
 
-    return {
-      isValid: true,
-      message: 'Email is valid and can receive emails'
-    };
+    return { isValid: true, message: "Email is valid and can receive emails" };
   } catch (error) {
-    console.error('Email verification error:', error);
-    return {
-      isValid: false,
-      message: 'Email verification failed'
-    };
+    console.error("Email verification error:", error);
+    return { isValid: false, message: "Email verification failed" };
   }
 };
+

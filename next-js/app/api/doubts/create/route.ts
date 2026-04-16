@@ -8,8 +8,8 @@ import Solver from "@/src/models/Solver";
 import Notification from "@/src/models/Notification";
 import User from "@/src/models/User";
 import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance";
-import { sendEmail } from "@/src/server/utils/email.js";
-import { validateSubjectRelevance } from "@/src/server/utils/openaiValidation.js";
+import { sendEmail } from "@/src/server/utils/email";
+import { validateSubjectRelevance } from "@/src/server/utils/openaiValidation";
 import { publishSocketEvent, publishSocketEvents } from "@/src/server/socketPublisher";
 
 export const runtime = "nodejs";

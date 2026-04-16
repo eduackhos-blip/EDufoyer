@@ -9,7 +9,7 @@ import SolverDoubts from "@/src/models/SolverDoubts";
 import User from "@/src/models/User";
 import Notification from "@/src/models/Notification";
 import { RoomServiceClient } from "livekit-server-sdk";
-import { sendEmail } from "@/src/server/utils/email.js";
+import { sendEmail } from "@/src/server/utils/email";
 import { publishSocketEvent } from "@/src/server/socketPublisher";
 
 export const runtime = "nodejs";
