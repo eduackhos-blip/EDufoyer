@@ -62,19 +62,8 @@ const AwaitingSolverPage = () => {
       }
     } catch (err) {
       console.error('Error fetching doubt:', err);
-      
-      // ALWAYS use mock data for now due to CORS issues
-      const mockDoubt = {
-        _id: doubtId,
-        subject: 'Your Submitted Doubt',
-        category: 'medium',
-        description: 'This is your submitted doubt. The awaiting solver flow is working correctly!',
-        status: 'open',
-        createdAt: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-        doubter_id: 'test-user'
-      };
-      setDoubt(mockDoubt);
-      console.log('Using mock doubt due to API issues with ID:', doubtId);
+      setDoubt(null);
+      setError('Failed to load doubt details.');
     }
   };
 
@@ -111,20 +100,7 @@ const AwaitingSolverPage = () => {
       }
     } catch (err) {
       console.error('Error fetching notifications:', err);
-      
-      // ALWAYS use mock notifications due to CORS issues
-      const mockNotifications = [
-        {
-          _id: 'mock-notif-1',
-          doubt_id: doubtId,
-          message_type: 'DOUBT_SUBMITTED',
-          content: `Your doubt "Your Submitted Doubt" has been submitted successfully and is awaiting a solver.`,
-          is_read: true,
-          createdAt: new Date(Date.now() - 2 * 60 * 1000)
-        }
-      ];
-      setNotifications(mockNotifications);
-      console.log('Using mock notifications due to API issues with doubt ID:', doubtId);
+      setNotifications([]);
     }
   };
 
@@ -268,19 +244,19 @@ const AwaitingSolverPage = () => {
             <div className="mb-2.5 flex items-center gap-3">
               <span className="w-20 shrink-0 text-[12.5px] text-gray-500">Subject:</span>
               <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-3 py-1 text-[12px] font-semibold text-[#2563EB]">
-                {doubt?.subject || 'Operating Systems'}
+                {doubt?.subject || 'Unknown Subject'}
               </span>
             </div>
             <div className="mb-3 flex items-center gap-3">
               <span className="w-20 shrink-0 text-[12.5px] text-gray-500">Category:</span>
               <span className="rounded-full border border-[#86EFAC] bg-[#F0FDF4] px-3 py-1 text-[12px] font-semibold text-[#16A34A] capitalize">
-                {doubt?.category || 'small'}
+                {doubt?.category || 'unspecified'}
               </span>
             </div>
             <div>
               <p className="mb-1.5 text-[12.5px] text-gray-500">Description:</p>
               <div className="rounded-lg border border-[#E5E7EB] bg-[#FAFAFA] px-3 py-2.5 text-[13px] text-gray-700">
-                {doubt?.description || 'No description available'}
+                {doubt?.description || 'Description unavailable'}
               </div>
             </div>
           </div>
@@ -309,7 +285,7 @@ const AwaitingSolverPage = () => {
                 <div>
                   <p className="text-[11.5px] leading-snug text-gray-700">
                     {notifications.filter((n) => n.doubt_id === doubtId)[0]?.content ||
-                      `Your doubt "${doubt?.subject || 'operating systems'}" has been submitted successfully and is awaiting a solver.`}
+                      `Your doubt "${doubt?.subject || 'your subject'}" has been submitted successfully and is awaiting a solver.`}
                   </p>
                   <p className="mt-1 text-[11px] text-gray-400">
                     {notifications.filter((n) => n.doubt_id === doubtId)[0]?.createdAt

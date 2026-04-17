@@ -57,7 +57,9 @@ const DoubtCard = ({
   if (type === 'my-doubts') {
     const [isAvatarBroken, setIsAvatarBroken] = useState(false);
     const answerText = doubt.solverDoubt?.feedback_comment;
-    const solverName = doubt.solver?.name || 'Rahul';
+    const trimmedSolverName = typeof doubt.solver?.name === 'string' ? doubt.solver.name.trim() : '';
+    const hasAnswerText = answerText !== undefined && answerText !== null && String(answerText).trim() !== '';
+    const solverName = trimmedSolverName || 'Solver';
     const solverAvatarUrl = doubt.solver?.avatarUrl || FALLBACK_AVATAR_URL;
     const shouldShowAvatarImage = Boolean(solverAvatarUrl) && !isAvatarBroken;
 
@@ -67,17 +69,17 @@ const DoubtCard = ({
       createdAt: doubt?.createdAt,
       hasSolverDoubt: Boolean(doubt?.solverDoubt),
       solverDoubt: doubt?.solverDoubt,
-      hasAnswerText: answerText !== undefined && answerText !== null && answerText !== '',
+      hasAnswerText,
       answerTextValue: answerText
     });
 
     const timeAgo = formatTimeAgo(doubt.solverDoubt?.resolved_at || doubt.createdAt);
     const question = doubt.description || '';
     const answerPreview =
-      answerText === undefined || answerText === null || String(answerText).trim() === ''
-        ? 'No answer preview available yet.'
+      !hasAnswerText
+        ? 'Awaiting answer from solver.'
         : truncateText(answerText, 110);
-    const isNew = true;
+    const isNew = hasAnswerText;
 
     const initials = solverName
       .split(' ')
@@ -111,7 +113,13 @@ const DoubtCard = ({
               <span className="text-[12.5px] text-[#aaaabc]">{timeAgo}</span>
             </div>
             <div className="text-[14.5px] text-[#1a1a2e]">
-              <span className="font-bold">{solverName}</span> answered your question
+              {hasAnswerText ? (
+                <>
+                  <span className="font-bold">{solverName}</span> answered your question
+                </>
+              ) : (
+                <span className="font-bold">Awaiting solver response</span>
+              )}
             </div>
 
             <div className="bg-[#fafbff] border-gray-200 border rounded-[12px] px-4 py-[14px] mt-[14px] mb-[14px]">
@@ -128,9 +136,9 @@ const DoubtCard = ({
               onClick={() =>
                 onViewAnswer?.({
                   doubtId: doubt._id,
-                  solverName: solverName || 'Solver',
+                  solverName,
                   questionText: question,
-                  answerText: answerText || 'No answer available yet.',
+                  answerText: hasAnswerText ? answerText : 'Awaiting answer from solver.',
                   timeLabel: timeAgo
                 })
               }

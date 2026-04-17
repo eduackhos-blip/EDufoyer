@@ -34,7 +34,6 @@ import {
 import { useRouter, useParams, usePathname, useSearchParams } from 'next/navigation';
 import authService from '../services/authService';
 import socialService from '../services/socialService';
-import userDashboardService from '../services/userDashboardService';
 import StoriesPage from './StoriesPage';
 import FriendsPage from './FriendsPage';
 import UserProfilePage from './UserProfilePage';
@@ -74,7 +73,7 @@ const SocialDashboard = () => {
         }
 
         // Get user data from auth service
-        const userData = authService.getCurrentUser();
+        const userData = await authService.getProfile();
         if (!userData) {
           router.push('/');
           return;
@@ -83,25 +82,24 @@ const SocialDashboard = () => {
         setUser(userData);
         
 
-        // Use userId from URL parameter or fallback to userData.id
-        const currentUserId = userId || userData.id || 'default_user';
+        // Use userId from URL parameter or authenticated user ID
+        const currentUserId = userId || userData.id || userData._id;
         console.log('Using user ID from URL:', currentUserId);
         
         // If no userId in URL, redirect to user-specific URL
-        if (!userId && userData.id) {
+        if (!userId && currentUserId) {
           console.log('No userId in URL, redirecting to user-specific URL');
-          router.replace(`/dashboard/social/${userData.id}`);
+          router.replace(`/dashboard/social/${currentUserId}`);
           return;
         }
         
-        // Load user-specific dashboard data
-        const dashboardData = userDashboardService.getUserDashboard(currentUserId);
-        setUserDashboard(dashboardData);
-        setPersonalizedContent(dashboardData.personalizedContent);
-        setStudyRecommendations(dashboardData.studyRecommendations);
-        setFriendSuggestions(dashboardData.friendSuggestions);
-        setUserStudyGroups(userDashboardService.getUserStudyGroups(dashboardData.user));
-        setUserNotifications(userDashboardService.getUserNotifications(dashboardData.user));
+        // Keep feed data API-driven; avoid injecting synthetic dashboard content.
+        setUserDashboard(null);
+        setPersonalizedContent([]);
+        setStudyRecommendations([]);
+        setFriendSuggestions([]);
+        setUserStudyGroups([]);
+        setUserNotifications([]);
         
         // Load posts, stories, and friend suggestions
         await loadPosts();
@@ -151,193 +149,61 @@ const SocialDashboard = () => {
 
   const loadPosts = async () => {
     try {
-      // Get user ID from URL parameter or localStorage
-      const currentUserId = userId || localStorage.getItem('userId') || user?.id || 'user_' + Math.random().toString(36).substr(2, 9);
-      console.log('Loading posts for user ID from URL:', currentUserId);
-      
-      // Create user-specific posts
-      const userPosts = getUserSpecificPosts(currentUserId);
-      console.log('User-specific posts:', userPosts);
-      setPosts(userPosts);
-      
+      const feed = await socialService.getPosts(1, 20);
+      const rawPosts = Array.isArray(feed?.posts) ? feed.posts : [];
+      const mappedPosts = rawPosts.map((post) => ({
+        id: post._id,
+        author: {
+          name: post?.author?.name || 'Unknown',
+          title: post?.subject || 'Student',
+          avatar: post?.author?.avatar || post?.author?.avatarUrl || 'https://via.placeholder.com/48',
+        },
+        content: post?.content || '',
+        hashtags: Array.isArray(post?.hashtags) ? post.hashtags : [],
+        subject: post?.subject || '',
+        image: Array.isArray(post?.images) && post.images.length > 0 ? post.images[0] : null,
+        likes: Array.isArray(post?.likes) ? post.likes.length : Number(post?.likes || 0),
+        comments: Array.isArray(post?.comments) ? post.comments.length : Number(post?.comments || 0),
+        shares: Array.isArray(post?.shares) ? post.shares.length : Number(post?.shares || 0),
+        saved: Array.isArray(post?.saves) ? post.saves.length : Number(post?.saves || 0),
+        liked: false,
+        isSaved: false,
+      }));
+      setPosts(mappedPosts);
     } catch (error) {
       console.error('Error loading posts:', error);
       setPosts([]);
     }
   };
 
-  // Function to generate user-specific posts
-  const getUserSpecificPosts = (userId) => {
-    const hash = userId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    const postTemplates = [
-      {
-        author: { name: 'CS_Mentor', title: 'Computer Science Professor', avatar: 'https://ui-avatars.com/api/?name=CS+Mentor&background=blue500&color=fff' },
-        content: 'Just finished an amazing React tutorial! The hooks concept is revolutionary for state management.',
-        hashtags: ['#react', '#javascript', '#programming', '#webdev'],
-        subject: 'Programming'
-      },
-      {
-        author: { name: 'Math_Teacher', title: 'Mathematics Professor', avatar: 'https://ui-avatars.com/api/?name=Math+Teacher&background=green500&color=fff' },
-        content: 'Solved a complex calculus problem today. Integration techniques are getting clearer!',
-        hashtags: ['#calculus', '#mathematics', '#integration', '#learning'],
-        subject: 'Mathematics'
-      },
-      {
-        author: { name: 'Physics_Prof', title: 'Physics Professor', avatar: 'https://ui-avatars.com/api/?name=Physics+Prof&background=purple500&color=fff' },
-        content: 'Quantum mechanics is mind-bending! The double-slit experiment never gets old.',
-        hashtags: ['#physics', '#quantum', '#science', '#research'],
-        subject: 'Physics'
-      },
-      {
-        author: { name: 'Bio_Researcher', title: 'Biology Researcher', avatar: 'https://ui-avatars.com/api/?name=Bio+Researcher&background=green500&color=fff' },
-        content: 'Molecular biology techniques are advancing rapidly. CRISPR is changing everything!',
-        hashtags: ['#biology', '#molecular', '#research', '#crispr'],
-        subject: 'Biology'
-      },
-      {
-        author: { name: 'Business_Expert', title: 'Business Consultant', avatar: 'https://ui-avatars.com/api/?name=Business+Expert&background=orange500&color=fff' },
-        content: 'Marketing strategies for 2024 are evolving. Digital transformation is key!',
-        hashtags: ['#business', '#marketing', '#strategy', '#digital'],
-        subject: 'Business'
-      }
-    ];
-    
-    const selectedPosts = [];
-    const numPosts = Math.abs(hash) % 2 + 1; // 1-2 posts per user
-    
-    for (let i = 0; i < numPosts; i++) {
-      const postIndex = (Math.abs(hash) + i) % postTemplates.length;
-      const template = postTemplates[postIndex];
-      selectedPosts.push({
-        id: `post_${userId}_${i}`,
-        author: template.author,
-        content: template.content,
-        hashtags: template.hashtags,
-        subject: template.subject,
-        image: `https://via.placeholder.com/600x400?text=${template.subject}`,
-        likes: Math.abs(hash + i) % 50 + 10,
-        comments: Math.abs(hash + i) % 20 + 5,
-        shares: Math.abs(hash + i) % 30 + 3,
-        saved: Math.abs(hash + i) % 15 + 2,
-        liked: false,
-        isSaved: false
-      });
-    }
-    
-    return selectedPosts;
-  };
-
   const loadStories = async () => {
     try {
-      // Get user ID from URL parameter or localStorage or generate one
-      const currentUserId = userId || localStorage.getItem('userId') || user?.id || 'user_' + Math.random().toString(36).substr(2, 9);
-      console.log('Loading stories for user ID from URL:', currentUserId);
-      
-      // Store user ID in localStorage for consistency
-      if (!localStorage.getItem('userId') || userId) {
-        localStorage.setItem('userId', currentUserId);
-      }
-      
-      // Create user-specific mock data based on user ID
-      const userStories = getUserSpecificStories(currentUserId);
-      console.log('User-specific stories:', userStories);
-      setStories(userStories);
-      
+      const response = await socialService.getStories();
+      const rawStories = Array.isArray(response?.data) ? response.data : [];
+      const borderColors = ['border-blue-500', 'border-green-500', 'border-purple-500', 'border-pink-500', 'border-orange-500'];
+      const mappedStories = rawStories.map((story, index) => ({
+        id: story?._id,
+        name: story?.author?.name || 'Unknown',
+        avatar: story?.author?.avatar || story?.author?.avatarUrl || 'https://via.placeholder.com/64',
+        color: borderColors[index % borderColors.length],
+        content: story?.content || '',
+        subject: story?.subject || '',
+        createdAt: story?.createdAt ? new Date(story.createdAt) : new Date(),
+      }));
+      setStories(mappedStories);
     } catch (error) {
       console.error('Error loading stories:', error);
       setStories([]);
     }
   };
 
-  // Function to generate user-specific stories
-  const getUserSpecificStories = (userId) => {
-    console.log('Generating stories for user:', userId);
-    
-    // Create different stories based on user ID hash
-    const hash = userId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    console.log('User hash:', hash);
-    
-    // Different story sets for different users
-    const userStorySets = {
-      'user1': [
-        { name: 'Alex_CS', avatar: 'https://ui-avatars.com/api/?name=Alex&background=blue500&color=fff', color: 'border-blue-500', content: 'React hooks are amazing!', subject: 'Programming' },
-        { name: 'Sarah_Dev', avatar: 'https://ui-avatars.com/api/?name=Sarah&background=green500&color=fff', color: 'border-green-500', content: 'Just built my first API!', subject: 'Web Development' },
-        { name: 'Mike_Code', avatar: 'https://ui-avatars.com/api/?name=Mike&background=purple500&color=fff', color: 'border-purple-500', content: 'JavaScript async/await rocks!', subject: 'JavaScript' }
-      ],
-      'user2': [
-        { name: 'Emma_Math', avatar: 'https://ui-avatars.com/api/?name=Emma&background=green500&color=fff', color: 'border-green-500', content: 'Calculus derivatives are clear now!', subject: 'Mathematics' },
-        { name: 'David_Stats', avatar: 'https://ui-avatars.com/api/?name=David&background=blue500&color=fff', color: 'border-blue-500', content: 'Statistics probability solved!', subject: 'Statistics' },
-        { name: 'Lisa_Algebra', avatar: 'https://ui-avatars.com/api/?name=Lisa&background=orange500&color=fff', color: 'border-orange-500', content: 'Linear algebra matrices!', subject: 'Linear Algebra' }
-      ],
-      'user3': [
-        { name: 'John_Physics', avatar: 'https://ui-avatars.com/api/?name=John&background=purple500&color=fff', color: 'border-purple-500', content: 'Quantum mechanics is mind-blowing!', subject: 'Physics' },
-        { name: 'Anna_Quantum', avatar: 'https://ui-avatars.com/api/?name=Anna&background=red500&color=fff', color: 'border-red-500', content: 'Double-slit experiment!', subject: 'Quantum Physics' },
-        { name: 'Tom_Mechanics', avatar: 'https://ui-avatars.com/api/?name=Tom&background=green500&color=fff', color: 'border-green-500', content: 'Classical mechanics!', subject: 'Mechanics' }
-      ],
-      'user4': [
-        { name: 'Maria_Bio', avatar: 'https://ui-avatars.com/api/?name=Maria&background=green500&color=fff', color: 'border-green-500', content: 'DNA replication process!', subject: 'Biology' },
-        { name: 'Carl_Genetics', avatar: 'https://ui-avatars.com/api/?name=Carl&background=blue500&color=fff', color: 'border-blue-500', content: 'Genetics inheritance patterns!', subject: 'Genetics' },
-        { name: 'Sofia_Molecular', avatar: 'https://ui-avatars.com/api/?name=Sofia&background=purple500&color=fff', color: 'border-purple-500', content: 'Molecular biology techniques!', subject: 'Molecular Biology' }
-      ],
-      'user5': [
-        { name: 'James_Business', avatar: 'https://ui-avatars.com/api/?name=James&background=orange500&color=fff', color: 'border-orange-500', content: 'Marketing strategies 2024!', subject: 'Business' },
-        { name: 'Rachel_Finance', avatar: 'https://ui-avatars.com/api/?name=Rachel&background=green500&color=fff', color: 'border-green-500', content: 'Financial analysis methods!', subject: 'Finance' },
-        { name: 'Kevin_Entrepreneur', avatar: 'https://ui-avatars.com/api/?name=Kevin&background=blue500&color=fff', color: 'border-blue-500', content: 'Startup success stories!', subject: 'Entrepreneurship' }
-      ]
-    };
-    
-    // Get stories for specific user or generate based on hash
-    let selectedStories = [];
-    
-    if (userStorySets[userId]) {
-      selectedStories = userStorySets[userId];
-    } else {
-      // Fallback for other user IDs
-      const allStories = Object.values(userStorySets).flat();
-      const numStories = Math.abs(hash) % 3 + 2;
-      
-      for (let i = 0; i < numStories; i++) {
-        const storyIndex = (Math.abs(hash) + i) % allStories.length;
-        selectedStories.push(allStories[storyIndex]);
-      }
-    }
-    
-    // Add user-specific IDs and timestamps
-    const finalStories = selectedStories.map((story, index) => ({
-      id: `story_${userId}_${index}`,
-      name: story.name,
-      avatar: story.avatar,
-      color: story.color,
-      content: story.content,
-      subject: story.subject,
-      createdAt: new Date(Date.now() - index * 3600000) // 1 hour apart
-    }));
-    
-    console.log('Final stories for', userId, ':', finalStories);
-    return finalStories;
-  };
-
   const loadFriendSuggestions = async () => {
     try {
       const response = await socialService.getFriendSuggestions();
-      setFriendSuggestions(response.data || []);
+      setFriendSuggestions(response || []);
     } catch (error) {
       console.error('Error loading friend suggestions:', error);
-      // Mock data for testing
-      setFriendSuggestions([
-        { name: 'Julia Smith', username: '@juliasmith', avatar: 'https://via.placeholder.com/40' },
-        { name: 'Vermillion D. Gray', username: '@vermilliongray', avatar: 'https://via.placeholder.com/40' },
-        { name: 'Mai Senpai', username: '@maisenpai', avatar: 'https://via.placeholder.com/40' },
-        { name: 'Oarack Babama', username: '@obama21', avatar: 'https://via.placeholder.com/40' }
-      ]);
+      setFriendSuggestions([]);
     }
   };
 
@@ -359,7 +225,7 @@ const SocialDashboard = () => {
 
   const handleLike = async (postId) => {
     try {
-      await socialService.likePost(postId);
+      await socialService.toggleLike(postId);
       await loadPosts();
     } catch (error) {
       console.error('Error liking post:', error);
@@ -368,7 +234,7 @@ const SocialDashboard = () => {
 
   const handleSave = async (postId) => {
     try {
-      await socialService.savePost(postId);
+      await socialService.toggleSave(postId);
       await loadPosts();
     } catch (error) {
       console.error('Error saving post:', error);
@@ -580,7 +446,7 @@ const SocialDashboard = () => {
               <div className="bg-white mb-6">
                 <div className="p-6 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Recommended for {userDashboard?.user?.specialization} Students
+                    Recommended for {userDashboard?.user?.specialization || 'Your'} Students
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {personalizedContent.slice(0, 4).map((content, index) => (

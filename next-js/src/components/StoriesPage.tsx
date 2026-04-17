@@ -67,51 +67,7 @@ const StoriesPage = () => {
       setStories(transformedStories);
     } catch (error) {
       console.error('Error loading stories:', error);
-      // Mock data for testing
-      setStories([
-        {
-          id: 1,
-          author: {
-            name: 'x_ae-23b',
-            avatar: 'https://via.placeholder.com/40',
-            username: '@x_ae-23b'
-          },
-          content: 'Just finished an amazing coding session! 🚀',
-          type: 'text',
-          image: null,
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          views: 45,
-          likes: 12
-        },
-        {
-          id: 2,
-          author: {
-            name: 'maisenpai',
-            avatar: 'https://via.placeholder.com/40',
-            username: '@maisenpai'
-          },
-          content: 'Learning React hooks today!',
-          type: 'text',
-          image: null,
-          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-          views: 32,
-          likes: 8
-        },
-        {
-          id: 3,
-          author: {
-            name: 'saylortwift',
-            avatar: 'https://via.placeholder.com/40',
-            username: '@saylortwift'
-          },
-          content: 'Beautiful sunset from my study room',
-          type: 'image',
-          image: 'https://via.placeholder.com/400x600',
-          createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-          views: 78,
-          likes: 23
-        }
-      ]);
+      setStories([]);
     } finally {
       setIsLoading(false);
     }

@@ -74,68 +74,9 @@ const FriendsPage = () => {
       
     } catch (error) {
       console.error('Error loading friends data:', error);
-      // Mock data for testing
-      setFriends([
-        {
-          id: 1,
-          name: 'John Doe',
-          email: 'john@example.com',
-          avatar: 'https://via.placeholder.com/40',
-          status: 'online',
-          lastActive: '2 minutes ago',
-          mutualFriends: 5,
-          isOnline: true
-        },
-        {
-          id: 2,
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          avatar: 'https://via.placeholder.com/40',
-          status: 'offline',
-          lastActive: '1 hour ago',
-          mutualFriends: 3,
-          isOnline: false
-        },
-        {
-          id: 3,
-          name: 'Mike Johnson',
-          email: 'mike@example.com',
-          avatar: 'https://via.placeholder.com/40',
-          status: 'online',
-          lastActive: '5 minutes ago',
-          mutualFriends: 8,
-          isOnline: true
-        }
-      ]);
-
-      setPendingRequests([
-        {
-          id: 1,
-          name: 'Alice Brown',
-          email: 'alice@example.com',
-          avatar: 'https://via.placeholder.com/40',
-          sentAt: '2 hours ago'
-        }
-      ]);
-
-      setFriendSuggestions([
-        {
-          id: 1,
-          name: 'Sarah Wilson',
-          email: 'sarah@example.com',
-          avatar: 'https://via.placeholder.com/40',
-          mutualFriends: 2,
-          reason: 'You have 2 mutual friends'
-        },
-        {
-          id: 2,
-          name: 'Tom Davis',
-          email: 'tom@example.com',
-          avatar: 'https://via.placeholder.com/40',
-          mutualFriends: 1,
-          reason: 'You have 1 mutual friend'
-        }
-      ]);
+      setFriends([]);
+      setPendingRequests([]);
+      setFriendSuggestions([]);
     } finally {
       setIsLoading(false);
     }

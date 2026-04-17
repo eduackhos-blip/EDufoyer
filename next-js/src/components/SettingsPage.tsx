@@ -55,12 +55,12 @@ const SettingsPage = () => {
 
   const [settings, setSettings] = useState({
     profile: {
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      bio: 'Passionate about mathematics and computer science.',
-      location: 'New York, NY',
-      website: 'https://johndoe.dev',
-      phone: '+1 (555) 123-4567',
+      name: '',
+      email: '',
+      bio: '',
+      location: '',
+      website: '',
+      phone: '',
       isPublic: true
     },
     privacy: {

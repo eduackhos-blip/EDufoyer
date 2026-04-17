@@ -26,30 +26,21 @@ async function getUserDoubts(userId: string, page = 1, limit = 20) {
       { $limit: parseInt(String(limit)) },
       {
         $lookup: {
-          from: (User as any).collection.name,
-          localField: "solver_id",
-          foreignField: "_id",
-          as: "solver",
-        },
-      },
-      { $unwind: { path: "$solver", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
           from: (SolverDoubts as any).collection.name,
-          let: { doubtId: "$_id", solverId: "$solver_id" },
+          let: { doubtId: "$_id" },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $and: [
-                    { $eq: ["$doubt_id", "$$doubtId"] },
-                    { $eq: ["$solver_id", "$$solverId"] },
-                  ],
+                  $eq: ["$doubt_id", "$$doubtId"],
                 },
               },
             },
+            { $sort: { updatedAt: -1 } },
+            { $limit: 1 },
             {
               $project: {
+                solver_id: 1,
                 resolved_at: 1,
                 resolution_status: 1,
                 feedback_comment: 1,
@@ -61,6 +52,20 @@ async function getUserDoubts(userId: string, page = 1, limit = 20) {
         },
       },
       { $unwind: { path: "$solverDoubt", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          effectiveSolverId: { $ifNull: ["$solver_id", "$solverDoubt.solver_id"] },
+        },
+      },
+      {
+        $lookup: {
+          from: (User as any).collection.name,
+          localField: "effectiveSolverId",
+          foreignField: "_id",
+          as: "solver",
+        },
+      },
+      { $unwind: { path: "$solver", preserveNullAndEmptyArrays: true } },
       {
         $project: {
           _id: 1,

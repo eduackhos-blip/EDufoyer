@@ -41,35 +41,8 @@ const FriendCircle = () => {
       setPendingRequests(requestsData);
     } catch (error) {
       console.error('Error loading friends data:', error);
-      // Fallback to sample data
-      const sampleFriends = [
-        {
-          _id: 1,
-          requester: { name: 'Rahul Sharma', email: 'rahul@example.com', avatar: 'https://via.placeholder.com/40' },
-          recipient: { name: 'You', email: 'you@example.com', avatar: 'https://via.placeholder.com/40' },
-          status: 'accepted',
-          requestedAt: '2024-01-15'
-        },
-        {
-          _id: 2,
-          requester: { name: 'Priya Singh', email: 'priya@example.com', avatar: 'https://via.placeholder.com/40' },
-          recipient: { name: 'You', email: 'you@example.com', avatar: 'https://via.placeholder.com/40' },
-          status: 'accepted',
-          requestedAt: '2024-01-20'
-        }
-      ];
-
-      const sampleRequests = [
-        {
-          _id: 1,
-          requester: { name: 'Sneha Patel', email: 'sneha@example.com', avatar: 'https://via.placeholder.com/40' },
-          message: 'Hi! I\'d love to study together!',
-          requestedAt: '2024-01-25'
-        }
-      ];
-
-      setFriends(sampleFriends);
-      setPendingRequests(sampleRequests);
+      setFriends([]);
+      setPendingRequests([]);
     } finally {
       setIsLoading(false);
     }

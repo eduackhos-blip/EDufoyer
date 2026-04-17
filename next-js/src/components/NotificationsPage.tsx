@@ -51,82 +51,13 @@ const NotificationsPage = () => {
   const loadNotifications = async () => {
     try {
       setIsLoading(true);
-      // This would be an API call to get notifications
-      // const response = await notificationService.getNotifications();
-      
-      // Sample data for demonstration
-      const sampleNotifications = [
-        {
-          _id: 1,
-          type: 'like',
-          title: 'Someone liked your post',
-          message: 'Rahul Sharma liked your post about "Calculus Integration Techniques"',
-          user: { name: 'Rahul Sharma', avatar: 'https://via.placeholder.com/40' },
-          post: { id: 1, title: 'Calculus Integration Techniques' },
-          isRead: false,
-          createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-          actionUrl: '/dashboard/social'
-        },
-        {
-          _id: 2,
-          type: 'comment',
-          title: 'New comment on your post',
-          message: 'Priya Singh commented: "This is really helpful! Thanks for sharing."',
-          user: { name: 'Priya Singh', avatar: 'https://via.placeholder.com/40' },
-          post: { id: 1, title: 'Calculus Integration Techniques' },
-          isRead: false,
-          createdAt: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-          actionUrl: '/dashboard/social'
-        },
-        {
-          _id: 3,
-          type: 'friend_request',
-          title: 'Friend request received',
-          message: 'Amit Kumar wants to connect with you',
-          user: { name: 'Amit Kumar', avatar: 'https://via.placeholder.com/40' },
-          isRead: false,
-          createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-          actionUrl: '/dashboard/social'
-        },
-        {
-          _id: 4,
-          type: 'group_invite',
-          title: 'Study group invitation',
-          message: 'You\'ve been invited to join "Advanced Mathematics Study Group"',
-          user: { name: 'Dr. Sarah Wilson', avatar: 'https://via.placeholder.com/40' },
-          group: { name: 'Advanced Mathematics Study Group' },
-          isRead: true,
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          actionUrl: '/dashboard/social'
-        },
-        {
-          _id: 5,
-          type: 'share',
-          title: 'Your post was shared',
-          message: 'Sneha Patel shared your post about "Physics Problem Solving"',
-          user: { name: 'Sneha Patel', avatar: 'https://via.placeholder.com/40' },
-          post: { id: 2, title: 'Physics Problem Solving' },
-          isRead: true,
-          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-          actionUrl: '/dashboard/social'
-        },
-        {
-          _id: 6,
-          type: 'save',
-          title: 'Your post was saved',
-          message: 'Alex Johnson saved your post about "Data Structures"',
-          user: { name: 'Alex Johnson', avatar: 'https://via.placeholder.com/40' },
-          post: { id: 3, title: 'Data Structures' },
-          isRead: true,
-          createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-          actionUrl: '/dashboard/social'
-        }
-      ];
-      
-      setNotifications(sampleNotifications);
-      setUnreadCount(sampleNotifications.filter(n => !n.isRead).length);
+      // Keep this page data-driven only. If backend notifications are unavailable, show empty state.
+      setNotifications([]);
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error loading notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setIsLoading(false);
     }

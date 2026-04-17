@@ -73,57 +73,7 @@ const StudyGroupsPage = () => {
       setMyGroups([]);
     } catch (error) {
       console.error('Error loading study groups:', error);
-      // Fallback to sample data
-      const sampleGroups = [
-        {
-          _id: 1,
-          name: 'Advanced Calculus Study Group',
-          description: 'Deep dive into calculus concepts and problem solving',
-          subject: 'Mathematics',
-          creator: { name: 'Dr. Sarah Wilson', avatar: 'https://via.placeholder.com/40' },
-          members: [
-            { user: { name: 'John Doe', avatar: 'https://via.placeholder.com/40' }, role: 'admin' },
-            { user: { name: 'Jane Smith', avatar: 'https://via.placeholder.com/40' }, role: 'member' },
-            { user: { name: 'Mike Johnson', avatar: 'https://via.placeholder.com/40' }, role: 'member' }
-          ],
-          maxMembers: 20,
-          isPrivate: false,
-          studySchedule: {
-            frequency: 'weekly',
-            days: ['monday', 'wednesday', 'friday'],
-            time: '19:00',
-            timezone: 'UTC'
-          },
-          tags: ['calculus', 'mathematics', 'advanced'],
-          lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          isActive: true
-        },
-        {
-          _id: 2,
-          name: 'Physics Problem Solvers',
-          description: 'Collaborative physics problem solving and concept discussions',
-          subject: 'Physics',
-          creator: { name: 'Prof. Alex Chen', avatar: 'https://via.placeholder.com/40' },
-          members: [
-            { user: { name: 'Alice Brown', avatar: 'https://via.placeholder.com/40' }, role: 'admin' },
-            { user: { name: 'Bob Wilson', avatar: 'https://via.placeholder.com/40' }, role: 'moderator' },
-            { user: { name: 'Carol Davis', avatar: 'https://via.placeholder.com/40' }, role: 'member' }
-          ],
-          maxMembers: 15,
-          isPrivate: true,
-          inviteCode: 'PHYS2024',
-          studySchedule: {
-            frequency: 'bi-weekly',
-            days: ['tuesday', 'thursday'],
-            time: '18:30',
-            timezone: 'UTC'
-          },
-          tags: ['physics', 'problems', 'collaboration'],
-          lastActivity: new Date(Date.now() - 1 * 60 * 60 * 1000),
-          isActive: true
-        }
-      ];
-      setStudyGroups(sampleGroups);
+      setStudyGroups([]);
     } finally {
       setIsLoading(false);
     }

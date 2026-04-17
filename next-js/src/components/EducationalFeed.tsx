@@ -54,36 +54,7 @@ const EducationalFeed = () => {
       setHasMore(response.pagination.hasNextPage);
     } catch (error) {
       console.error('Error loading posts:', error);
-      // Fallback to sample data if API fails
-      const samplePosts = [
-        {
-          _id: 1,
-          author: { name: 'Rahul Sharma', avatar: 'https://via.placeholder.com/40' },
-          content: 'Just solved this complex algorithm problem! The key was understanding the time complexity. Anyone else working on data structures?',
-          images: ['https://via.placeholder.com/400x200'],
-          subject: 'Computer Science',
-          likes: [{ user: 'user1' }],
-          comments: [],
-          shares: [],
-          saves: [],
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          hashtags: ['#algorithms', '#datastructures']
-        },
-        {
-          _id: 2,
-          author: { name: 'Priya Singh', avatar: 'https://via.placeholder.com/40' },
-          content: 'Calculus integration techniques that helped me ace my exam! Sharing my study notes 📚',
-          images: ['https://via.placeholder.com/400x200'],
-          subject: 'Mathematics',
-          likes: [{ user: 'user2' }, { user: 'user3' }],
-          comments: [],
-          shares: [],
-          saves: [],
-          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-          hashtags: ['#calculus', '#mathematics']
-        }
-      ];
-      setPosts(samplePosts);
+      setPosts([]);
     } finally {
       setIsLoading(false);
     }
