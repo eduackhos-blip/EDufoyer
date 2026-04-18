@@ -2,13 +2,13 @@ import fs from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
-import Solver from "@/src/server/ported-backend/models/Solver.js";
-import SolverRequest from "@/src/server/ported-backend/models/SolverRequest.js";
-import Notification from "@/src/server/ported-backend/models/Notification.js";
-import User from "@/src/server/ported-backend/models/User.js";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
+import Solver from "@/src/models/Solver";
+import SolverRequest from "@/src/models/SolverRequest";
+import Notification from "@/src/models/Notification";
+import User from "@/src/models/User";
 
 export const runtime = "nodejs";
 

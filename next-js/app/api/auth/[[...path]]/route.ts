@@ -1,14 +1,14 @@
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { serverEnv } from "@/src/server/env";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
-import User from "@/src/server/ported-backend/models/User.js";
-import Solver from "@/src/server/ported-backend/models/Solver.js";
-import { validateEmail, normalizeEmail } from "@/src/server/ported-backend/utils/emailValidator.js";
-import { checkEmailWhitelist } from "@/src/server/ported-backend/utils/emailWhitelist.js";
-import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/server/ported-backend/utils/emailVerification.js";
+import { connectDb } from "@/src/lib/db";
+import { serverEnv } from "@/src/utils/server/env";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
+import User from "@/src/models/User";
+import Solver from "@/src/models/Solver";
+import { validateEmail, normalizeEmail } from "@/src/utils/server/emailValidator";
+import { checkEmailWhitelist } from "@/src/utils/server/emailWhitelist";
+import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/utils/server/emailVerification";
 
 export const runtime = "nodejs";
 
@@ -50,14 +50,80 @@ async function handleRegister(req: NextRequest) {
   await user.save();
   const emailResult = (await sendVerificationEmail(normalizedEmail, verificationCode)) as { success: boolean };
   if (!emailResult.success) {
-    await User.findByIdAndDelete(user._id);
-    return bad("Failed to send verification email. Please check if your email address is correct and try again.", 500);
+    if (process.env.NODE_ENV === "production") {
+      await User.findByIdAndDelete(user._id);
+      return bad("Failed to send verification email. Please check if your email address is correct and try again.", 500);
+    }
+
+    // Dev-safe fallback: allow registration when SMTP is unavailable.
+    user.emailVerified = true;
+    user.emailVerificationCode = null;
+    user.emailVerificationExpiry = null;
+    await user.save();
+    return ok(
+      {
+        user: { id: user._id, name: user.name, email: user.email, emailVerified: user.emailVerified },
+        token: signToken(String(user._id)),
+        verificationRequired: false,
+      },
+      "Registration successful (dev fallback: verification email unavailable).",
+      201
+    );
   }
   return ok(
     { user: { id: user._id, name: user.name, email: user.email, emailVerified: user.emailVerified }, verificationRequired: true },
     "Registration successful. Please check your email for verification code.",
     201
   );
+}
+
+async function handleVerifyEmail(req: NextRequest) {
+  const { email, verificationCode } = await req.json();
+  if (!email || !verificationCode) return bad("Email and verification code are required");
+  const normalizedEmail = normalizeEmail(email);
+  const user = await User.findOne({ $or: [{ email }, { email: normalizedEmail }] });
+  if (!user) return bad("User not found", 404);
+  if (user.emailVerified) {
+    return ok({ user: user.toJSON(), token: signToken(String(user._id)) }, "Email already verified");
+  }
+  if (!user.emailVerificationCode || !user.emailVerificationExpiry) {
+    return bad("No verification request found. Please request a new code.");
+  }
+  if (new Date() > user.emailVerificationExpiry) {
+    return bad("Verification code has expired. Please request a new code.");
+  }
+  if (String(user.emailVerificationCode) !== String(verificationCode)) {
+    return bad("Invalid verification code");
+  }
+  user.emailVerified = true;
+  user.emailVerificationCode = null;
+  user.emailVerificationExpiry = null;
+  await user.save();
+  return ok({ user: user.toJSON(), token: signToken(String(user._id)) }, "Email verified successfully");
+}
+
+async function handleResendVerification(req: NextRequest) {
+  const { email } = await req.json();
+  if (!email) return bad("Email is required");
+  const normalizedEmail = normalizeEmail(email);
+  const user = await User.findOne({ $or: [{ email }, { email: normalizedEmail }] });
+  if (!user) return bad("User not found", 404);
+  if (user.emailVerified) return bad("Email is already verified", 400);
+  const verificationCode = generateVerificationCode();
+  user.emailVerificationCode = verificationCode;
+  user.emailVerificationExpiry = new Date(Date.now() + 10 * 60 * 1000);
+  await user.save();
+  const emailResult = (await sendVerificationEmail(user.email, verificationCode)) as { success: boolean };
+  if (!emailResult.success) {
+    if (process.env.NODE_ENV === "production") {
+      return bad("Failed to resend verification email. Please try again later.", 500);
+    }
+    return ok(
+      { verificationRequired: false, user: user.toJSON(), token: signToken(String(user._id)) },
+      "Verification email unavailable in dev; account has been verified."
+    );
+  }
+  return ok({ verificationRequired: true }, "Verification email sent successfully");
 }
 
 async function handleLogin(req: NextRequest) {
@@ -84,7 +150,23 @@ async function handleGetProfile(req: NextRequest) {
 
 async function handleUpdateProfile(req: NextRequest) {
   const current = await getAuthenticatedUser(req);
-  const { name, email, username, avatarUrl, coverImageUrl, bio } = await req.json();
+  let body: {
+    name?: string;
+    email?: string;
+    username?: string | null;
+    avatarUrl?: string;
+    coverImageUrl?: string;
+    bio?: string;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return bad(
+      "Could not read profile data. The request may be too large (try smaller images) or the body was truncated.",
+      413
+    );
+  }
+  const { name, email, username, avatarUrl, coverImageUrl, bio } = body;
   const updateData: Record<string, unknown> = {};
   const unsetData: Record<string, string> = {};
   if (name) updateData.name = name;
@@ -196,11 +278,24 @@ async function handleAdminOnboardSolver(req: NextRequest) {
 
 const run = async (req: NextRequest, ctx: Ctx) => {
   try {
-    await connectDb();
     const path = await getPath(ctx);
+    if (!serverEnv.mongoUri) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "MONGODB_URI is required for in-app auth APIs. Configure it in your Next environment.",
+          path: path.join("/") || "root",
+        },
+        { status: 503 }
+      );
+    }
+
+    await connectDb();
     const key = path.join("/");
     if (req.method === "POST" && key === "register") return handleRegister(req);
     if (req.method === "POST" && key === "login") return handleLogin(req);
+    if (req.method === "POST" && key === "verify-email") return handleVerifyEmail(req);
+    if (req.method === "POST" && key === "resend-verification") return handleResendVerification(req);
     if (req.method === "GET" && key === "profile") return handleGetProfile(req);
     if (req.method === "PUT" && key === "profile") return handleUpdateProfile(req);
     if (req.method === "POST" && key === "change-password") return handleChangePassword(req);

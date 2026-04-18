@@ -1,12 +1,12 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import DoubtPackPurchase from "@/src/server/ported-backend/models/DoubtPackPurchase.js";
-import DoubtPack from "@/src/server/ported-backend/models/DoubtPack.js";
-import User from "@/src/server/ported-backend/models/User.js";
-import Notification from "@/src/server/ported-backend/models/Notification.js";
-import UniversityDoubtBalance from "@/src/server/ported-backend/models/UniversityDoubtBalance.js";
+import { connectDb } from "@/src/lib/db";
+import DoubtPackPurchase from "@/src/models/DoubtPackPurchase";
+import DoubtPack from "@/src/models/DoubtPack";
+import User from "@/src/models/User";
+import Notification from "@/src/models/Notification";
+import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance";
 
 export const runtime = "nodejs";
 
@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Doubt pack not found" }, { status: 404 });
     }
 
-    let userId = null;
+    let userId: mongoose.Types.ObjectId | null = null;
     if (university_id && mongoose.Types.ObjectId.isValid(university_id)) {
       const userExists = await User.findById(university_id);
-      if (userExists) userId = university_id;
+      if (userExists) userId = new mongoose.Types.ObjectId(university_id);
     }
     if (!userId && university_email) {
       const existingUser = await User.findOne({ email: university_email });

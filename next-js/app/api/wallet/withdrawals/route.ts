@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
-import WithdrawalRequest from "@/src/server/ported-backend/models/WithdrawalRequest.js";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
+import WithdrawalRequest from "@/src/models/WithdrawalRequest";
 
 export const runtime = "nodejs";
 

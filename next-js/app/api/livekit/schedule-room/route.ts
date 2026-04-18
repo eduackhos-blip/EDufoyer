@@ -1,7 +1,7 @@
 import { RoomServiceClient } from "livekit-server-sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
 
 export const runtime = "nodejs";
 

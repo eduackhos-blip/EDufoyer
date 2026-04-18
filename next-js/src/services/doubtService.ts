@@ -1,7 +1,6 @@
 // @ts-nocheck
 // Use relative URLs for same-origin requests
-import { buildApiUrl } from "@/src/config/env";
-const API_BASE_URL = buildApiUrl("/doubts");
+const API_BASE_URL = "/api/doubts";
 
 class DoubtService {
   constructor() {
@@ -166,9 +165,9 @@ class DoubtService {
   // Answer a doubt
   async answerDoubt(doubtId, answer) {
     try {
-      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/${doubtId}/answer`, {
-        method: 'POST',
-        body: JSON.stringify({ answer }),
+      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/${doubtId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'answer', answer }),
       });
 
       const data = await response.json();
@@ -177,7 +176,7 @@ class DoubtService {
         throw new Error(data.message || 'Failed to submit answer');
       }
 
-      return data.data.doubt;
+      return data.data?.doubt || data.data;
     } catch (error) {
       console.error('Answer doubt error:', error);
       throw error;
@@ -187,8 +186,9 @@ class DoubtService {
   // Accept an answer
   async acceptAnswer(doubtId, answerId) {
     try {
-      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/${doubtId}/accept-answer/${answerId}`, {
-        method: 'POST',
+      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/${doubtId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'accept-answer', answerId }),
       });
 
       const data = await response.json();
@@ -197,7 +197,7 @@ class DoubtService {
         throw new Error(data.message || 'Failed to accept answer');
       }
 
-      return data.data.doubt;
+      return data.data?.doubt || data.data;
     } catch (error) {
       console.error('Accept answer error:', error);
       throw error;
@@ -207,7 +207,7 @@ class DoubtService {
   // Update doubt status
   async updateDoubtStatus(doubtId, status) {
     try {
-      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/${doubtId}/status`, {
+      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/${doubtId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
@@ -218,7 +218,7 @@ class DoubtService {
         throw new Error(data.message || 'Failed to update doubt status');
       }
 
-      return data.data.doubt;
+      return data.data?.doubt || data.data;
     } catch (error) {
       console.error('Update doubt status error:', error);
       throw error;

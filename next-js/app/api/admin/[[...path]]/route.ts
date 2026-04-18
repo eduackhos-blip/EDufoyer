@@ -1,17 +1,17 @@
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { generateVerificationCode, sendVerificationEmail } from "@/src/server/ported-backend/utils/emailVerification.js";
-import Solver from "@/src/server/ported-backend/models/Solver.js";
-import User from "@/src/server/ported-backend/models/User.js";
-import DoubtPack from "@/src/server/ported-backend/models/DoubtPack.js";
-import SolverRequest from "@/src/server/ported-backend/models/SolverRequest.js";
-import Notification from "@/src/server/ported-backend/models/Notification.js";
-import DoubtPackPurchase from "@/src/server/ported-backend/models/DoubtPackPurchase.js";
-import RatingFeedback from "@/src/server/ported-backend/models/RatingFeedback.js";
-import WithdrawalRequest from "@/src/server/ported-backend/models/WithdrawalRequest.js";
-import Wallet from "@/src/server/ported-backend/models/Wallet.js";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { generateVerificationCode, sendVerificationEmail } from "@/src/utils/server/emailVerification";
+import Solver from "@/src/models/Solver";
+import User from "@/src/models/User";
+import DoubtPack from "@/src/models/DoubtPack";
+import SolverRequest from "@/src/models/SolverRequest";
+import Notification from "@/src/models/Notification";
+import DoubtPackPurchase from "@/src/models/DoubtPackPurchase";
+import RatingFeedback from "@/src/models/RatingFeedback";
+import WithdrawalRequest from "@/src/models/WithdrawalRequest";
+import Wallet from "@/src/models/Wallet";
 
 export const runtime = "nodejs";
 
@@ -316,10 +316,10 @@ const run = async (req: NextRequest, ctx: Ctx) => {
       }
       const doubtPack = await DoubtPack.findById(doubt_pack_id);
       if (!doubtPack) return json({ success: false, message: "Doubt pack not found", doubt_pack_id }, 404);
-      let userId = null;
+      let userId: mongoose.Types.ObjectId | null = null;
       if (university_id && mongoose.Types.ObjectId.isValid(university_id)) {
         const userExists = await User.findById(university_id);
-        if (userExists) userId = university_id;
+        if (userExists) userId = new mongoose.Types.ObjectId(university_id);
       }
       if (!userId) {
         const existingUser = await User.findOne({ email: university_email });

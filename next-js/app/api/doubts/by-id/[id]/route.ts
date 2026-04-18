@@ -1,11 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
-import { getDoubtById } from "@/src/server/ported-backend/controllers/doubt/getDoubtById.js";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
+import Doubt from "@/src/models/Doubt";
+import SolverDoubts from "@/src/models/SolverDoubts";
+import Solver from "@/src/models/Solver";
 
 export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };
+
+async function getDoubtById(doubtId: string) {
+  try {
+    const doubtData = await Doubt.findById(doubtId);
+    if (!doubtData) {
+      return { success: false, doubt: null, error: "Doubt not found." };
+    }
+
+    let solverData: unknown = null;
+    let solverDoubtData: unknown = null;
+
+    if (
+      (doubtData as any).status === "assigned" ||
+      (doubtData as any).status === "resolved" ||
+      (doubtData as any).status === "closed"
+    ) {
+      const solverDoubtResult = await SolverDoubts.findOne({ doubt_id: doubtId });
+      if (solverDoubtResult) {
+        solverDoubtData = solverDoubtResult;
+        if ((solverDoubtResult as any).solver_id) {
+          const solverResult = await Solver.findOne({ user_id: (solverDoubtResult as any).solver_id });
+          if (solverResult) solverData = solverResult;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      doubt: {
+        ...(doubtData as any).toObject(),
+        solver: solverData,
+        solverDoubt: solverDoubtData,
+      },
+      error: null,
+    };
+  } catch {
+    return { success: false, doubt: null, error: "An unexpected error occurred." };
+  }
+}
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {

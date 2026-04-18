@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDb } from "@/src/server/db";
-import { getAuthenticatedUser } from "@/src/server/currentUser";
-import { authErrorResponse } from "@/src/server/errorResponse";
-import Post from "@/src/server/ported-backend/models/Post.js";
-import Friend from "@/src/server/ported-backend/models/Friend.js";
-import StudyGroup from "@/src/server/ported-backend/models/StudyGroup.js";
-import Story from "@/src/server/ported-backend/models/Story.js";
-import User from "@/src/server/ported-backend/models/User.js";
+import { connectDb } from "@/src/lib/db";
+import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { authErrorResponse } from "@/src/utils/server/errorResponse";
+import Post from "@/src/models/Post";
+import Friend from "@/src/models/Friend";
+import StudyGroup from "@/src/models/StudyGroup";
+import Story from "@/src/models/Story";
+import User from "@/src/models/User";
 
 export const runtime = "nodejs";
 
@@ -69,6 +69,53 @@ const run = async (req: NextRequest, ctx: Ctx) => {
           const userData = u as unknown as { _id: unknown; name?: string; email?: string; avatar?: string };
           return { id: userData._id, name: userData.name, email: userData.email, avatar: userData.avatar };
         }),
+      });
+    }
+
+    if (method === "GET" && key === "search/posts") {
+      const queryText = req.nextUrl.searchParams.get("q");
+      if (!queryText || queryText.trim().length < 2) {
+        return json({ success: false, message: "Search query must be at least 2 characters long" }, 400);
+      }
+      const page = Number(req.nextUrl.searchParams.get("page") || "1");
+      const limit = Number(req.nextUrl.searchParams.get("limit") || "10");
+      const skip = (page - 1) * limit;
+      const normalizedQuery = queryText.trim();
+
+      const posts = await Post.find({
+        isActive: true,
+        $or: [
+          { content: { $regex: normalizedQuery, $options: "i" } },
+          { hashtags: { $in: [normalizedQuery.toLowerCase()] } },
+          { subject: { $regex: normalizedQuery, $options: "i" } },
+        ],
+      })
+        .populate("author", "name email avatar")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+      const total = await Post.countDocuments({
+        isActive: true,
+        $or: [
+          { content: { $regex: normalizedQuery, $options: "i" } },
+          { hashtags: { $in: [normalizedQuery.toLowerCase()] } },
+          { subject: { $regex: normalizedQuery, $options: "i" } },
+        ],
+      });
+
+      return json({
+        success: true,
+        data: {
+          posts,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalPosts: total,
+            hasNextPage: page < Math.ceil(total / limit),
+            hasPrevPage: page > 1,
+          },
+        },
       });
     }
 
