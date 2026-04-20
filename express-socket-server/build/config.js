@@ -5,6 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
+const node_path_1 = __importDefault(require("node:path"));
+const nodeEnv = (process.env.NODE_ENV ?? "development").toLowerCase();
+const envFile = nodeEnv === "production" ? ".env.production" : ".env.development";
+// Prefer explicit env files (.env.development/.env.production), fallback to plain .env.
+dotenv_1.default.config({ path: node_path_1.default.resolve(process.cwd(), envFile) });
 dotenv_1.default.config();
 const parseAllowedOrigins = (raw) => {
     if (!raw || raw.trim().length === 0) {

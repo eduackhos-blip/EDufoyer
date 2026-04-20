@@ -205,6 +205,14 @@ async function createDoubt(formData: unknown, userId: string) {
                 },
               },
               {
+                event: "university:balance-updated",
+                payload: {
+                  university_email: "admin@kiit.ac.in",
+                  doubtBuckets: (balanceUpdate as any).doubtBuckets,
+                  totalAvailable: (balanceUpdate as any).totalAvailable,
+                },
+              },
+              {
                 event: "doubt:created",
                 payload: { university_email: "admin@kiit.ac.in", category },
               },

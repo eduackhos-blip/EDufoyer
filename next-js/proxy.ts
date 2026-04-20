@@ -19,14 +19,14 @@ const corsAllowedOrigins = new Set(
 
 const csp = [
   "default-src 'self'",
-  "connect-src 'self' https://remote-opgy8hh4.livekit.cloud wss://remote-opgy8hh4.livekit.cloud https://edufoyer.com http://edufoyer.com",
+  "connect-src 'self' https://edufoyer.com http://edufoyer.com",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  "media-src 'self' https://remote-opgy8hh4.livekit.cloud",
+  "media-src 'self'",
   "object-src 'none'",
-  "frame-src 'self' https://remote-opgy8hh4.livekit.cloud",
+  "frame-src 'self'",
 ].join("; ");
 
 const applyCorsHeaders = (response: NextResponse, origin: string | null) => {

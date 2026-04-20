@@ -3,6 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerEdufoyerSocketHandlers = void 0;
 const Solver_1 = require("../../models/Solver");
 const registerEdufoyerSocketHandlers = (socket) => {
+    socket.on("join:admin", ({ university_email } = {}) => {
+        const normalizedEmail = String(university_email || "").trim().toLowerCase();
+        if (!normalizedEmail) {
+            socket.emit("registrationError", { message: "university_email is required" });
+            return;
+        }
+        socket.join(`admin:${normalizedEmail}`);
+        socket.emit("registrationSuccess", {
+            message: "Successfully joined admin room",
+            room: `admin:${normalizedEmail}`,
+        });
+    });
     socket.on("registerSolver", async ({ userId, subjects = [] } = {}) => {
         try {
             const authenticatedUserId = socket.user.userId;

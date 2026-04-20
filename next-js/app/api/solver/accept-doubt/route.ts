@@ -6,9 +6,9 @@ import { z } from "zod";
 import Doubt from "@/src/models/Doubt";
 import Solver from "@/src/models/Solver";
 import SolverDoubts from "@/src/models/SolverDoubts";
+import Room from "@/src/models/Room";
 import User from "@/src/models/User";
 import Notification from "@/src/models/Notification";
-import { RoomServiceClient } from "livekit-server-sdk";
 import { sendEmail } from "@/src/utils/server/email";
 import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
 
@@ -51,14 +51,23 @@ async function getUserEmail(userId: string) {
   }
 }
 
-async function allotDoubt({ doubtId, solverId }: { doubtId: string; solverId: string }) {
-  const apiKey = process.env.LIVEKIT_API_KEY;
-  const apiSecret = process.env.LIVEKIT_API_SECRET;
-
-  if (!apiKey || !apiSecret) {
-    return { success: false, error: "Server configuration error for real-time session." };
+function resolveFrontendBase(requestOrigin: string) {
+  const envBase = (process.env.FRONTEND_URL || "").trim();
+  if (process.env.NODE_ENV === "production" && envBase) {
+    return envBase.replace(/\/+$/, "");
   }
+  return requestOrigin.replace(/\/+$/, "");
+}
 
+async function allotDoubt({
+  doubtId,
+  solverId,
+  frontendBase,
+}: {
+  doubtId: string;
+  solverId: string;
+  frontendBase: string;
+}) {
   try {
     const [doubtToAssign, solverToAssign] = await Promise.all([
       Doubt.findById(doubtId)
@@ -86,26 +95,23 @@ async function allotDoubt({ doubtId, solverId }: { doubtId: string; solverId: st
       throw new Error(`Solver does not have the required speciality: ${(doubtToAssign as any).subject}`);
     }
 
-    const roomService = new RoomServiceClient(
-      process.env.LIVEKIT_URL || "https://remote-opgy8hh4.livekit.cloud",
-      apiKey,
-      apiSecret
+    const roomId = `doubt-${String(doubtId)}-solver-${String((solverToAssign as any).user_id)}`;
+    await Room.findOneAndUpdate(
+      {
+        doubt_id: doubtId,
+        solver_id: (solverToAssign as any).user_id,
+      },
+      {
+        $set: {
+          roomId,
+          doubter_id: (doubtToAssign as any).doubter_id,
+          subject: String((doubtToAssign as any).subject || ""),
+          status: "active",
+          closedAt: null,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    const roomName = `doubt-session-${doubtId}`;
-    const roomOptions = { name: roomName, emptyTimeout: 60, maxParticipants: 2 };
-
-    try {
-      const roomPromise = roomService.createRoom(roomOptions as any);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("LiveKit room creation timeout")), 10000)
-      );
-      await Promise.race([roomPromise, timeoutPromise]);
-    } catch (lkError: any) {
-      const msg = lkError instanceof Error ? lkError.message : "";
-      if (!msg.includes("room already exists") && !msg.includes("timeout")) {
-        throw new Error("Failed to set up the solving session room.");
-      }
-    }
 
     const [updatedDoubt, solverDoubtLink] = await Promise.all([
       Doubt.findByIdAndUpdate(
@@ -113,112 +119,114 @@ async function allotDoubt({ doubtId, solverId }: { doubtId: string; solverId: st
         { status: "assigned", solver_id: (solverToAssign as any).user_id, updatedAt: new Date() },
         { new: true, select: "status solver_id" }
       ),
-      SolverDoubts.create({
-        doubt_id: doubtId,
-        solver_id: (solverToAssign as any).user_id,
-        resolution_status: "session_scheduled",
-        assigned_at: new Date(),
-        livekit_room_name: roomName,
-      } as any),
+      SolverDoubts.findOneAndUpdate(
+        { doubt_id: doubtId, solver_id: (solverToAssign as any).user_id },
+        {
+          $set: {
+            resolution_status: "session_scheduled",
+            assigned_at: new Date(),
+            room_id: roomId,
+            updatedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ),
     ]);
 
-    setImmediate(async () => {
-      try {
-        const studentId = String((doubtToAssign as any).doubter_id);
-        const [studentEmail, solverEmail] = await Promise.all([getUserEmail(studentId), getUserEmail(solverId)]);
+    const studentId = String((doubtToAssign as any).doubter_id);
+    const [studentEmail, solverEmail] = await Promise.all([
+      getUserEmail(studentId),
+      getUserEmail(solverId),
+    ]);
 
-        const frontendBase = (process.env.FRONTEND_URL || "").trim();
-        const base = frontendBase || "";
-        const sessionUrl = `${base}/dashboard/session/${doubtId}`;
-        const emailSessionUrl = `${sessionUrl}?email=true`;
+    const sessionUrl = `${frontendBase}/dashboard/session/${roomId}`;
+    const emailSessionUrl = `${sessionUrl}?email=true`;
 
-        let scheduledInfo = "";
-        let scheduledTextInfo = "";
-        if ((doubtToAssign as any).is_scheduled && (doubtToAssign as any).scheduled_date) {
-          const sd = new Date((doubtToAssign as any).scheduled_date);
-          const formattedDate = sd.toLocaleDateString("en-IN", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          const formattedTime =
-            (doubtToAssign as any).scheduled_time ||
-            sd.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-          scheduledInfo = `<p><strong>Scheduled Date & Time:</strong> ${formattedDate} at ${formattedTime}</p>`;
-          scheduledTextInfo = `Scheduled Date & Time: ${formattedDate} at ${formattedTime}\n\n`;
-        }
+    let scheduledInfo = "";
+    let scheduledTextInfo = "";
+    if ((doubtToAssign as any).is_scheduled && (doubtToAssign as any).scheduled_date) {
+      const sd = new Date((doubtToAssign as any).scheduled_date);
+      const formattedDate = sd.toLocaleDateString("en-IN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const formattedTime =
+        (doubtToAssign as any).scheduled_time ||
+        sd.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      scheduledInfo = `<p><strong>Scheduled Date & Time:</strong> ${formattedDate} at ${formattedTime}</p>`;
+      scheduledTextInfo = `Scheduled Date & Time: ${formattedDate} at ${formattedTime}\n\n`;
+    }
 
-        let solverNotificationContent = `You accepted doubt "${(doubtToAssign as any).subject}". Join the session: ${sessionUrl}`;
-        if ((doubtToAssign as any).is_scheduled && (doubtToAssign as any).scheduled_date) {
-          const sd = new Date((doubtToAssign as any).scheduled_date);
-          const formattedDate = sd.toLocaleDateString("en-IN", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          const formattedTime =
-            (doubtToAssign as any).scheduled_time ||
-            sd.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-          solverNotificationContent = `You accepted doubt "${(doubtToAssign as any).subject}" scheduled for ${formattedDate} at ${formattedTime}. You'll receive the meeting link at the scheduled time.`;
-        }
+    let solverNotificationContent = `You accepted doubt "${(doubtToAssign as any).subject}". Join the session: ${sessionUrl}`;
+    if ((doubtToAssign as any).is_scheduled && (doubtToAssign as any).scheduled_date) {
+      const sd = new Date((doubtToAssign as any).scheduled_date);
+      const formattedDate = sd.toLocaleDateString("en-IN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const formattedTime =
+        (doubtToAssign as any).scheduled_time ||
+        sd.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      solverNotificationContent = `You accepted doubt "${(doubtToAssign as any).subject}" scheduled for ${formattedDate} at ${formattedTime}. You'll receive the meeting link at the scheduled time.`;
+    }
 
-        await createNotification({
-          userId: solverId,
-          doubtId,
-          messageType: "ASSIGNED_TO_SOLVER",
-          content: solverNotificationContent,
-        });
+    let studentNotificationContent = `Solver assigned for "${(doubtToAssign as any).subject}". Join the session: ${sessionUrl}`;
+    if ((doubtToAssign as any).is_scheduled && (doubtToAssign as any).scheduled_date) {
+      const sd = new Date((doubtToAssign as any).scheduled_date);
+      const formattedDate = sd.toLocaleDateString("en-IN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const formattedTime =
+        (doubtToAssign as any).scheduled_time ||
+        sd.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      studentNotificationContent = `Solver assigned for "${(doubtToAssign as any).subject}" scheduled for ${formattedDate} at ${formattedTime}. You'll receive the meeting link at the scheduled time.`;
+    }
 
-        if (solverEmail) {
-          await sendEmail({
-            to: solverEmail,
-            subject: `Solving Session Ready: ${(doubtToAssign as any).subject}`,
-            text: `You have accepted the doubt "${(doubtToAssign as any).subject}".\n\n${scheduledTextInfo}Please join the solving session here: ${emailSessionUrl}\n\nThe student has also been notified.`,
-            html: `<p>You have accepted the doubt "<strong>${(doubtToAssign as any).subject}</strong>".</p>${scheduledInfo}<p>Please join the solving session with the student by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The student has also been notified and will join the same link.</p>`,
-          });
-        }
+    // Do not defer critical notification writes; ensure they are persisted before response.
+    await Promise.allSettled([
+      createNotification({
+        userId: solverId,
+        doubtId,
+        messageType: "ASSIGNED_TO_SOLVER",
+        content: solverNotificationContent,
+      }),
+      createNotification({
+        userId: studentId,
+        doubtId,
+        messageType: "DOUBT_ASSIGNED",
+        content: studentNotificationContent,
+      }),
+    ]);
 
-        let studentNotificationContent = `Solver assigned for "${(doubtToAssign as any).subject}". Join the session: ${sessionUrl}`;
-        if ((doubtToAssign as any).is_scheduled && (doubtToAssign as any).scheduled_date) {
-          const sd = new Date((doubtToAssign as any).scheduled_date);
-          const formattedDate = sd.toLocaleDateString("en-IN", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          const formattedTime =
-            (doubtToAssign as any).scheduled_time ||
-            sd.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-          studentNotificationContent = `Solver assigned for "${(doubtToAssign as any).subject}" scheduled for ${formattedDate} at ${formattedTime}. You'll receive the meeting link at the scheduled time.`;
-        }
+    if (solverEmail) {
+      void sendEmail({
+        to: solverEmail,
+        subject: `Solving Session Ready: ${(doubtToAssign as any).subject}`,
+        text: `You have accepted the doubt "${(doubtToAssign as any).subject}".\n\n${scheduledTextInfo}Please join the solving session here: ${emailSessionUrl}\n\nThe student has also been notified.`,
+        html: `<p>You have accepted the doubt "<strong>${(doubtToAssign as any).subject}</strong>".</p>${scheduledInfo}<p>Please join the solving session with the student by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The student has also been notified and will join the same link.</p>`,
+      }).catch(() => undefined);
+    }
 
-        await createNotification({
-          userId: studentId,
-          doubtId,
-          messageType: "DOUBT_ASSIGNED",
-          content: studentNotificationContent,
-        });
+    if (studentEmail) {
+      void sendEmail({
+        to: studentEmail,
+        subject: `Solver Ready for Your Doubt: ${(doubtToAssign as any).subject}`,
+        text: `A solver has accepted your doubt "${(doubtToAssign as any).subject}" and is ready to help.\n\n${scheduledTextInfo}Please join the solving session here: ${emailSessionUrl}\n\nThe solver has also been notified.`,
+        html: `<p>A solver has accepted your doubt "<strong>${(doubtToAssign as any).subject}</strong>" and is ready to help.</p>${scheduledInfo}<p>Please join the solving session with the solver by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The solver has also been notified and will join the same link.</p>`,
+      }).catch(() => undefined);
+    }
 
-        if (studentEmail) {
-          await sendEmail({
-            to: studentEmail,
-            subject: `Solver Ready for Your Doubt: ${(doubtToAssign as any).subject}`,
-            text: `A solver has accepted your doubt "${(doubtToAssign as any).subject}" and is ready to help.\n\n${scheduledTextInfo}Please join the solving session here: ${emailSessionUrl}\n\nThe solver has also been notified.`,
-            html: `<p>A solver has accepted your doubt "<strong>${(doubtToAssign as any).subject}</strong>" and is ready to help.</p>${scheduledInfo}<p>Please join the solving session with the solver by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The solver has also been notified and will join the same link.</p>`,
-          });
-        }
-
-        void publishSocketEvent({
-          event: "doubt:assigned",
-          room: `subject:${String((doubtToAssign as any).subject || "").toLowerCase()}`,
-          payload: { doubtId: String(doubtId), assignedTo: String(solverId) },
-        });
-      } catch {
-        // ignore
-      }
+    void publishSocketEvent({
+      event: "doubt:assigned",
+      room: `subject:${String((doubtToAssign as any).subject || "").toLowerCase()}`,
+      payload: { doubtId: String(doubtId), assignedTo: String(solverId), roomId },
     });
 
     return { success: true, doubt: updatedDoubt, solverDoubt: solverDoubtLink };
@@ -228,7 +236,7 @@ async function allotDoubt({ doubtId, solverId }: { doubtId: string; solverId: st
   }
 }
 
-async function acceptDoubtAssignment(formData: unknown, userId: string) {
+async function acceptDoubtAssignment(formData: unknown, userId: string, frontendBase: string) {
   const validatedFields = AcceptDoubtSchema.safeParse(formData);
   if (!validatedFields.success) {
     return { success: false, error: "Invalid input data.", fieldErrors: validatedFields.error.flatten().fieldErrors };
@@ -239,7 +247,7 @@ async function acceptDoubtAssignment(formData: unknown, userId: string) {
 
   const { doubtId } = validatedFields.data;
   try {
-    const result = await allotDoubt({ doubtId, solverId: userId });
+    const result = await allotDoubt({ doubtId, solverId: userId, frontendBase });
     if ((result as any).success) {
       return { success: true, message: "Doubt assigned! Check your email for the session link." };
     }
@@ -255,7 +263,8 @@ export async function POST(req: NextRequest) {
     await connectDb();
     const user = await getAuthenticatedUser(req);
     const body = await req.json();
-    const result = await acceptDoubtAssignment(body, user.id);
+    const frontendBase = resolveFrontendBase(req.nextUrl.origin);
+    const result = await acceptDoubtAssignment(body, user.id, frontendBase);
     if (!result || typeof result !== "object") {
       return NextResponse.json(
         { success: false, message: "Unexpected server response while accepting doubt" },

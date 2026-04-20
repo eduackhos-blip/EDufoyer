@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { io } from 'socket.io-client';
+import { useSocket } from '../contexts/SocketContext';
 import {
   KIIT_ADMIN_AUTH_KEY,
 } from '../config/kiitAdmin';
@@ -8,6 +8,7 @@ import { KiitAdminDashboardView } from './KiitAdminPanel';
 
 const UniversityAdminDashboard = () => {
   const router = useRouter();
+  const { socket: sharedSocket, connectSocket } = useSocket();
   const isAuthed = localStorage.getItem(KIIT_ADMIN_AUTH_KEY) === 'true';
   
   // State for doubt balance
@@ -113,36 +114,49 @@ const UniversityAdminDashboard = () => {
       fetchKiitUsers();
       
       // Set up socket connection for real-time updates
-      const socket = io(window.location.origin, { withCredentials: true });
-      
-      socket.on('university:balance-updated', (data) => {
-        if (data.university_email === 'admin@kiit.ac.in') {
-          setDoubtBalance({
-            doubtBuckets: data.doubtBuckets || { small: 0, medium: 0, large: 0 },
-            totalAvailable: data.totalAvailable || 0
-          });
-        }
-      });
-      
-      socket.on('user:registered', () => {
-        fetchKiitUsers();
-      });
-      
-      socket.on('doubt:created', () => {
-        fetchKiitUsers();
-      });
-      
-      const interval = setInterval(() => {
-        fetchDoubtBalance();
-        fetchKiitUsers();
-      }, 30000);
-      
-      return () => {
-        clearInterval(interval);
-        socket.disconnect();
-      };
+      const socket = sharedSocket ?? connectSocket();
+      if (socket) {
+        const onConnect = () => {
+          socket.emit('join:admin', { university_email: 'admin@kiit.ac.in' });
+        };
+        const onUniversityBalanceUpdated = (data) => {
+          if (data.university_email === 'admin@kiit.ac.in') {
+            setDoubtBalance({
+              doubtBuckets: data.doubtBuckets || { small: 0, medium: 0, large: 0 },
+              totalAvailable: data.totalAvailable || 0
+            });
+          }
+        };
+        
+        const onUserRegistered = () => {
+          fetchKiitUsers();
+        };
+        
+        const onDoubtCreated = () => {
+          fetchKiitUsers();
+        };
+
+        socket.on('connect', onConnect);
+        socket.on('university:balance-updated', onUniversityBalanceUpdated);
+        socket.on('user:registered', onUserRegistered);
+        socket.on('doubt:created', onDoubtCreated);
+        socket.emit('join:admin', { university_email: 'admin@kiit.ac.in' });
+        
+        const interval = setInterval(() => {
+          fetchDoubtBalance();
+          fetchKiitUsers();
+        }, 30000);
+        
+        return () => {
+          clearInterval(interval);
+          socket.off('connect', onConnect);
+          socket.off('university:balance-updated', onUniversityBalanceUpdated);
+          socket.off('user:registered', onUserRegistered);
+          socket.off('doubt:created', onDoubtCreated);
+        };
+      }
     }
-  }, [isAuthed, fetchDoubtBalance, fetchKiitUsers]);
+  }, [isAuthed, fetchDoubtBalance, fetchKiitUsers, sharedSocket, connectSocket]);
 
   // Generate dynamic wallet history from actual data (last 7 days)
   const walletHistory = useMemo(() => {

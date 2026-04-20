@@ -1,9 +1,9 @@
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, X, Menu, BookOpen } from 'lucide-react';
 import DoubtCard from './DoubtCard';
 import doubtService from '../services/doubtService';
 import solverService from '../services/solverService';
-import { io } from 'socket.io-client';
 import authService from '../services/authService';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import DarkModeToggle from './DarkModeToggle';
@@ -13,6 +13,7 @@ import { DashboardSidebarSuggested, DashboardSidebarUserFooter } from './Dashboa
 import AssignedDoubtsSection from './AssignedDoubtsSection';
 import AvailableDoubtsSection from './AvailableDoubtsSection';
 import MyDoubtsSection from './MyDoubtsSection';
+import { useSocket } from '../contexts/SocketContext';
 
 const DoubtManagement = () => {
   const router = useRouter();
@@ -37,6 +38,7 @@ const DoubtManagement = () => {
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { socket: sharedSocket, connectSocket } = useSocket();
 
   useEffect(() => {
     const onResize = () => {
@@ -165,16 +167,25 @@ const DoubtManagement = () => {
     loadData();
 
     // Setup Socket.IO for realtime available doubts
-    try {
-      const socket = io(window.location.origin, { withCredentials: true });
-      socketRef.current = socket;
+    let onSocketConnect = null;
+    let onSocketConnectError = null;
+    let onDoubtAvailable = null;
+    let onDoubtAssigned = null;
+    let onDoubtRated = null;
 
-      socket.on('connect', () => {
+    try {
+      const socket = sharedSocket ?? connectSocket();
+      if (socket) {
+        socketRef.current = socket;
+
+      onSocketConnect = () => {
         console.log('✅ Solver socket connected', socket.id);
-      });
-      socket.on('connect_error', (err) => {
+      };
+      onSocketConnectError = (err) => {
         console.error('❌ Solver socket connect_error', err);
-      });
+      };
+      socket.on('connect', onSocketConnect);
+      socket.on('connect_error', onSocketConnectError);
 
       // Register solver with their subjects so backend can place into rooms
       (async () => {
@@ -198,7 +209,7 @@ const DoubtManagement = () => {
         }
       })();
 
-      socket.on('doubt:available', (payload) => {
+      onDoubtAvailable = (payload) => {
         console.log('📥 doubt:available', payload);
         setIncomingDoubt({
           doubtId: payload.doubtId,
@@ -226,19 +237,21 @@ const DoubtManagement = () => {
             scheduled_time: payload.scheduled_time,
           }, ...prev];
         });
-      });
+      };
+      socket.on('doubt:available', onDoubtAvailable);
 
-      socket.on('doubt:assigned', ({ doubtId }) => {
+      onDoubtAssigned = ({ doubtId }) => {
         // Remove from available if it was shown
         setAvailableDoubts((prev) => prev.filter((d) => String(d._id || d.id) !== String(doubtId)));
         if (incomingDoubt && String(incomingDoubt.doubtId) === String(doubtId)) {
           setShowAvailableModal(false);
           setIncomingDoubt(null);
         }
-      });
+      };
+      socket.on('doubt:assigned', onDoubtAssigned);
 
       // Show toast to solver when asker rates and ends the session
-      socket.on('doubt:rated', ({ doubtId, rating }) => {
+      onDoubtRated = ({ doubtId, rating }) => {
         setToast({
           message: `Asker rated the session${rating ? ` (${rating}/5)` : ''} and left. Doubt ${String(doubtId).slice(-6)}.`,
         });
@@ -250,7 +263,9 @@ const DoubtManagement = () => {
         )));
         // Auto-hide toast after 5s
         setTimeout(() => setToast(null), 5000);
-      });
+      };
+      socket.on('doubt:rated', onDoubtRated);
+      }
     } catch (sockErr) {
       console.error('Socket setup error:', sockErr);
     }
@@ -338,7 +353,11 @@ const DoubtManagement = () => {
       window.removeEventListener('focus', handlePageFocus);
       clearInterval(checkInterval);
       if (socketRef.current) {
-        socketRef.current.disconnect();
+        if (onSocketConnect) socketRef.current.off('connect', onSocketConnect);
+        if (onSocketConnectError) socketRef.current.off('connect_error', onSocketConnectError);
+        if (onDoubtAvailable) socketRef.current.off('doubt:available', onDoubtAvailable);
+        if (onDoubtAssigned) socketRef.current.off('doubt:assigned', onDoubtAssigned);
+        if (onDoubtRated) socketRef.current.off('doubt:rated', onDoubtRated);
         socketRef.current = null;
       }
       if (pollingRef.current) {
@@ -346,7 +365,7 @@ const DoubtManagement = () => {
         pollingRef.current = null;
       }
     };
-  }, []);
+  }, [sharedSocket, connectSocket]);
 
   const handleAcceptFromModal = async () => {
     if (!incomingDoubt) return;

@@ -30,7 +30,7 @@ export function detectRecordingAttempts() {
   };
 
   // Method 1: Skip getDisplayMedia interception - it's needed for legitimate screen sharing
-  // getDisplayMedia is used by LiveKit for screen sharing, so we don't treat it as recording
+  // We don't treat built-in screen share as recording
   // We only detect external recording tools, not legitimate screen sharing
 
   // Method 2: Check for DevTools (common for recording)
@@ -54,13 +54,6 @@ export function detectRecordingAttempts() {
       devtools.open = false;
     }
   }, 500);
-
-  // Method 3: Detect console access (indicates DevTools)
-  const originalConsole = {
-    log: console.log,
-    warn: console.warn,
-    error: console.error
-  };
 
   // Method 4: Detect iframe access (some recording tools use iframes)
   if (window.self !== window.top) {
@@ -132,7 +125,7 @@ export function addAntiRecordingIndicators() {
   const style = document.createElement('style');
   style.textContent = `
     /* Prevent right-click context menu */
-    video, [data-lk-video] {
+    video, [data-session-video] {
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
@@ -141,7 +134,7 @@ export function addAntiRecordingIndicators() {
     }
     
     /* Disable text selection */
-    [data-lk-theme] {
+    [data-session-theme] {
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
@@ -149,7 +142,7 @@ export function addAntiRecordingIndicators() {
     }
     
     /* Prevent drag */
-    video, [data-lk-video] {
+    video, [data-session-video] {
       -webkit-user-drag: none;
       -khtml-user-drag: none;
       -moz-user-drag: none;

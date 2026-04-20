@@ -58,11 +58,10 @@ universityDoubtBalanceSchema.virtual('calculatedTotal').get(function() {
   return (this.doubtBuckets.small || 0) + (this.doubtBuckets.medium || 0) + (this.doubtBuckets.large || 0);
 });
 
-// Update totalAvailable before saving
-universityDoubtBalanceSchema.pre('save', function(next) {
-  this.totalAvailable = this.calculatedTotal;
-  this.lastUpdated = new Date();
-  next();
+// Mongoose 7+/8-safe hook style (no legacy `next` callback).
+universityDoubtBalanceSchema.pre('save', function() {
+  this.set('totalAvailable', this.calculatedTotal);
+  this.set('lastUpdated', new Date());
 });
 
 export default mongoose.models.UniversityDoubtBalance || mongoose.model('UniversityDoubtBalance', universityDoubtBalanceSchema);

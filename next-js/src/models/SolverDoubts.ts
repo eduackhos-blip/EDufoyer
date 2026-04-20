@@ -23,7 +23,7 @@ const SolverDoubtsSchema = new mongoose.Schema({
     enum: ['pending', 'session_scheduled', 'session_completed', 'accepted', 'rejected', 'needs_revision'],
     default: 'pending'
   },
-  livekit_room_name: {
+  room_id: {
     type: String
   },
   feedback_rating: {
@@ -54,10 +54,9 @@ const SolverDoubtsSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
-SolverDoubtsSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+// Mongoose 7+/8-safe hook style (no legacy `next` callback).
+SolverDoubtsSchema.pre('save', function() {
+  this.set('updatedAt', new Date());
 });
 
 export default mongoose.models.SolverDoubts || mongoose.model('SolverDoubts', SolverDoubtsSchema);

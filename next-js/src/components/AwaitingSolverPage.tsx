@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
 import { Clock, User, Bell, CheckCircle, AlertCircle, RefreshCw, Video, Calendar } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import notificationService from '../services/notificationService';
 import doubtService from '../services/doubtService';
 import SolverAcceptanceNotification from './SolverAcceptanceNotification';
+import { useSocket } from '../contexts/SocketContext';
 
 const AwaitingSolverPage = () => {
   const { doubtId } = useParams();
@@ -18,6 +18,7 @@ const AwaitingSolverPage = () => {
   const [showAcceptanceNotification, setShowAcceptanceNotification] = useState(false);
   const [solverInfo, setSolverInfo] = useState(null);
   const socketRef = useRef(null);
+  const { socket: sharedSocket, connectSocket } = useSocket();
 
   // Format time elapsed
   const formatTimeElapsed = (seconds) => {
@@ -140,25 +141,29 @@ const AwaitingSolverPage = () => {
   // Realtime: subscribe to the subject room so the asker gets instant assignment modal
   useEffect(() => {
     if (!doubt?.subject) return;
+    let onDoubtAssigned = null;
     try {
-      const socket = io(window.location.origin, { withCredentials: true });
-      socketRef.current = socket;
-      const subjects = [String(doubt.subject).toLowerCase()];
-      socket.emit('registerSolver', { userId: null, subjects });
-      socket.on('doubt:assigned', ({ doubtId: assignedId }) => {
-        if (String(assignedId) === String(doubtId)) {
-          setSolverInfo({ name: 'Solver', doubtTitle: doubt.subject });
-          setShowAcceptanceNotification(true);
-        }
-      });
+      const socket = sharedSocket ?? connectSocket();
+      if (socket) {
+        socketRef.current = socket;
+        const subjects = [String(doubt.subject).toLowerCase()];
+        socket.emit('registerSolver', { userId: null, subjects });
+        onDoubtAssigned = ({ doubtId: assignedId }) => {
+          if (String(assignedId) === String(doubtId)) {
+            setSolverInfo({ name: 'Solver', doubtTitle: doubt.subject });
+            setShowAcceptanceNotification(true);
+          }
+        };
+        socket.on('doubt:assigned', onDoubtAssigned);
+      }
     } catch {}
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+      if (socketRef.current && onDoubtAssigned) {
+        socketRef.current.off('doubt:assigned', onDoubtAssigned);
       }
+      socketRef.current = null;
     };
-  }, [doubtId, doubt?.subject]);
+  }, [doubtId, doubt?.subject, sharedSocket, connectSocket]);
 
   // Timer for elapsed time
   useEffect(() => {

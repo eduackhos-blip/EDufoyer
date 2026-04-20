@@ -1,5 +1,11 @@
 import dotenv from "dotenv";
+import path from "node:path";
 
+const nodeEnv = (process.env.NODE_ENV ?? "development").toLowerCase();
+const envFile = nodeEnv === "production" ? ".env.production" : ".env.development";
+
+// Prefer explicit env files (.env.development/.env.production), fallback to plain .env.
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
 
 const parseAllowedOrigins = (raw?: string) => {

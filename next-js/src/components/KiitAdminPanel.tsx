@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { io } from 'socket.io-client';
+import { useSocket } from '../contexts/SocketContext';
 import {
   Area,
   AreaChart,
@@ -27,6 +27,7 @@ import {
 import RechargeWalletModal from './RechargeWalletModal';
 
 const KiitAdminPanel = () => {
+  const { socket: sharedSocket, connectSocket } = useSocket();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -229,45 +230,52 @@ const KiitAdminPanel = () => {
       fetchKiitUsers();
       
       // Set up socket connection for real-time updates
-      const socket = io(window.location.origin, { 
-        withCredentials: true,
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5
-      });
-      
-      // Store socket in ref for cleanup
-      socketRef.current = socket;
-      
-      socket.on('connect', () => {
-        console.log('✅ Socket connected:', socket.id);
-        // Join admin room for university updates
+      const socket = sharedSocket ?? connectSocket();
+      if (socket) {
+        let onConnect = null;
+        let onDisconnect = null;
+        let onConnectError = null;
+        let onUniversityBalanceUpdated = null;
+        let onDoubtBalanceUpdated = null;
+        let onUserRegistered = null;
+        let onDoubtCreated = null;
+
+        // Store socket in ref for cleanup
+        socketRef.current = socket;
+        
+        onConnect = () => {
+          console.log('✅ Socket connected:', socket.id);
+          // Join admin room for university updates
+          socket.emit('join:admin', { university_email: 'admin@kiit.ac.in' });
+        };
+        socket.on('connect', onConnect);
         socket.emit('join:admin', { university_email: 'admin@kiit.ac.in' });
-      });
-      
-      socket.on('disconnect', () => {
-        console.log('❌ Socket disconnected');
-      });
-      
-      socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-      });
-      
-      socket.on('university:balance-updated', (data) => {
-        console.log('📡 Received balance update from server:', data);
-        if (data.university_email === 'admin@kiit.ac.in') {
-          // Update balance immediately when server sends update
-          setDoubtBalance({
-            doubtBuckets: data.doubtBuckets || { small: 0, medium: 0, large: 0 },
-            totalAvailable: data.totalAvailable || 0
-          });
-          console.log('✅ Balance updated from socket event');
-        }
-      });
-      
-      // Listen for doubt balance updates (when doubt is created)
-      socket.on('doubt:balance:updated', (data) => {
+        
+        onDisconnect = () => {
+          console.log('❌ Socket disconnected');
+        };
+        socket.on('disconnect', onDisconnect);
+        
+        onConnectError = (error) => {
+          console.error('Socket connection error:', error);
+        };
+        socket.on('connect_error', onConnectError);
+        
+        onUniversityBalanceUpdated = (data) => {
+          console.log('📡 Received balance update from server:', data);
+          if (data.university_email === 'admin@kiit.ac.in') {
+            // Update balance immediately when server sends update
+            setDoubtBalance({
+              doubtBuckets: data.doubtBuckets || { small: 0, medium: 0, large: 0 },
+              totalAvailable: data.totalAvailable || 0
+            });
+            console.log('✅ Balance updated from socket event');
+          }
+        };
+        socket.on('university:balance-updated', onUniversityBalanceUpdated);
+        
+        // Listen for doubt balance updates (when doubt is created)
+        onDoubtBalanceUpdated = (data) => {
         console.log('📡 Received doubt balance update from server:', data);
         if (data && (data.university_email === 'admin@kiit.ac.in' || !data.university_email)) {
           // Update balance immediately when a doubt is created
@@ -285,16 +293,18 @@ const KiitAdminPanel = () => {
             setTimeout(() => fetchDoubtBalance(), 500);
           }
         }
-      });
+      };
+      socket.on('doubt:balance:updated', onDoubtBalanceUpdated);
       
       // Listen for new user registrations
-      socket.on('user:registered', () => {
+        onUserRegistered = () => {
         console.log('📡 New user registered, refreshing KIIT users...');
         fetchKiitUsers();
-      });
+      };
+      socket.on('user:registered', onUserRegistered);
       
       // Listen for doubt created events - refresh both users and balance
-      socket.on('doubt:created', (data) => {
+        onDoubtCreated = (data) => {
         console.log('📡 New doubt created event received:', data);
         // Refresh KIIT users list immediately
         if (typeof fetchKiitUsers === 'function') {
@@ -308,10 +318,11 @@ const KiitAdminPanel = () => {
             fetchDoubtBalance();
           }, 300); // Wait 300ms for backend to update balance
         }
-      });
+      };
+      socket.on('doubt:created', onDoubtCreated);
       
       // Refresh balance and users every 5 seconds as fallback (reduced from 30s for faster updates)
-      const interval = setInterval(() => {
+        const interval = setInterval(() => {
         console.log('⏰ Auto-refresh: Fetching data...');
         if (typeof fetchDoubtBalance === 'function') {
           fetchDoubtBalance();
@@ -321,21 +332,25 @@ const KiitAdminPanel = () => {
         }
       }, 5000); // Reduced to 5 seconds for faster balance updates
       
-      return () => {
-        console.log('🧹 Cleaning up interval and socket...');
-        clearInterval(interval);
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-          socketRef.current = null;
-        }
-        if (socket) {
-          socket.disconnect();
-        }
-      };
+        return () => {
+          console.log('🧹 Cleaning up interval and socket...');
+          clearInterval(interval);
+          if (socketRef.current) {
+            if (onConnect) socketRef.current.off('connect', onConnect);
+            if (onDisconnect) socketRef.current.off('disconnect', onDisconnect);
+            if (onConnectError) socketRef.current.off('connect_error', onConnectError);
+            if (onUniversityBalanceUpdated) socketRef.current.off('university:balance-updated', onUniversityBalanceUpdated);
+            if (onDoubtBalanceUpdated) socketRef.current.off('doubt:balance:updated', onDoubtBalanceUpdated);
+            if (onUserRegistered) socketRef.current.off('user:registered', onUserRegistered);
+            if (onDoubtCreated) socketRef.current.off('doubt:created', onDoubtCreated);
+            socketRef.current = null;
+          }
+        };
+      }
     } else {
       console.log('❌ User not authenticated, skipping fetch');
     }
-  }, [isAuthenticated, fetchDoubtBalance, fetchKiitUsers]);
+  }, [isAuthenticated, fetchDoubtBalance, fetchKiitUsers, sharedSocket, connectSocket]);
 
   const summary = useMemo(() => {
     // Calculate from dynamic kiitUsers data only

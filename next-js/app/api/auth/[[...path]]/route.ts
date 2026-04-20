@@ -6,6 +6,7 @@ import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
 import { authErrorResponse } from "@/src/utils/server/errorResponse";
 import User from "@/src/models/User";
 import Solver from "@/src/models/Solver";
+import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
 import { validateEmail, normalizeEmail } from "@/src/utils/server/emailValidator";
 import { checkEmailWhitelist } from "@/src/utils/server/emailWhitelist";
 import { verifyEmail, sendVerificationEmail, generateVerificationCode } from "@/src/utils/server/emailVerification";
@@ -48,6 +49,17 @@ async function handleRegister(req: NextRequest) {
     emailVerificationExpiry: verificationExpiry,
   });
   await user.save();
+
+  if (normalizedEmail.toLowerCase().endsWith("@kiit.ac.in")) {
+    void publishSocketEvent({
+      event: "user:registered",
+      payload: {
+        userId: String(user._id),
+        email: user.email,
+      },
+    });
+  }
+
   const emailResult = (await sendVerificationEmail(normalizedEmail, verificationCode)) as { success: boolean };
   if (!emailResult.success) {
     if (process.env.NODE_ENV === "production") {

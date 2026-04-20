@@ -7,6 +7,7 @@ import DoubtPack from "@/src/models/DoubtPack";
 import User from "@/src/models/User";
 import Notification from "@/src/models/Notification";
 import UniversityDoubtBalance from "@/src/models/UniversityDoubtBalance";
+import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
 
 export const runtime = "nodejs";
 
@@ -83,6 +84,15 @@ export async function POST(req: NextRequest) {
     }
     if (userId && !universityBalance.university_id) universityBalance.university_id = userId;
     await universityBalance.save();
+
+    void publishSocketEvent({
+      event: "university:balance-updated",
+      payload: {
+        university_email: String(university_email || "").toLowerCase(),
+        doubtBuckets: universityBalance.doubtBuckets,
+        totalAvailable: universityBalance.totalAvailable,
+      },
+    });
 
     const adminUsers = await User.find({ role: "admin" }).select("_id");
     await Promise.all(

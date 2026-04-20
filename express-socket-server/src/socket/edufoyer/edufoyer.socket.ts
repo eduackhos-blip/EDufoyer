@@ -7,6 +7,20 @@ type RegisterSolverPayload = {
 };
 
 export const registerEdufoyerSocketHandlers = (socket: Socket) => {
+  socket.on("join:admin", ({ university_email }: { university_email?: string } = {}) => {
+    const normalizedEmail = String(university_email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      socket.emit("registrationError", { message: "university_email is required" });
+      return;
+    }
+
+    socket.join(`admin:${normalizedEmail}`);
+    socket.emit("registrationSuccess", {
+      message: "Successfully joined admin room",
+      room: `admin:${normalizedEmail}`,
+    });
+  });
+
   socket.on("registerSolver", async ({ userId, subjects = [] }: RegisterSolverPayload = {}) => {
     try {
       const authenticatedUserId = socket.user.userId;

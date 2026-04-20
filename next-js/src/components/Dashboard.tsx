@@ -1,9 +1,10 @@
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Video, Calendar, CheckCircle, Clock, X, Menu } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import authService from '../services/authService';
-import { io } from 'socket.io-client';
+import { useSocket } from '../contexts/SocketContext';
 import AskDoubt from './AskDoubt';
 import SolverRegistration from './SolverRegistration';
 import SolverRequestForm from './SolverRequestForm';
@@ -32,6 +33,7 @@ const Dashboard = () => {
   const location = { pathname, search: searchParams.toString() ? `?${searchParams.toString()}` : '', hash: typeof window !== 'undefined' ? window.location.hash : '' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showSolverRequestForm, setShowSolverRequestForm] = useState(false);
+  const { socket: sharedSocket, connectSocket } = useSocket();
   
   // Handle responsive sidebar - close on mobile by default, open on desktop
   useEffect(() => {
@@ -89,75 +91,83 @@ const Dashboard = () => {
       } catch {}
     })();
 
+    let onDoubtAvailable = null;
+    let onDoubtAssigned = null;
+    let onDoubtRated = null;
+    let onDoubtCompleted = null;
+
     // Realtime listener for solver modal
     try {
-      const socket = io(window.location.origin, { withCredentials: true });
+      const socket = sharedSocket ?? connectSocket();
       socketRef.current = socket;
 
-      (async () => {
-        try {
-          const profile = await authService.getProfile();
-          const userId = profile?.id || profile?._id;
-          let subjects = [];
+      if (socket) {
+        (async () => {
           try {
-            const profRes = await fetch('/api/profile', {
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            const profJson = await profRes.json();
-            const strongSubject = profJson?.data?.strongSubject;
-            subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
-          } catch {}
-          socket.emit('registerSolver', { userId, subjects });
-        } catch {
-          socket.emit('registerSolver', { userId: null, subjects: [] });
-        }
-      })();
-
-      socket.on('doubt:available', (payload) => {
-        setIncomingDoubt({
-          doubtId: payload.doubtId,
-          subject: payload.subject,
-          description: payload.description,
-          status: payload.status,
-          createdAt: payload.createdAt,
-          is_scheduled: payload.is_scheduled || false,
-          scheduled_date: payload.scheduled_date,
-          scheduled_time: payload.scheduled_time,
-        });
-        setShowAvailableModal(true);
-      });
-
-      socket.on('doubt:assigned', ({ doubtId }) => {
-        if (incomingDoubt && String(incomingDoubt.doubtId) === String(doubtId)) {
-          setShowAvailableModal(false);
-          setIncomingDoubt(null);
-        }
-      });
-
-      // Toast on asker rating completion
-      socket.on('doubt:rated', ({ doubtId, rating }) => {
-        setToast({ message: `Asker rated ${rating ? `(${rating}/5)` : ''} and ended session. Doubt ${String(doubtId).slice(-6)}.` });
-        setTimeout(() => setToast(null), 5000);
-      });
-    } catch {}
-
-    // Update metrics on real-time completion
-    if (socketRef.current) {
-      socketRef.current.on('doubt:completed', async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) return;
-          const res = await fetch('/api/solver/metrics', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const json = await res.json();
-          if (json?.success) {
-            setMonthlySolved(json.data?.solvedCount || 0);
-            setAvgRating(json.data?.avgRating ?? null);
+            const profile = await authService.getProfile();
+            const userId = profile?.id || profile?._id;
+            let subjects = [];
+            try {
+              const profRes = await fetch('/api/profile', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+              });
+              const profJson = await profRes.json();
+              const strongSubject = profJson?.data?.strongSubject;
+              subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
+            } catch {}
+            socket.emit('registerSolver', { userId, subjects });
+          } catch {
+            socket.emit('registerSolver', { userId: null, subjects: [] });
           }
-        } catch {}
-      });
-    }
+        })();
+
+        onDoubtAvailable = (payload) => {
+          setIncomingDoubt({
+            doubtId: payload.doubtId,
+            subject: payload.subject,
+            description: payload.description,
+            status: payload.status,
+            createdAt: payload.createdAt,
+            is_scheduled: payload.is_scheduled || false,
+            scheduled_date: payload.scheduled_date,
+            scheduled_time: payload.scheduled_time,
+          });
+          setShowAvailableModal(true);
+        };
+
+        onDoubtAssigned = ({ doubtId }) => {
+          if (incomingDoubt && String(incomingDoubt.doubtId) === String(doubtId)) {
+            setShowAvailableModal(false);
+            setIncomingDoubt(null);
+          }
+        };
+
+        onDoubtRated = ({ doubtId, rating }) => {
+          setToast({ message: `Asker rated ${rating ? `(${rating}/5)` : ''} and ended session. Doubt ${String(doubtId).slice(-6)}.` });
+          setTimeout(() => setToast(null), 5000);
+        };
+
+        onDoubtCompleted = async () => {
+          try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            const res = await fetch('/api/solver/metrics', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const json = await res.json();
+            if (json?.success) {
+              setMonthlySolved(json.data?.solvedCount || 0);
+              setAvgRating(json.data?.avgRating ?? null);
+            }
+          } catch {}
+        };
+
+        socket.on('doubt:available', onDoubtAvailable);
+        socket.on('doubt:assigned', onDoubtAssigned);
+        socket.on('doubt:rated', onDoubtRated);
+        socket.on('doubt:completed', onDoubtCompleted);
+      }
+    } catch {}
 
     // Fallback polling every 15s to keep metrics fresh
     if (!pollingRef.current) {
@@ -207,16 +217,20 @@ const Dashboard = () => {
     }
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+      const socket = socketRef.current;
+      if (socket) {
+        if (onDoubtAvailable) socket.off('doubt:available', onDoubtAvailable);
+        if (onDoubtAssigned) socket.off('doubt:assigned', onDoubtAssigned);
+        if (onDoubtRated) socket.off('doubt:rated', onDoubtRated);
+        if (onDoubtCompleted) socket.off('doubt:completed', onDoubtCompleted);
       }
+      socketRef.current = null;
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
     };
-  }, [router, incomingDoubt]);
+  }, [router, incomingDoubt, sharedSocket, connectSocket]);
 
   const handleAcceptFromModal = async () => {
     if (!incomingDoubt) return;

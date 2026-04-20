@@ -44,10 +44,9 @@ const ProfileSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
-ProfileSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+// Mongoose 7+/8-safe hook style (no legacy `next` callback).
+ProfileSchema.pre('save', function() {
+  this.set('updatedAt', new Date());
 });
 
 // Indexes for better query performance

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 declare namespace NodeJS {
   interface ProcessEnv {
     // Node runtime
@@ -7,11 +8,6 @@ declare namespace NodeJS {
     BACKEND_API_ORIGIN?: string;
     MONGODB_URI?: string;
     JWT_SECRET?: string;
-
-    // LiveKit
-    LIVEKIT_URL?: string;
-    LIVEKIT_API_KEY?: string;
-    LIVEKIT_API_SECRET?: string;
 
     // Payments
     RAZORPAY_KEY_ID?: string;
@@ -37,6 +33,7 @@ declare namespace NodeJS {
 
     // App URLs
     FRONTEND_URL?: string;
+    NEXT_PUBLIC_SOCKET_URL?: string;
   }
 }
 
