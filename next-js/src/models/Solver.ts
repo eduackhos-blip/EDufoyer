@@ -44,10 +44,9 @@ const SolverSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
-SolverSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+// Mongoose 7+ hook style (avoid legacy `next` callback runtime issues)
+SolverSchema.pre("save", function () {
+  this.set("updatedAt", new Date());
 });
 
 // Indexes for better query performance

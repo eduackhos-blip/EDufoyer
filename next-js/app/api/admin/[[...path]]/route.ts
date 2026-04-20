@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/lib/db";
 import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
@@ -119,27 +120,41 @@ const run = async (req: NextRequest, ctx: Ctx) => {
       if (!name || !email || !subjects || subjects.length === 0) {
         return json({ success: false, message: "Name, email, and at least one subject are required" }, 400);
       }
-      let user = await User.findOne({ email: String(email).toLowerCase() });
+      const normalizedEmail = String(email).toLowerCase();
+      let user = await User.findOne({ email: normalizedEmail });
       if (!user) {
-        user = new User({
-          name,
-          email: String(email).toLowerCase(),
-          password: `temp_password_${Date.now()}`,
-          isEmailVerified: false,
-          isSolver: false,
-        });
-        await user.save();
+        const hashedTempPassword = await bcrypt.hash(`temp_password_${Date.now()}`, 12);
+        user = await User.findOneAndUpdate(
+          { email: normalizedEmail },
+          {
+            $setOnInsert: {
+              name,
+              email: normalizedEmail,
+              password: hashedTempPassword,
+              emailVerified: false,
+              isSolver: false,
+            },
+          },
+          { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+        );
       }
+      if (!user) return json({ success: false, message: "Failed to create or fetch user" }, 500);
       const existingSolver = await Solver.findOne({ user_id: user._id });
       if (existingSolver) return json({ success: false, message: "User is already registered as a solver" }, 400);
-      const newSolver = new Solver({
-        user_id: user._id,
-        specialities: subjects.map((s: string) => s.toLowerCase()),
-        experience: experience || "beginner",
-        bio: bio || "",
-        isActive: true,
-      });
-      await newSolver.save();
+      const newSolver = await Solver.findOneAndUpdate(
+        { user_id: user._id },
+        {
+          $setOnInsert: {
+            user_id: user._id,
+            specialities: subjects.map((s: string) => s.toLowerCase()),
+            experience: experience || "beginner",
+            bio: bio || "",
+            isActive: true,
+          },
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+      if (!newSolver) return json({ success: false, message: "Failed to create solver" }, 500);
       await User.findByIdAndUpdate(user._id, { name, isSolver: true });
       return json(
         {
