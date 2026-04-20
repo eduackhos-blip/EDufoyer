@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useCurrentSessionUser } from "@/src/hooks/useCurrentSessionUser";
 import type { RoomChatMessage } from "@/src/hooks/useRoomChat";
@@ -74,6 +74,10 @@ export function RoomCallSession({
 }: RoomCallSessionProps) {
   const user = useCurrentSessionUser();
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+  const remoteScreenShareVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!isMobileChatOpen) return;
@@ -83,6 +87,34 @@ export function RoomCallSession({
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileChatOpen]);
+
+  useEffect(() => {
+    if (!remoteScreenShareVideoRef.current) return;
+    if (remoteScreenShareVideoRef.current.srcObject !== remoteScreenShareStream) {
+      remoteScreenShareVideoRef.current.srcObject = remoteScreenShareStream;
+    }
+  }, [remoteScreenShareStream]);
+
+  useEffect(() => {
+    if (!remoteVideoRef.current) return;
+    if (remoteVideoRef.current.srcObject !== remoteVideoStream) {
+      remoteVideoRef.current.srcObject = remoteVideoStream;
+    }
+  }, [remoteVideoStream, hasLiveRemoteVideo]);
+
+  useEffect(() => {
+    if (!localVideoRef.current) return;
+    if (localVideoRef.current.srcObject !== myStream) {
+      localVideoRef.current.srcObject = myStream;
+    }
+  }, [myStream, isCameraOn]);
+
+  useEffect(() => {
+    if (!remoteAudioRef.current) return;
+    if (remoteAudioRef.current.srcObject !== remoteAudioStream) {
+      remoteAudioRef.current.srcObject = remoteAudioStream;
+    }
+  }, [remoteAudioStream]);
 
   useEffect(() => {
     if (!isMobileChatOpen) return;
@@ -139,9 +171,7 @@ export function RoomCallSession({
                   autoPlay
                   playsInline
                   className="h-full w-full object-contain"
-                  ref={(video) => {
-                    if (video) video.srcObject = remoteScreenShareStream;
-                  }}
+                  ref={remoteScreenShareVideoRef}
                 />
               </div>
             ) : null}
@@ -170,9 +200,7 @@ export function RoomCallSession({
                         autoPlay
                         playsInline
                         className="absolute inset-0 h-full w-full object-cover"
-                        ref={(video) => {
-                          if (video) video.srcObject = remoteVideoStream;
-                        }}
+                        ref={remoteVideoRef}
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
@@ -207,9 +235,7 @@ export function RoomCallSession({
                     muted
                     playsInline
                     className="absolute inset-0 h-full w-full object-cover"
-                    ref={(video) => {
-                      if (video) video.srcObject = myStream;
-                    }}
+                    ref={localVideoRef}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
@@ -235,9 +261,7 @@ export function RoomCallSession({
 
           <audio
             autoPlay
-            ref={(audio) => {
-              if (audio) audio.srcObject = remoteAudioStream;
-            }}
+            ref={remoteAudioRef}
           />
         </div>
 
