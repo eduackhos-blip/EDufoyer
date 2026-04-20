@@ -1,0 +1,33 @@
+import type { Server } from "socket.io";
+import { registerEdufoyerSocketHandlers } from "./edufoyer/edufoyer.socket";
+import { SOCKET_EVENTS } from "./events";
+import { registerMessageSocketHandlers } from "./messages/message.socket";
+import { registerRoomSocketHandlers } from "./room/room.socket";
+import { registerWebRtcSocketHandlers } from "./webrtc/webrtc.socket";
+
+export const setupSocketHandlers = (io: Server) => {
+  io.on("connection", (socket) => {
+    console.log(`[socket] connected: ${socket.id} user=${socket.user.userId}`);
+
+    socket.on(SOCKET_EVENTS.PING, () => {
+      socket.emit(SOCKET_EVENTS.PONG, { message: "pong from server" });
+    });
+
+    registerRoomSocketHandlers(socket);
+    registerWebRtcSocketHandlers(socket);
+    registerMessageSocketHandlers(socket, io);
+    registerEdufoyerSocketHandlers(socket);
+
+    socket.on("error", (error) => {
+      console.error(`[socket] error (${socket.id}):`, error);
+    });
+
+    socket.on("clientError", (error) => {
+      console.error(`[socket] clientError (${socket.id}):`, error);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[socket] disconnected: ${socket.id}, reason: ${reason}`);
+    });
+  });
+};

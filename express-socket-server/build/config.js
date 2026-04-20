@@ -20,4 +20,6 @@ exports.config = {
     mongoUri: process.env.MONGODB_URI ?? "",
     allowedOrigins: parseAllowedOrigins(process.env.SOCKET_ALLOWED_ORIGINS),
     publishApiKey: process.env.SOCKET_SERVER_API_KEY ?? "",
+    /** Same secret as Edufoyer / Next.js API JWT signing (Bearer tokens). */
+    jwtSecret: process.env.JWT_SECRET ?? "",
 };

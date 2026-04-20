@@ -9,7 +9,8 @@ const http_1 = __importDefault(require("http"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const socket_io_1 = require("socket.io");
 const config_1 = require("./config");
-const Solver_1 = require("./models/Solver");
+const socketAuthMiddleware_1 = require("./middleware/socketAuthMiddleware");
+const socket_1 = require("./socket");
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.Server(server, {
@@ -85,49 +86,8 @@ app.post("/emit-many", requirePublishApiKey, (req, res) => {
     }
     return res.json({ success: true, emitted: events.length });
 });
-io.on("connection", (socket) => {
-    console.log(`[socket] connected: ${socket.id}`);
-    socket.on("error", (error) => {
-        console.error(`[socket] error (${socket.id}):`, error);
-    });
-    socket.on("disconnect", (reason) => {
-        console.log(`[socket] disconnected: ${socket.id}, reason: ${reason}`);
-    });
-    socket.on("registerSolver", async ({ userId, subjects = [] }) => {
-        try {
-            if (userId) {
-                socket.join(`solver:${userId}`);
-            }
-            let subjectList = Array.isArray(subjects) ? subjects : [];
-            if (subjectList.length === 0 && userId) {
-                const solverDoc = await Solver_1.Solver.findOne({ user_id: userId })
-                    .select("specialities")
-                    .lean();
-                if (solverDoc?.specialities?.length) {
-                    subjectList = solverDoc.specialities;
-                }
-            }
-            const rooms = subjectList.map((subject) => `subject:${String(subject).toLowerCase()}`);
-            rooms.forEach((room) => socket.join(room));
-            socket.emit("registrationSuccess", {
-                message: "Successfully registered as solver",
-                subjects: subjectList,
-            });
-        }
-        catch (error) {
-            console.error("[socket] registerSolver failed:", error);
-            socket.emit("registrationError", {
-                message: "Failed to register as solver",
-            });
-        }
-    });
-    socket.on("ping", () => {
-        socket.emit("pong");
-    });
-    socket.on("clientError", (error) => {
-        console.error(`[socket] clientError (${socket.id}):`, error);
-    });
-});
+io.use(socketAuthMiddleware_1.socketAuthMiddleware);
+(0, socket_1.setupSocketHandlers)(io);
 const start = async () => {
     try {
         if (!config_1.config.mongoUri) {

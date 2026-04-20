@@ -4,7 +4,8 @@ import http from "http";
 import mongoose from "mongoose";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
-import { Solver } from "./models/Solver";
+import { socketAuthMiddleware } from "./middleware/socketAuthMiddleware";
+import { setupSocketHandlers } from "./socket";
 
 type EmitPayload = {
   event: string;
@@ -103,57 +104,8 @@ app.post("/emit-many", requirePublishApiKey, (req, res) => {
   return res.json({ success: true, emitted: events.length });
 });
 
-io.on("connection", (socket) => {
-  console.log(`[socket] connected: ${socket.id}`);
-
-  socket.on("error", (error) => {
-    console.error(`[socket] error (${socket.id}):`, error);
-  });
-
-  socket.on("disconnect", (reason) => {
-    console.log(`[socket] disconnected: ${socket.id}, reason: ${reason}`);
-  });
-
-  socket.on("registerSolver", async ({ userId, subjects = [] }) => {
-    try {
-      if (userId) {
-        socket.join(`solver:${userId}`);
-      }
-
-      let subjectList: string[] = Array.isArray(subjects) ? subjects : [];
-
-      if (subjectList.length === 0 && userId) {
-        const solverDoc = await Solver.findOne({ user_id: userId })
-          .select("specialities")
-          .lean();
-        if (solverDoc?.specialities?.length) {
-          subjectList = solverDoc.specialities;
-        }
-      }
-
-      const rooms = subjectList.map((subject) => `subject:${String(subject).toLowerCase()}`);
-      rooms.forEach((room) => socket.join(room));
-
-      socket.emit("registrationSuccess", {
-        message: "Successfully registered as solver",
-        subjects: subjectList,
-      });
-    } catch (error) {
-      console.error("[socket] registerSolver failed:", error);
-      socket.emit("registrationError", {
-        message: "Failed to register as solver",
-      });
-    }
-  });
-
-  socket.on("ping", () => {
-    socket.emit("pong");
-  });
-
-  socket.on("clientError", (error) => {
-    console.error(`[socket] clientError (${socket.id}):`, error);
-  });
-});
+io.use(socketAuthMiddleware);
+setupSocketHandlers(io);
 
 const start = async () => {
   try {
