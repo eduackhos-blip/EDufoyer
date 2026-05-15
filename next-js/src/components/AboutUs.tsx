@@ -1,7 +1,6 @@
 import React from 'react';
-import { Users, Target, Award, Heart, ArrowLeft, Mail, Phone, MapPin } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import DarkModeToggle from './DarkModeToggle';
+import { Users, Target, Award, Heart, Mail, Phone, MapPin } from 'lucide-react';
+import EduMarketingHeader from './EduMarketingHeader';
 
 type FeatureItem = {
   icon: React.ComponentType<{ className?: string }>;
@@ -9,87 +8,93 @@ type FeatureItem = {
   description: string;
 };
 
-const AboutUs = () => {
-  const router = useRouter();
+const CARD_CLASS =
+  'rounded-[24px] border border-[#073E36]/18 bg-white p-8 shadow-[0_12px_40px_rgba(7,62,54,0.06),0_24px_64px_rgba(7,62,54,0.08)] transition-colors duration-300 dark:border-[#073E36]/25 dark:bg-[#142824]/95 dark:shadow-[0_12px_40px_rgba(0,0,0,0.25)] md:p-12';
 
+const AboutUs = () => {
   const features: FeatureItem[] = [
     {
       icon: Users,
       title: 'Peer-to-Peer Learning',
-      description: 'Connect with fellow students and learn together in a collaborative environment.'
+      description: 'Connect with fellow students and learn together in a collaborative environment.',
     },
     {
       icon: Target,
       title: '24/7 Support',
-      description: 'Get instant help with your doubts anytime, anywhere from expert solvers.'
+      description: 'Get instant help with your doubts anytime, anywhere from expert solvers.',
     },
     {
       icon: Award,
       title: 'Earn While Learning',
-      description: 'Help others solve doubts and earn coins while enhancing your knowledge.'
+      description: 'Help others solve doubts and earn coins while enhancing your knowledge.',
     },
     {
       icon: Heart,
       title: 'Community Driven',
-      description: 'Join a vibrant community of learners and educators passionate about education.'
-    }
+      description: 'Join a vibrant community of learners and educators passionate about education.',
+    },
   ];
 
+  const headingShadow = {
+    textShadow:
+      '0 1px 0 rgba(255,255,255,0.32), 0 2px 8px rgba(7, 62, 54, 0.22), 0 4px 14px rgba(7, 62, 54, 0.14)',
+  } as const;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300">
-        <div className="flex items-center justify-between p-6">
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+    <div className="relative min-h-screen overflow-hidden bg-white transition-colors duration-300 dark:bg-[#0a1614]">
+      <div className="edu-hero-bg-grid" aria-hidden />
+
+      <div className="relative z-10">
+        <div className="mx-auto w-[96%] sm:w-[92%]">
+          <div className="edu-marketing-page-header">
+            <EduMarketingHeader variant="inline" />
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-4 md:px-6 md:pb-20 md:pt-6">
+        <div className="mb-14 text-center md:mb-16">
+          <h1
+            className="font-display mb-5 text-4xl font-bold tracking-tight text-[#073E36] dark:text-[#E6EDD7] md:text-5xl lg:text-6xl"
+            style={headingShadow}
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Home</span>
-          </button>
-          <DarkModeToggle className="p-3" />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-12 pt-24">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-800 dark:text-gray-100 mb-6 transition-colors duration-300 tracking-tight">
-            About <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">Us</span>
+            About <span className="text-[#073E36] dark:text-[#E6EDD7]">Us</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto transition-colors duration-300 leading-relaxed font-medium">
-            Empowering students through peer-to-peer learning and real-time doubt solving
+          <p className="mx-auto max-w-3xl text-base font-medium leading-relaxed text-[#1a2e2c]/90 dark:text-[#E6EDD7]/80 md:text-lg">
+            Empowering students through peer-to-peer learning and real-time doubt solving.
           </p>
         </div>
 
-        {/* Mission Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-12 shadow-lg mb-12 transition-colors duration-300">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 mb-6 transition-colors duration-300 tracking-tight">Our Mission</h2>
-          <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed mb-4 transition-colors duration-300 font-normal">
-            At EDUFOYER, we believe that learning is a collaborative journey. Our mission is to create a platform where students can learn together, help each other, and earn while doing so. We're building a community-driven educational ecosystem that breaks down barriers to learning.
+        <div className={`${CARD_CLASS} mb-10 md:mb-12`}>
+          <h2 className="font-display mb-6 text-3xl font-bold tracking-tight text-[#073E36] dark:text-[#E6EDD7] md:text-4xl">
+            Our Mission
+          </h2>
+          <p className="mb-4 text-base font-normal leading-relaxed text-[#1a2e2c] dark:text-[#c5d4c8] md:text-lg">
+            At EDUFOYER, we believe that learning is a collaborative journey. Our mission is to create a platform
+            where students can learn together, help each other, and earn while doing so. We&apos;re building a
+            community-driven educational ecosystem that breaks down barriers to learning.
           </p>
-          <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed transition-colors duration-300 font-normal">
-            We envision a world where every student has access to instant help, where knowledge is shared freely, and where helping others is rewarded. Our platform connects students with skilled peers who are experts in their respective domains, offering real-time support that makes learning more accessible and engaging.
+          <p className="text-base font-normal leading-relaxed text-[#1a2e2c] dark:text-[#c5d4c8] md:text-lg">
+            We envision a world where every student has access to instant help, where knowledge is shared freely, and
+            where helping others is rewarded. Our platform connects students with skilled peers who are experts in
+            their respective domains, offering real-time support that makes learning more accessible and engaging.
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="mb-10 grid gap-5 md:mb-12 md:grid-cols-2 md:gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              className={`${CARD_CLASS} p-6 transition-transform duration-300 hover:-translate-y-0.5 md:p-8`}
             >
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <feature.icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="shrink-0 rounded-2xl border border-[#073E36]/12 bg-[#E6EDD7] p-3 dark:border-[#073E36]/30 dark:bg-[#073E36]/25">
+                  <feature.icon className="h-6 w-6 text-[#073E36] dark:text-[#E6EDD7]" strokeWidth={2} />
                 </div>
                 <div>
-                  <h3 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-3 transition-colors duration-300 tracking-tight">
+                  <h3 className="mb-2 text-xl font-semibold tracking-tight text-[#073E36] dark:text-[#E6EDD7] md:text-2xl">
                     {feature.title}
                   </h3>
-                  <p className="text-base text-gray-600 dark:text-gray-400 transition-colors duration-300 leading-relaxed">
+                  <p className="text-base leading-relaxed text-[#1a2e2c]/90 dark:text-[#c5d4c8]">
                     {feature.description}
                   </p>
                 </div>
@@ -98,110 +103,94 @@ const AboutUs = () => {
           ))}
         </div>
 
-        {/* Stats Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 rounded-2xl p-8 md:p-12 text-white mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center tracking-tight">Our Impact</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="mb-10 overflow-hidden rounded-[24px] border border-[#073E36]/25 bg-[#073E36] p-8 text-white shadow-[0_12px_40px_rgba(7,62,54,0.2),0_28px_72px_rgba(7,62,54,0.25)] md:mb-12 md:p-12">
+          <h2 className="font-display mb-10 text-center text-3xl font-bold tracking-tight md:text-4xl">
+            Our Impact
+          </h2>
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold mb-2 tracking-tight">5K+</div>
-              <div className="text-blue-100 text-sm md:text-base font-medium">Active Students</div>
+              <div className="mb-2 text-4xl font-bold tracking-tight md:text-5xl">5K+</div>
+              <div className="text-sm font-medium text-[#E6EDD7]/90 md:text-base">Active Students</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold mb-2 tracking-tight">1K+</div>
-              <div className="text-blue-100 text-sm md:text-base font-medium">Expert Solvers</div>
+              <div className="mb-2 text-4xl font-bold tracking-tight md:text-5xl">1K+</div>
+              <div className="text-sm font-medium text-[#E6EDD7]/90 md:text-base">Expert Solvers</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold mb-2 tracking-tight">10K+</div>
-              <div className="text-blue-100 text-sm md:text-base font-medium">Doubts Solved</div>
+              <div className="mb-2 text-4xl font-bold tracking-tight md:text-5xl">10K+</div>
+              <div className="text-sm font-medium text-[#E6EDD7]/90 md:text-base">Doubts Solved</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold mb-2 tracking-tight">24/7</div>
-              <div className="text-blue-100 text-sm md:text-base font-medium">Support Available</div>
+              <div className="mb-2 text-4xl font-bold tracking-tight md:text-5xl">24/7</div>
+              <div className="text-sm font-medium text-[#E6EDD7]/90 md:text-base">Support Available</div>
             </div>
           </div>
         </div>
 
-        {/* Values Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-12 shadow-lg transition-colors duration-300">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 mb-8 transition-colors duration-300 tracking-tight">Our Values</h2>
+        <div className={`${CARD_CLASS} mb-10 md:mb-12`}>
+          <h2 className="font-display mb-8 text-3xl font-bold tracking-tight text-[#073E36] dark:text-[#E6EDD7] md:text-4xl">
+            Our Values
+          </h2>
           <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-2.5 h-2.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300 tracking-tight">Accessibility</h3>
-                <p className="text-base text-gray-600 dark:text-gray-400 transition-colors duration-300 leading-relaxed">
-                  We believe education should be accessible to everyone, regardless of time or location.
-                </p>
+            {[
+              { title: 'Accessibility', body: 'We believe education should be accessible to everyone, regardless of time or location.' },
+              { title: 'Collaboration', body: 'Learning together makes us stronger. We foster a collaborative learning environment.' },
+              { title: 'Innovation', body: 'We continuously innovate to provide the best learning experience for our community.' },
+              { title: 'Excellence', body: 'We strive for excellence in everything we do, ensuring quality education for all.' },
+            ].map((v) => (
+              <div key={v.title} className="flex items-start gap-4">
+                <div className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#073E36] ring-2 ring-[#E6EDD7]/80 dark:bg-[#E6EDD7] dark:ring-[#073E36]/50" />
+                <div>
+                  <h3 className="mb-2 text-xl font-semibold tracking-tight text-[#073E36] dark:text-[#E6EDD7] md:text-2xl">
+                    {v.title}
+                  </h3>
+                  <p className="text-base leading-relaxed text-[#1a2e2c]/90 dark:text-[#c5d4c8]">{v.body}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-2.5 h-2.5 bg-purple-600 dark:bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300 tracking-tight">Collaboration</h3>
-                <p className="text-base text-gray-600 dark:text-gray-400 transition-colors duration-300 leading-relaxed">
-                  Learning together makes us stronger. We foster a collaborative learning environment.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-2.5 h-2.5 bg-green-600 dark:bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300 tracking-tight">Innovation</h3>
-                <p className="text-base text-gray-600 dark:text-gray-400 transition-colors duration-300 leading-relaxed">
-                  We continuously innovate to provide the best learning experience for our community.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-2.5 h-2.5 bg-orange-600 dark:bg-orange-400 rounded-full mt-2 flex-shrink-0"></div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300 tracking-tight">Excellence</h3>
-                <p className="text-base text-gray-600 dark:text-gray-400 transition-colors duration-300 leading-relaxed">
-                  We strive for excellence in everything we do, ensuring quality education for all.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Contact Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-12 shadow-lg transition-colors duration-300">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 mb-8 transition-colors duration-300 tracking-tight text-center">Contact Us</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+        <div className={CARD_CLASS}>
+          <h2 className="font-display mb-8 text-center text-3xl font-bold tracking-tight text-[#073E36] dark:text-[#E6EDD7] md:text-4xl">
+            Contact Us
+          </h2>
+          <div className="grid gap-8 md:grid-cols-3 md:gap-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
-                <Mail className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#073E36]/12 bg-[#E6EDD7] dark:border-[#073E36]/30 dark:bg-[#073E36]/25">
+                <Mail className="h-8 w-8 text-[#073E36] dark:text-[#E6EDD7]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Email</h3>
+              <h3 className="mb-2 text-lg font-semibold text-[#073E36] dark:text-[#E6EDD7]">Email</h3>
               <a
                 href="mailto:edufoyer2025@gmail.com"
-                className="text-base text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="text-base text-[#1a2e2c] underline-offset-2 transition-colors hover:text-[#073E36] hover:underline dark:text-[#c5d4c8] dark:hover:text-[#E6EDD7]"
               >
                 edufoyer2025@gmail.com
               </a>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
-                <Phone className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#073E36]/12 bg-[#E6EDD7] dark:border-[#073E36]/30 dark:bg-[#073E36]/25">
+                <Phone className="h-8 w-8 text-[#073E36] dark:text-[#E6EDD7]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Phone</h3>
+              <h3 className="mb-2 text-lg font-semibold text-[#073E36] dark:text-[#E6EDD7]">Phone</h3>
               <a
                 href="tel:+919065343339"
-                className="text-base text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="text-base text-[#1a2e2c] underline-offset-2 transition-colors hover:text-[#073E36] hover:underline dark:text-[#c5d4c8] dark:hover:text-[#E6EDD7]"
               >
                 9065343339
               </a>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
-                <MapPin className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#073E36]/12 bg-[#E6EDD7] dark:border-[#073E36]/30 dark:bg-[#073E36]/25">
+                <MapPin className="h-8 w-8 text-[#073E36] dark:text-[#E6EDD7]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Address</h3>
-              <p className="text-base text-gray-600 dark:text-gray-400 transition-colors duration-300">
+              <h3 className="mb-2 text-lg font-semibold text-[#073E36] dark:text-[#E6EDD7]">Address</h3>
+              <p className="text-base text-[#1a2e2c]/90 dark:text-[#c5d4c8]">
                 Jacobpura, Sector 52, Gurugram, Haryana, India- 122022
               </p>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -209,8 +198,3 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
-
-
-
-
-
