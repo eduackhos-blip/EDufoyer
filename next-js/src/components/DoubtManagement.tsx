@@ -1,19 +1,32 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, X, Menu, BookOpen } from 'lucide-react';
+import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, X, BookOpen } from 'lucide-react';
 import DoubtCard from './DoubtCard';
 import doubtService from '../services/doubtService';
 import solverService from '../services/solverService';
 import authService from '../services/authService';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import DarkModeToggle from './DarkModeToggle';
-import SharedSidebar from './SharedSidebar';
-import { buildDashboardSidebarItems } from './dashboardSidebarUtils';
-import { DashboardSidebarSuggested, DashboardSidebarUserFooter } from './DashboardSidebarExtras';
+import DashboardPageLayout from './dashboard/DashboardPageLayout';
 import AssignedDoubtsSection from './AssignedDoubtsSection';
 import AvailableDoubtsSection from './AvailableDoubtsSection';
 import MyDoubtsSection from './MyDoubtsSection';
+import SolvedDoubtsList from './SolvedDoubtsList';
 import { useSocket } from '../contexts/SocketContext';
+
+const DOUBT_TABS = [
+  { id: 'my-doubts', label: 'My Doubts' },
+  { id: 'available', label: 'Available' },
+  { id: 'assigned', label: 'Assigned' },
+  { id: 'solved', label: 'Solved' },
+];
+
+function parseDoubtsTab(tabFromUrl) {
+  if (tabFromUrl === 'available' || tabFromUrl === 'assigned' || tabFromUrl === 'solved') {
+    return tabFromUrl;
+  }
+  return 'my-doubts';
+}
 
 const DoubtManagement = () => {
   const router = useRouter();
@@ -21,7 +34,7 @@ const DoubtManagement = () => {
   const searchParams = useSearchParams();
   const location = { pathname, search: searchParams.toString() ? `?${searchParams.toString()}` : '', hash: typeof window !== 'undefined' ? window.location.hash : '' };
   const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl === 'available' ? 'available' : 'my-doubts'); // Default to my doubts or from URL
+  const [activeTab, setActiveTab] = useState(() => parseDoubtsTab(tabFromUrl));
   const [myDoubts, setMyDoubts] = useState([]);
   const [availableDoubts, setAvailableDoubts] = useState([]);
   const [assignedDoubts, setAssignedDoubts] = useState([]);
@@ -35,39 +48,7 @@ const DoubtManagement = () => {
   const seenAvailableIdsRef = useRef(new Set());
   const pollingRef = useRef(null);
   const [toast, setToast] = useState(null);
-  const [user, setUser] = useState(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { socket: sharedSocket, connectSocket, isConnected } = useSocket();
-
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 1024) setIsSidebarOpen(true);
-    };
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        if (!authService.isAuthenticated()) {
-          router.push('/');
-          return;
-        }
-        const userData = await authService.getProfile();
-        setUser(userData);
-      } catch (e) {
-        console.error('Error fetching user data:', e);
-        authService.logout();
-        router.push('/');
-      } finally {
-        setIsAuthLoading(false);
-      }
-    };
-    fetchUserData();
-  }, [router]);
 
   const fetchMyDoubts = async () => {
     try {
@@ -123,15 +104,23 @@ const DoubtManagement = () => {
     return result;
   };
 
-  // Update activeTab when URL changes
+  const setDoubtsTab = (tab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams();
+    if (tab !== 'my-doubts') params.set('tab', tab);
+    const query = params.toString();
+    router.replace(query ? `/dashboard/doubts?${query}` : '/dashboard/doubts', { scroll: false });
+  };
+
   useEffect(() => {
-    const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl === 'available') {
-      setActiveTab('available');
-    } else if (tabFromUrl === 'assigned') {
-      setActiveTab('assigned');
-    }
+    setActiveTab(parseDoubtsTab(searchParams.get('tab')));
   }, [searchParams]);
+
+  const tabCounts = {
+    'my-doubts': myDoubts.length,
+    available: availableDoubts.length,
+    assigned: assignedDoubts.length,
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -420,79 +409,52 @@ const DoubtManagement = () => {
     );
   }
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      router.push('/');
-    } catch {
-      router.push('/');
-    }
-  };
-
-  const handleHelpSupport = () => router.push('/contact');
-
-  const sidebarItems = buildDashboardSidebarItems({
-    user,
-    pathname: location.pathname,
-    search: location.search,
-    onLogout: handleLogout,
-  });
-
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-hidden">
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <SharedSidebar  
-          items={sidebarItems}
-          onClose={() => setIsSidebarOpen(false)}
-          showCloseButton={true}
-          belowNav={<DashboardSidebarSuggested />}
-          footer={
-            <DashboardSidebarUserFooter
-              user={user}
-              onLogout={handleLogout}
-              onHelpSupport={handleHelpSupport}
-            />
-          }
-        />
-      </aside>
-
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-          aria-hidden
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden lg:ml-0">
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 transition-colors duration-300 shrink-0">
-          <div className="flex items-center justify-between gap-3">
+    <DashboardPageLayout loadingMessage="Loading doubts…">
+      <div className="flex min-h-full flex-col overflow-hidden bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
+        <div className="shrink-0 border-b border-gray-200 bg-white p-4 transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="lg:hidden p-2 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
-                onClick={() => setIsSidebarOpen((o) => !o)}
-                aria-label="Open menu"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-
-              <button
                 onClick={() => router.push('/dashboard')}
                 className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-100 transition-colors shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span className="font-semibold">My Doubts</span>
+                <span className="font-semibold">Doubts</span>
               </button>
             </div>
 
-            <DarkModeToggle />
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <div
+                className="flex flex-wrap items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
+                role="tablist"
+                aria-label="Doubts sections"
+              >
+                {DOUBT_TABS.map((tab) => {
+                  const count = tabCounts[tab.id];
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setDoubtsTab(tab.id)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
+                        isActive
+                          ? 'border border-blue-200 bg-blue-50 text-blue-700 shadow-sm dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'
+                      }`}
+                    >
+                      {tab.label}
+                      {count != null ? ` (${count})` : ''}
+                    </button>
+                  );
+                })}
+              </div>
+              <DarkModeToggle />
+            </div>
           </div>
         </div>
 
@@ -677,40 +639,6 @@ const DoubtManagement = () => {
           </div>
         </div>
       )}
-          {/* Tabs */}
-          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl transition-colors duration-300">
-            <button
-              onClick={() => setActiveTab('my-doubts')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                activeTab === 'my-doubts'
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-300'
-              }`}
-            >
-              My Doubts ({myDoubts.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('available')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                activeTab === 'available'
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-300'
-              }`}
-            >
-              Available ({availableDoubts.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('assigned')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                activeTab === 'assigned'
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-300'
-              }`}
-            >
-              Assigned ({assignedDoubts.length})
-            </button>
-          </div>
-
           {/* Lists */}
           <div className="mt-4">
         {activeTab === 'my-doubts' && (
@@ -739,10 +667,16 @@ const DoubtManagement = () => {
             />
           </div>
         )}
+
+        {activeTab === 'solved' && (
+          <div>
+            <SolvedDoubtsList />
+          </div>
+        )}
           </div>
         </div>
       </div>
-    </div>
+    </DashboardPageLayout>
   );
 };
 

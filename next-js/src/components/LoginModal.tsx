@@ -56,7 +56,7 @@ const LoginModal = () => {
   useEffect(() => {
     if (authService.isAuthenticated()) {
       const isCacheVerified = localStorage.getItem('cacheVerified') === 'true';
-      router.push(isCacheVerified ? '/dashboard/profile' : '/verify-cache');
+      router.push(isCacheVerified ? '/dashboard' : '/verify-cache');
     }
   }, [router]);
 

@@ -11,26 +11,74 @@ const PAGE_BG = '#ffffff';
 const FOREST = '#073E36';
 const CARD_SAGE = '#E6EDD7';
 
+/** Elevation for inset white / light panels on sage cards (readable spread, forest tint). */
+const INNER_PANEL_BOX_SHADOW =
+  '0 2px 8px rgba(7, 62, 54, 0.07), 0 10px 32px rgba(7, 62, 54, 0.12), 0 22px 56px -8px rgba(7, 62, 54, 0.16), 0 36px 80px -14px rgba(7, 62, 54, 0.1)';
+
 const CATEGORY_LABELS: Record<string, string> = {
   small: 'Small',
   medium: 'Medium',
   large: 'Large'
 };
 
-function SectionTitle({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
+function SectionTitle({
+  children,
+  icon,
+  iconPosition = 'start',
+  titleClassName = '',
+  tight = false
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  iconPosition?: 'start' | 'end';
+  titleClassName?: string;
+  /** Less margin below the title row (e.g. before a tightly coupled panel). */
+  tight?: boolean;
+}) {
+  const label = (
+    <span
+      className={`relative inline-block pt-[7px] text-[18px] font-bold leading-tight tracking-tight text-[#1a2e2c] md:text-[20px]${titleClassName ? ` ${titleClassName}` : ''}`}
+    >
+      <img
+        src="/aboveMarks.png"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute left-[-17px] top-0 h-[20px] w-[26px] object-contain"
+        decoding="async"
+      />
+      {children}
+    </span>
+  );
+
   return (
-    <div className="mb-3 flex items-center gap-2">
-      {icon}
-      <span className="relative inline-block pt-[6px] text-[15px] font-bold tracking-tight text-[#1a2e2c]">
-        <img
-          src="/aboveMarks.png"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute left-[-17px] top-0 h-[18px] w-[24px] object-contain"
-          decoding="async"
-        />
-        {children}
-      </span>
+    <div className={`flex items-center gap-2 ${tight ? 'mb-1' : 'mb-3'}`}>
+      {iconPosition === 'start' && icon}
+      {label}
+      {iconPosition === 'end' && <span className="inline-flex translate-y-[5px]">{icon}</span>}
+    </div>
+  );
+}
+
+/** Small white sparkles beside hero line art (match mock). */
+function WaitingRoomHeroSparkles() {
+  return (
+    <div
+      className="mb-6 ml-0.5 flex shrink-0 items-end gap-0.5 self-end md:mb-7 md:ml-1"
+      style={{ position: 'relative', top: '-5rem', rotate: '39deg' }}
+      aria-hidden
+    >
+      <img
+        src="/whiteStarBigger.png"
+        alt=""
+        className="h-4 w-auto object-contain opacity-95 drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] md:h-5"
+        decoding="async"
+      />
+      <img
+        src="/whiteStarBigger.png"
+        alt=""
+        className="mb-1 -ml-0.5 h-3 w-auto translate-y-0.5 object-contain opacity-90 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] md:mb-1.5 md:h-3.5"
+        decoding="async"
+      />
     </div>
   );
 }
@@ -48,24 +96,38 @@ function WaitingRoomIllustration() {
   );
 }
 
-function RoomTitleMarks() {
+/** Decorative corner stars on white inner panels (match mock). */
+function CardCornerStars({ variant }: { variant: 'how' | 'process' }) {
+  const star = (position: string, heightClass: string) => (
+    <img
+      src="/fillStarBottom.png"
+      alt=""
+      aria-hidden
+      className={`pointer-events-none absolute z-0 object-contain select-none ${position} ${heightClass} w-auto`}
+      decoding="async"
+    />
+  );
+  if (variant === 'how') {
+    return (
+      <>
+        {star('left-2 top-2 md:left-2.5 md:top-2.5', 'h-4 md:h-[18px]')}
+        {star('right-2 top-2 md:right-2.5 md:top-2.5', 'h-[22px] md:h-6')}
+        {star('right-7 top-3 md:right-8 md:top-3', 'h-3 md:h-3.5')}
+      </>
+    );
+  }
   return (
-    <span className="absolute -top-[12px] left-0 flex gap-[3px]" aria-hidden>
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="block h-[10px] w-[2px] rounded-full bg-white/90"
-          style={{ transform: `rotate(${-18 + i * 18}deg)` }}
-        />
-      ))}
-    </span>
+    <>
+      {star('right-2 top-2 md:right-2.5 md:top-2.5', 'h-[22px] md:h-6')}
+      {star('right-8 top-3 md:right-9 md:top-3', 'h-3 md:h-3.5')}
+    </>
   );
 }
 
 /** Curved dotted connectors between three step nodes (matches mock). */
 function HowItWorksTrack() {
   return (
-    <div className="relative px-1 pb-1 pt-2">
+    <div className="relative z-[1] px-1 pb-1 pt-2">
       <svg
         className="pointer-events-none absolute left-2 right-2 top-[22px] h-[52px] w-[calc(100%-16px)] text-[#a8bdb4]"
         viewBox="0 0 260 52"
@@ -309,9 +371,15 @@ const AwaitingSolverPage = () => {
       >
         <div className="text-center">
           <div
-            className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-[#073E36]/25 border-t-[#073E36]"
+            className="relative mx-auto mb-5 h-12 w-12 rounded-full border border-[#073E36]/15 bg-[rgba(7,62,54,0.045)] shadow-[0_3px_18px_rgba(7,62,54,0.11)]"
             aria-hidden
-          />
+          >
+            <div className="pointer-events-none absolute inset-[1px] rounded-full border border-[#073E36]/10" />
+            {/* Outer ring: clockwise */}
+            <div className="pointer-events-none absolute inset-0 will-change-transform rounded-full border-[4px] border-[#073E36]/14 border-t-[#073E36] border-r-[#073E36]/55 shadow-[0_0_12px_rgba(7,62,54,0.14)] motion-reduce:animate-none animate-[spin_1.05s_linear_infinite]" />
+            {/* Inner ring: counter-clockwise */}
+            <div className="pointer-events-none absolute inset-[5px] will-change-transform rounded-full border-[4px] border-[#073E36]/10 border-t-[#073E36] border-r-[#073E36]/48 shadow-[inset_0_0_6px_rgba(7,62,54,0.06),0_0_10px_rgba(7,62,54,0.1)] motion-reduce:animate-none animate-[spin_0.85s_linear_infinite_reverse]" />
+          </div>
           <p className="text-[15px] text-[#1a2e2c]/80">Loading doubt details…</p>
         </div>
       </div>
@@ -396,6 +464,23 @@ const AwaitingSolverPage = () => {
                 radial-gradient(ellipse 65% 50% at 6% 92%, rgba(255,255,255,0.1) 0%, transparent 50%)`
             }}
           />
+          {/* Bottom glow stack — subtle; nudged slightly lower */}
+          <div className="pointer-events-none absolute bottom-0 left-[-1.25rem] right-[-1.25rem] top-0 z-0 md:left-[-2rem] md:right-[-2rem]">
+            <img
+              src="/largerGradientWaitingRoom.png"
+              alt=""
+              aria-hidden
+              decoding="async"
+              className="pointer-events-none absolute inset-x-0 top-[6.85rem] h-[clamp(2rem,9vw,3.5rem)] w-full select-none object-cover object-bottom opacity-[0.52] md:top-[7rem] md:h-[clamp(2.25rem,8vw,3.75rem)] md:opacity-[0.5]"
+            />
+            <img
+              src="/Rectangle%20184.png"
+              alt=""
+              aria-hidden
+              decoding="async"
+              className="pointer-events-none absolute inset-x-0 bottom-1 top-[9.25rem] w-full select-none object-cover object-bottom opacity-[0.48] md:bottom-1.5 md:top-[9.5rem] md:opacity-[0.45]"
+            />
+          </div>
 
           <div className="absolute right-4 top-4 z-[2] md:right-6 md:top-5">
             <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[11px] font-semibold text-neutral-900 shadow-md md:text-[12px]">
@@ -410,18 +495,25 @@ const AwaitingSolverPage = () => {
             <div className="max-w-xl pt-6 md:pt-5">
               <div className="flex flex-wrap items-center gap-5">
                 <div
-                  className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-full border-[3px] border-white/35 bg-white/10 shadow-inner"
+                  className="relative flex h-[3.5rem] w-[3.5rem] shrink-0 items-center justify-center rounded-full border border-white/25 bg-gradient-to-br from-white/[0.16] to-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_4px_20px_rgba(0,0,0,0.14)] md:h-[3.75rem] md:w-[3.75rem]"
                   aria-hidden
                 >
-                  <div className="h-[2.85rem] w-[2.85rem] animate-spin rounded-full border-[3px] border-white/25 border-t-white border-r-white/40" />
+                  <div className="pointer-events-none absolute inset-[1px] rounded-full border border-white/12" />
+                  {/* Outer ring: clockwise */}
+                  <div className="pointer-events-none absolute inset-0 z-0 will-change-transform rounded-full border-[5px] border-white/18 border-t-white border-r-white/60 shadow-[0_0_18px_rgba(255,255,255,0.18)] motion-reduce:animate-none animate-[spin_1.1s_linear_infinite]" />
+                  {/* Inner ring: counter-clockwise */}
+                  <div className="pointer-events-none absolute inset-[6px] z-[1] will-change-transform rounded-full border-[4px] border-white/12 border-t-white border-r-white/50 shadow-[inset_0_0_8px_rgba(255,255,255,0.06),0_0_14px_rgba(255,255,255,0.12)] motion-reduce:animate-none animate-[spin_0.85s_linear_infinite_reverse] md:inset-[7px]" />
                 </div>
                 <div>
-                  <h1 className="text-[28px] font-bold leading-[1.1] tracking-tight text-white md:text-[36px]">
-                    <span className="relative inline-block font-bold">
-                      <RoomTitleMarks />
-                      Waiting
-                    </span>{' '}
-                    <span className="inline-block font-bold">Room</span>
+                  <h1 className="flex flex-wrap items-center gap-2 text-[28px] font-bold leading-[1.1] tracking-tight text-white md:gap-3 md:text-[36px]">
+                    <span className="inline-block font-bold">Waiting Room</span>
+                    <img
+                      src="/env.d.png"
+                      alt=""
+                      aria-hidden
+                      className="relative -left-[25px] -top-[25px] h-9 w-auto shrink-0 object-contain opacity-95 md:h-11"
+                      decoding="async"
+                    />
                   </h1>
                   <p className="mt-2 max-w-md text-[13px] leading-snug text-white/55 md:text-[15px]">
                     Your doubt is waiting for a solver to accept it
@@ -430,21 +522,22 @@ const AwaitingSolverPage = () => {
               </div>
             </div>
             <div
-              className="flex justify-center pb-1 md:block md:justify-end md:pb-0 md:pr-2"
+              className="flex items-end justify-center gap-0.5 pb-1 md:justify-end md:pb-0 md:pr-2"
               style={{ position: 'relative', bottom: '-52px', right: '14px' }}
             >
               <WaitingRoomIllustration />
+              <WaitingRoomHeroSparkles />
             </div>
           </div>
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.22fr)_minmax(280px,1fr)]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-6">
             <div
-              className="rounded-[22px] border border-[#073E36]/14 p-4 shadow-[0_10px_36px_rgba(7,62,54,0.08)] md:p-5"
+              className="flex flex-col gap-5 rounded-[22px] border border-[#073E36]/14 px-4 pb-3 pt-4 shadow-[0_10px_36px_rgba(7,62,54,0.08)] md:gap-6 md:px-5 md:pb-4 md:pt-5"
               style={{ backgroundColor: CARD_SAGE }}
             >
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <SectionTitle>Doubt details</SectionTitle>
                 <button
                   type="button"
@@ -455,7 +548,17 @@ const AwaitingSolverPage = () => {
                   {withdrawing ? 'Withdrawing…' : 'Withdraw request'}
                 </button>
               </div>
-              <div className="rounded-[18px] border border-[#073E36]/10 bg-white p-4 shadow-[0_4px_22px_rgba(7,62,54,0.06)] md:p-5">
+              <div
+                className="relative rounded-[18px] border border-[#073E36]/10 bg-white p-4 md:p-5"
+                style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+              >
+                <img
+                  src="/fillStarBottom.png"
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-3 h-5 w-5 object-contain select-none md:right-4 md:top-4"
+                  decoding="async"
+                />
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <span className="text-[12px] font-semibold text-[#4b5c57]">Subject</span>
                   <span className="rounded-full bg-[#073E36] px-3 py-1 text-[12px] font-semibold text-white">
@@ -475,19 +578,30 @@ const AwaitingSolverPage = () => {
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div
-              className="rounded-[22px] border border-[#073E36]/14 p-4 shadow-[0_10px_36px_rgba(7,62,54,0.08)] md:p-5"
-              style={{ backgroundColor: CARD_SAGE }}
-            >
-              <SectionTitle icon={<Bell className="h-4 w-4 text-[#073E36]" strokeWidth={2.2} aria-hidden />}>
-                Live updates
-              </SectionTitle>
-              <div className="rounded-[16px] border border-[#073E36]/12 bg-[#ecf4e4] px-4 py-3.5 shadow-inner">
-                <div className="flex items-start gap-3">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#073E36]" />
-                  <p className="text-[13px] leading-snug text-[#1a2e2c]">{liveText}</p>
+              <div className="flex flex-col gap-2">
+                <SectionTitle
+                  icon={<Bell className="h-4 w-4 shrink-0 text-[#073E36]" strokeWidth={2.2} aria-hidden />}
+                  iconPosition="end"
+                  tight
+                >
+                  Live updates
+                </SectionTitle>
+                <div
+                  className="relative rounded-[16px] border border-[#073E36]/12 bg-[#ecf4e4] px-4 py-3.5"
+                  style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+                >
+                  <img
+                    src="/fillStarBottom.png"
+                    alt=""
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-3 h-5 w-5 object-contain select-none md:right-4 md:top-4"
+                    decoding="async"
+                  />
+                  <div className="flex items-start gap-3 pr-7">
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#073E36]" />
+                    <p className="text-[13px] font-medium leading-snug text-[#073E36]">{liveText}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -499,7 +613,11 @@ const AwaitingSolverPage = () => {
               style={{ backgroundColor: CARD_SAGE }}
             >
               <SectionTitle>How it works</SectionTitle>
-              <div className="rounded-[18px] border border-[#073E36]/10 bg-white p-3 shadow-[0_4px_22px_rgba(7,62,54,0.06)] md:p-4">
+              <div
+                className="relative overflow-hidden rounded-[18px] border border-[#073E36]/10 bg-white p-3 md:p-4"
+                style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+              >
+                <CardCornerStars variant="how" />
                 <HowItWorksTrack />
               </div>
             </div>
@@ -509,8 +627,12 @@ const AwaitingSolverPage = () => {
               style={{ backgroundColor: CARD_SAGE }}
             >
               <SectionTitle>Process</SectionTitle>
-              <div className="rounded-[18px] border border-[#073E36]/10 bg-white p-4 shadow-[0_4px_22px_rgba(7,62,54,0.06)] md:p-5">
-                <ol className="space-y-5">
+              <div
+                className="relative overflow-hidden rounded-[18px] border border-[#073E36]/10 bg-white p-4 md:p-5"
+                style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+              >
+                <CardCornerStars variant="process" />
+                <ol className="relative z-[1] space-y-5">
                   <li className="flex gap-3">
                     <span
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white"

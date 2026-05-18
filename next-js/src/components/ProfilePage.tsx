@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, ArrowLeft, Search, Menu, TrendingUp } from 'lucide-react';
+import { Loader2, ArrowLeft, Search, TrendingUp } from 'lucide-react';
 import {
   XAxis,
   YAxis,
@@ -12,11 +12,9 @@ import {
 import authService from '../services/authService';
 import doubtService from '../services/doubtService';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import SharedSidebar from './SharedSidebar';
-import { buildDashboardSidebarItems } from './dashboardSidebarUtils';
-import { DashboardSidebarSuggested, DashboardSidebarUserFooter } from './DashboardSidebarExtras';
 import WalletDisplay from './WalletDisplay';
 import DarkModeToggle from './DarkModeToggle';
+import DashboardPageLayout from './dashboard/DashboardPageLayout';
 import ProfileAskDoubtCard from './ProfileAskDoubtCard';
 
 const DEFAULT_PROFILE_COVER_URL = '/cover-photo-profile-page.jpg';
@@ -50,17 +48,7 @@ const ProfilePage = () => {
   const [solvedThisMonth, setSolvedThisMonth] = useState(0);
   const [avgRating, setAvgRating] = useState(null);
   const [perfTab, setPerfTab] = useState('Overall');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQ, setSearchQ] = useState('');
-
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 1024) setIsSidebarOpen(true);
-    };
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -172,24 +160,6 @@ const ProfilePage = () => {
     };
   }, [user?.coverImageUrl, user?.updatedAt]);
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      router.push('/');
-    } catch {
-      router.push('/');
-    }
-  };
-
-  const handleHelpSupport = () => router.push('/contact');
-
-  const sidebarItems = buildDashboardSidebarItems({
-    user,
-    pathname: location.pathname,
-    search: location.search,
-    onLogout: handleLogout,
-  });
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -200,47 +170,11 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden transition-colors duration-300">
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <SharedSidebar
-          items={sidebarItems}
-          onClose={() => setIsSidebarOpen(false)}
-          showCloseButton={true}
-          belowNav={<DashboardSidebarSuggested />}
-          footer={
-            <DashboardSidebarUserFooter
-              user={user}
-              onLogout={handleLogout}
-              onHelpSupport={handleHelpSupport}
-            />
-          }
-        />
-      </aside>
-
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-          aria-hidden
-        />
-      )}
-
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 lg:ml-0">
+    <DashboardPageLayout loadingMessage="Loading profile…">
+      <div className="flex min-h-full flex-col overflow-hidden bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
         <header className="shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex items-center gap-2 min-w-0 shrink-0">
-              <button
-                type="button"
-                className="lg:hidden p-2 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => setIsSidebarOpen((o) => !o)}
-                aria-label="Open menu"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
               <button
                 type="button"
                 onClick={() => router.push('/dashboard')}
@@ -423,8 +357,8 @@ const ProfilePage = () => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardPageLayout>
   );
 };
 

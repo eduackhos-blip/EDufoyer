@@ -1,7 +1,6 @@
 import {
   Home,
   BookOpen,
-  Search,
   LogOut,
   Bell,
   User,
@@ -17,14 +16,9 @@ import {
  */
 export function buildDashboardSidebarItems({ user, pathname, search, onLogout }) {
   const userId = user?.id || user?._id || 'default_user';
-  const params = new URLSearchParams(typeof search === 'string' ? search : '');
-  const doubtsTab = params.get('tab');
-  const isDoubts = pathname === '/dashboard/doubts';
-
   const activeHome = pathname === '/dashboard';
-  const activeMyDoubts = isDoubts && doubtsTab !== 'available';
-  const activeAvailable = isDoubts && doubtsTab === 'available';
-  const activeSolved = pathname === '/dashboard/solved-doubts';
+  const activeDoubts =
+    pathname === '/dashboard/doubts' || pathname === '/dashboard/solved-doubts';
   const activeSocial =
     pathname === '/dashboard/social' || pathname.startsWith('/dashboard/social/');
   const activeCorp = pathname === '/dashboard/corporate-connect';
@@ -37,19 +31,7 @@ export function buildDashboardSidebarItems({ user, pathname, search, onLogout })
 
   const baseItems = [
     { icon: Home, label: 'Home', path: '/dashboard', active: activeHome },
-    { icon: BookOpen, label: 'My Doubts', path: '/dashboard/doubts', active: activeMyDoubts },
-    {
-      icon: Search,
-      label: 'Available Doubts',
-      path: '/dashboard/doubts?tab=available',
-      active: activeAvailable,
-    },
-    {
-      icon: BookOpen,
-      label: 'Solved Doubts',
-      path: '/dashboard/solved-doubts',
-      active: activeSolved,
-    },
+    { icon: BookOpen, label: 'Doubts', path: '/dashboard/doubts', active: activeDoubts },
     {
       icon: Share2,
       label: 'Educational Social',
