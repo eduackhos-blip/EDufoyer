@@ -19,3 +19,7 @@ export const getAuthenticatedUser = async (req: NextRequest) => {
   return user;
 };
 
+/** Stable Mongo user id for wallet, withdrawals, and other user-scoped queries. */
+export const getAuthUserId = (user: { _id?: unknown; id?: string }) =>
+  String(user._id ?? user.id ?? "");
+

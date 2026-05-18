@@ -95,7 +95,7 @@ const start = async () => {
         }
         else {
             await mongoose_1.default.connect(config_1.config.mongoUri);
-            console.log("[mongo] connected");
+            console.log(`[mongo] connected db=${mongoose_1.default.connection.db?.databaseName ?? "unknown"}`);
         }
     }
     catch (error) {

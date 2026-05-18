@@ -1,51 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/lib/db";
-import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { getAuthenticatedUser, getAuthUserId } from "@/src/utils/server/currentUser";
 import { authErrorResponse } from "@/src/utils/server/errorResponse";
+import { checkWithdrawalEligibility } from "@/src/utils/server/walletEligibility";
 import Wallet from "@/src/models/Wallet";
 import WithdrawalRequest from "@/src/models/WithdrawalRequest";
-import SolverDoubts from "@/src/models/SolverDoubts";
 
 export const runtime = "nodejs";
-
-async function checkWithdrawalEligibility(solverId: string) {
-  const completedDoubts = await SolverDoubts.countDocuments({
-    solver_id: solverId,
-    resolution_status: "session_completed",
-    feedback_rating: { $exists: true, $ne: null },
-  });
-  const solvedDoubts = await SolverDoubts.find({
-    solver_id: solverId,
-    resolution_status: "session_completed",
-    feedback_rating: { $exists: true, $ne: null },
-  }).select("feedback_rating");
-
-  let averageRating = 0;
-  if (solvedDoubts.length > 0) {
-    const totalRating = solvedDoubts.reduce((sum, sd) => sum + (sd.feedback_rating || 0), 0);
-    averageRating = Math.round((totalRating / solvedDoubts.length) * 10) / 10;
-  }
-  const minDoubtsRequired = 30;
-  const minRatingRequired = 3.5;
-  const isEligible = completedDoubts >= minDoubtsRequired && averageRating >= minRatingRequired;
-  return {
-    isEligible,
-    completedDoubts,
-    averageRating,
-    minDoubtsRequired,
-    minRatingRequired,
-    message: isEligible
-      ? "You are eligible for withdrawal"
-      : completedDoubts < minDoubtsRequired
-        ? `Complete ${minDoubtsRequired - completedDoubts} more doubts to unlock withdrawal (Free trial period: ${completedDoubts}/${minDoubtsRequired})`
-        : `Your average rating is ${averageRating.toFixed(1)}. You need at least ${minRatingRequired} stars to withdraw.`,
-  };
-}
 
 export async function POST(req: NextRequest) {
   try {
     await connectDb();
     const user = await getAuthenticatedUser(req);
+    const userId = getAuthUserId(user);
     const body = await req.json();
     const { amount, upi_id, bank_account_number, bank_ifsc, bank_name, account_holder_name } = body ?? {};
 
@@ -62,8 +29,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const wallet = await Wallet.findOne({ user_id: user.id });
-    if (!wallet) return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
+    const wallet = await Wallet.findOne({ user_id: userId });
+    if (!wallet) {
+      return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
+    }
     if (wallet.balance < amount) {
       return NextResponse.json(
         { success: false, message: `Insufficient balance. Available: ${wallet.balance} coins` },
@@ -71,21 +40,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const eligibility = await checkWithdrawalEligibility(String(user.id));
+    const eligibility = await checkWithdrawalEligibility(userId);
     if (!eligibility.isEligible) {
-      return NextResponse.json({ success: false, message: eligibility.message, eligibility }, { status: 403 });
+      return NextResponse.json(
+        { success: false, message: eligibility.message, eligibility },
+        { status: 403 }
+      );
     }
 
-    const pendingRequest = await WithdrawalRequest.findOne({ user_id: user.id, status: "pending" });
+    const pendingRequest = await WithdrawalRequest.findOne({ user_id: userId, status: "pending" });
     if (pendingRequest) {
       return NextResponse.json(
-        { success: false, message: "You already have a pending withdrawal request. Please wait for approval." },
+        {
+          success: false,
+          message: "You already have a pending withdrawal request. Please wait for approval.",
+        },
         { status: 400 }
       );
     }
 
     const withdrawalRequest = new WithdrawalRequest({
-      user_id: user.id,
+      user_id: userId,
       amount,
       upi_id: upi_id || null,
       bank_account_number: bank_account_number || null,
@@ -97,7 +72,11 @@ export async function POST(req: NextRequest) {
     await withdrawalRequest.save();
 
     return NextResponse.json(
-      { success: true, message: "Withdrawal request submitted successfully", data: withdrawalRequest },
+      {
+        success: true,
+        message: "Withdrawal request submitted successfully",
+        data: withdrawalRequest,
+      },
       { status: 201 }
     );
   } catch (error) {

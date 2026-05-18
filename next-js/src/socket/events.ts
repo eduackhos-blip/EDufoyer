@@ -13,6 +13,13 @@ export const SOCKET_EVENTS = {
   RECEIVE_MESSAGE: "receive_message",
   ROOM_ERROR: "room-error",
   SCREEN_SHARE_STOP: "screen_share_stop",
+  LEAVE_ROOM: "leave-room",
+  SESSION_BOTH_JOINED: "session:both-joined",
+  SESSION_ASKER_LEFT: "session:asker-left",
+  SESSION_ASKER_REJOINED: "session:asker-rejoined",
+  SESSION_TIMER_START: "session:timer-start",
+  SESSION_SOLVER_LEFT: "session:solver-left",
+  SESSION_PROCESSED: "session:processed",
 } as const;
 
 export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

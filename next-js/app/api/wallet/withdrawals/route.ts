@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/lib/db";
-import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { getAuthenticatedUser, getAuthUserId } from "@/src/utils/server/currentUser";
 import { authErrorResponse } from "@/src/utils/server/errorResponse";
 import WithdrawalRequest from "@/src/models/WithdrawalRequest";
 
@@ -10,9 +10,10 @@ export async function GET(req: NextRequest) {
   try {
     await connectDb();
     const user = await getAuthenticatedUser(req);
-    const withdrawals = await WithdrawalRequest.find({ user_id: user.id })
+    const withdrawals = await WithdrawalRequest.find({ user_id: getAuthUserId(user) })
       .sort({ createdAt: -1 })
       .populate("approved_by", "name email");
+
     return NextResponse.json({ success: true, data: withdrawals }, { status: 200 });
   } catch (error) {
     const authRes = authErrorResponse(error);

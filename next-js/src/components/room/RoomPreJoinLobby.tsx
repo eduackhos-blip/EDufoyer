@@ -3,6 +3,9 @@ import { RoomPreJoinLobbyHeader } from "./RoomPreJoinLobbyHeader";
 
 export type RoomPreJoinLobbyProps = {
   roomId: string | undefined;
+  meetingTimerLabel?: string | null;
+  categorySessionLabel?: string | null;
+  isTimerRunning?: boolean;
   myStream: MediaStream | null;
   mediaError: string | null;
   isMicOn: boolean;
@@ -14,6 +17,9 @@ export type RoomPreJoinLobbyProps = {
 
 export function RoomPreJoinLobby({
   roomId,
+  meetingTimerLabel,
+  categorySessionLabel,
+  isTimerRunning,
   myStream,
   mediaError,
   isMicOn,
@@ -26,7 +32,12 @@ export function RoomPreJoinLobby({
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-0.5rem)] w-full max-w-3xl flex-col gap-4 py-3 max-lg:px-0 sm:gap-6 sm:py-6 lg:min-h-[calc(100vh-2rem)] lg:gap-8 lg:py-8">
-      <RoomPreJoinLobbyHeader roomId={roomId} />
+      <RoomPreJoinLobbyHeader
+        roomId={roomId}
+        meetingTimerLabel={meetingTimerLabel}
+        categorySessionLabel={categorySessionLabel}
+        isTimerRunning={isTimerRunning}
+      />
 
       <div className="overflow-hidden rounded-xl border border-slate-800/70 bg-slate-900/70 shadow-lg shadow-black/20 lg:rounded-2xl lg:border-slate-800 lg:shadow-xl lg:shadow-black/30">
         <div className="relative aspect-video w-full bg-slate-950">

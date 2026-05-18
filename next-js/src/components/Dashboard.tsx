@@ -33,7 +33,7 @@ const Dashboard = () => {
   const location = { pathname, search: searchParams.toString() ? `?${searchParams.toString()}` : '', hash: typeof window !== 'undefined' ? window.location.hash : '' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showSolverRequestForm, setShowSolverRequestForm] = useState(false);
-  const { socket: sharedSocket, connectSocket } = useSocket();
+  const { socket: sharedSocket, connectSocket, isConnected } = useSocket();
   
   // Handle responsive sidebar - close on mobile by default, open on desktop
   useEffect(() => {
@@ -95,6 +95,28 @@ const Dashboard = () => {
     let onDoubtAssigned = null;
     let onDoubtRated = null;
     let onDoubtCompleted = null;
+    let onSocketConnect = null;
+
+    const registerAsSolver = (socket) => {
+      (async () => {
+        try {
+          const profile = await authService.getProfile();
+          const userId = profile?.id || profile?._id;
+          let subjects = [];
+          try {
+            const profRes = await fetch('/api/profile', {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            const profJson = await profRes.json();
+            const strongSubject = profJson?.data?.strongSubject;
+            subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
+          } catch {}
+          socket.emit('registerSolver', { userId, subjects });
+        } catch {
+          socket.emit('registerSolver', { subjects: [] });
+        }
+      })();
+    };
 
     // Realtime listener for solver modal
     try {
@@ -102,24 +124,9 @@ const Dashboard = () => {
       socketRef.current = socket;
 
       if (socket) {
-        (async () => {
-          try {
-            const profile = await authService.getProfile();
-            const userId = profile?.id || profile?._id;
-            let subjects = [];
-            try {
-              const profRes = await fetch('/api/profile', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-              });
-              const profJson = await profRes.json();
-              const strongSubject = profJson?.data?.strongSubject;
-              subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
-            } catch {}
-            socket.emit('registerSolver', { userId, subjects });
-          } catch {
-            socket.emit('registerSolver', { userId: null, subjects: [] });
-          }
-        })();
+        registerAsSolver(socket);
+        onSocketConnect = () => registerAsSolver(socket);
+        socket.on('connect', onSocketConnect);
 
         onDoubtAvailable = (payload) => {
           setIncomingDoubt({
@@ -219,6 +226,7 @@ const Dashboard = () => {
     return () => {
       const socket = socketRef.current;
       if (socket) {
+        if (onSocketConnect) socket.off('connect', onSocketConnect);
         if (onDoubtAvailable) socket.off('doubt:available', onDoubtAvailable);
         if (onDoubtAssigned) socket.off('doubt:assigned', onDoubtAssigned);
         if (onDoubtRated) socket.off('doubt:rated', onDoubtRated);
@@ -230,7 +238,7 @@ const Dashboard = () => {
         pollingRef.current = null;
       }
     };
-  }, [router, incomingDoubt, sharedSocket, connectSocket]);
+  }, [router, sharedSocket, connectSocket, isConnected]);
 
   const handleAcceptFromModal = async () => {
     if (!incomingDoubt) return;
@@ -246,8 +254,14 @@ const Dashboard = () => {
         body: JSON.stringify({ doubtId: incomingDoubt.doubtId })
       });
       
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error('Failed to accept doubt');
+        throw new Error(data?.message || 'Failed to accept doubt');
+      }
+
+      const sessionRoomId = data?.data?.roomId;
+      if (!sessionRoomId) {
+        throw new Error('Accept succeeded but session room id was missing.');
       }
       
       await new Promise((r) => setTimeout(r, 1200));
@@ -262,11 +276,10 @@ const Dashboard = () => {
         return;
       }
       
-      // For immediate doubts, accept and join session
-      const toId = incomingDoubt.doubtId;
+      // For immediate doubts, accept and join session (full room id required for timer + session)
       setShowAvailableModal(false);
       setIncomingDoubt(null);
-      router.push(`/dashboard/session/${toId}`);
+      router.push(`/dashboard/session/${encodeURIComponent(sessionRoomId)}`);
     } catch {
       setIsJoiningSession(false);
     }

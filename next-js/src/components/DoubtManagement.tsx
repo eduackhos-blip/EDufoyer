@@ -38,7 +38,7 @@ const DoubtManagement = () => {
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { socket: sharedSocket, connectSocket } = useSocket();
+  const { socket: sharedSocket, connectSocket, isConnected } = useSocket();
 
   useEffect(() => {
     const onResize = () => {
@@ -117,15 +117,10 @@ const DoubtManagement = () => {
   };
 
   const handleAcceptDoubt = async (doubtId) => {
-    try {
-      await solverService.acceptDoubt(doubtId);
-      // Refresh the lists
-      fetchAvailableDoubts();
-      fetchAssignedDoubts();
-    } catch (err) {
-      console.error('Error accepting doubt:', err);
-      setError(err.message || 'Failed to accept doubt.');
-    }
+    const result = await solverService.acceptDoubt(doubtId);
+    fetchAvailableDoubts();
+    fetchAssignedDoubts();
+    return result;
   };
 
   // Update activeTab when URL changes
@@ -178,36 +173,38 @@ const DoubtManagement = () => {
       if (socket) {
         socketRef.current = socket;
 
+      const registerAsSolver = () => {
+        (async () => {
+          try {
+            const user = await authService.getProfile();
+            const userId = user?.id || user?._id;
+            let subjects = [];
+            try {
+              const profRes = await fetch('/api/profile', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+              });
+              const profJson = await profRes.json();
+              const strongSubject = profJson?.data?.strongSubject;
+              subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
+            } catch {}
+            socket.emit('registerSolver', { userId, subjects });
+          } catch {
+            socket.emit('registerSolver', { subjects: [] });
+          }
+        })();
+      };
+
+      registerAsSolver();
+
       onSocketConnect = () => {
         console.log('✅ Solver socket connected', socket.id);
+        registerAsSolver();
       };
       onSocketConnectError = (err) => {
         console.error('❌ Solver socket connect_error', err);
       };
       socket.on('connect', onSocketConnect);
       socket.on('connect_error', onSocketConnectError);
-
-      // Register solver with their subjects so backend can place into rooms
-      (async () => {
-        try {
-          // Always register with userId so personal room emits work immediately
-          const user = await authService.getProfile();
-          const userId = user?.id || user?._id;
-          let subjects = [];
-          try {
-            const profRes = await fetch('/api/profile', {
-              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            const profJson = await profRes.json();
-            const strongSubject = profJson?.data?.strongSubject;
-            subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
-          } catch {}
-          socket.emit('registerSolver', { userId, subjects });
-        } catch (e) {
-          // fallback: at least try to join with token-embedded user id if available later
-          socket.emit('registerSolver', { userId: null, subjects: [] });
-        }
-      })();
 
       onDoubtAvailable = (payload) => {
         console.log('📥 doubt:available', payload);
@@ -365,13 +362,14 @@ const DoubtManagement = () => {
         pollingRef.current = null;
       }
     };
-  }, [sharedSocket, connectSocket]);
+  }, [sharedSocket, connectSocket, isConnected]);
 
   const handleAcceptFromModal = async () => {
     if (!incomingDoubt) return;
     try {
       setIsJoiningSession(true);
-      await handleAcceptDoubt(incomingDoubt.doubtId);
+      const acceptResult = await handleAcceptDoubt(incomingDoubt.doubtId);
+      const sessionRoomId = acceptResult?.data?.roomId;
       // Brief UX delay to communicate session preparation
       await new Promise((r) => setTimeout(r, 1500));
       
@@ -384,13 +382,18 @@ const DoubtManagement = () => {
         alert('Doubt accepted successfully! You will receive an email with the meeting link at the scheduled time.');
         return;
       }
+
+      if (!sessionRoomId) {
+        throw new Error('Session room id missing after accept.');
+      }
       
       // For immediate doubts, accept and join session
       setShowAvailableModal(false);
       setIncomingDoubt(null);
-      router.push(`/dashboard/session/${incomingDoubt.doubtId}`);
+      router.push(`/dashboard/session/${encodeURIComponent(sessionRoomId)}`);
     } catch (e) {
-      // keep modal open to retry or dismiss
+      console.error('Error accepting doubt:', e);
+      setError(e?.message || 'Failed to accept doubt.');
       setIsJoiningSession(false);
     }
   };

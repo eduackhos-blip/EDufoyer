@@ -5,6 +5,7 @@ import type { RoomChatMessage } from "@/src/hooks/useRoomChat";
 import { ChatSidebarContent } from "./ChatSidebarContent";
 import { MicIcon } from "./CallControlIcons";
 import { RoomCallSessionFooter } from "./RoomCallSessionFooter";
+import { MeetingTimerBadge } from "./MeetingTimerBadge";
 
 type RemoteUser = { userId: string; username: string; email: string };
 
@@ -27,6 +28,11 @@ export type RoomCallSessionProps = {
   isScreenSharing: boolean;
   onScreenShareClick: () => void;
   onLeaveClick: () => void;
+  meetingTimerLabel?: string | null;
+  categorySessionLabel?: string | null;
+  isTimerRunning?: boolean;
+  showAskerGraceBanner?: boolean;
+  askerGraceLabel?: string | null;
   messages: RoomChatMessage[];
   chatInput: string;
   setChatInput: (value: string) => void;
@@ -67,6 +73,11 @@ export function RoomCallSession({
   isScreenSharing,
   onScreenShareClick,
   onLeaveClick,
+  meetingTimerLabel,
+  categorySessionLabel,
+  isTimerRunning = false,
+  showAskerGraceBanner,
+  askerGraceLabel,
   messages,
   chatInput,
   setChatInput,
@@ -133,11 +144,21 @@ export function RoomCallSession({
   return (
     <div className="flex h-[calc(100dvh-0.5rem)] w-full max-lg:gap-1.5 lg:h-[calc(100vh-2rem)] lg:gap-4">
       <section className="flex min-w-0 flex-1 flex-col gap-1.5 lg:gap-4">
-        <header className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800/70 bg-slate-900/70 px-2.5 py-2 max-lg:shadow-sm lg:gap-3 lg:rounded-2xl lg:border-slate-800 lg:px-4 lg:py-3">
+        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-slate-800/70 bg-slate-900/70 px-2.5 py-2 max-lg:shadow-sm lg:gap-3 lg:rounded-2xl lg:border-slate-800 lg:px-4 lg:py-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-indigo-400">Room</p>
-            <h1 className="text-lg font-semibold">{roomId}</h1>
+            <h1 className="truncate text-sm font-semibold lg:text-lg">{roomId}</h1>
           </div>
+          {meetingTimerLabel ? (
+            <MeetingTimerBadge
+              timerLabel={meetingTimerLabel}
+              categoryLabel={categorySessionLabel}
+              isRunning={isTimerRunning}
+              compact
+            />
+          ) : (
+            <div />
+          )}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
@@ -159,6 +180,20 @@ export function RoomCallSession({
             </Link>
           </div>
         </header>
+
+        {showAskerGraceBanner && askerGraceLabel ? (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-sm text-amber-100">
+            <p className="font-medium">Asker left the meeting</p>
+            <p className="mt-1 text-amber-200/90">
+              Please stay on this page. If they do not rejoin within{" "}
+              <span className="font-mono font-semibold">{askerGraceLabel}</span>, the session will
+              end. If you leave before then, wallet credit may not be applied.
+            </p>
+            <p className="mt-1 text-xs text-amber-300/80">
+              If the asker rejoins in time, the session continues as usual.
+            </p>
+          </div>
+        ) : null}
 
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-800/60 bg-slate-900/70 p-1 lg:rounded-2xl lg:border-slate-800 lg:p-3">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">

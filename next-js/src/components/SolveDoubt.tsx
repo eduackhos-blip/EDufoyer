@@ -27,12 +27,15 @@ const SolveDoubt = () => {
         setStatus('pending');
         setMessage('Accepting the doubt...');
         const res = await solverService.acceptDoubt(doubtId);
+        const sessionRoomId = res?.data?.roomId;
+        if (!sessionRoomId) {
+          throw new Error('Session room id missing after accept.');
+        }
         setStatus('success');
         setMessage(res?.message || 'Doubt accepted. Redirecting to session...');
 
-        // Redirect to live session
         setTimeout(() => {
-          router.push(`/dashboard/session/${doubtId}`);
+          router.push(`/dashboard/session/${encodeURIComponent(sessionRoomId)}`);
         }, 1200);
       } catch (err) {
         console.error('SolveDoubt error:', err);

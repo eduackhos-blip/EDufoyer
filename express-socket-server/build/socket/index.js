@@ -12,7 +12,7 @@ const setupSocketHandlers = (io) => {
         socket.on(events_1.SOCKET_EVENTS.PING, () => {
             socket.emit(events_1.SOCKET_EVENTS.PONG, { message: "pong from server" });
         });
-        (0, room_socket_1.registerRoomSocketHandlers)(socket);
+        (0, room_socket_1.registerRoomSocketHandlers)(socket, io);
         (0, webrtc_socket_1.registerWebRtcSocketHandlers)(socket);
         (0, message_socket_1.registerMessageSocketHandlers)(socket, io);
         (0, edufoyer_socket_1.registerEdufoyerSocketHandlers)(socket);
@@ -21,9 +21,6 @@ const setupSocketHandlers = (io) => {
         });
         socket.on("clientError", (error) => {
             console.error(`[socket] clientError (${socket.id}):`, error);
-        });
-        socket.on("disconnect", (reason) => {
-            console.log(`[socket] disconnected: ${socket.id}, reason: ${reason}`);
         });
     });
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { HelpCircle, X, AlertCircle, Info, Calendar, Clock, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import doubtService from '../services/doubtService';
 import AskDoubtModal from './AskDoubtModal';
 import { 
@@ -10,6 +11,7 @@ import {
   validateImage,
   validateDoubtForm 
 } from '../utils/client/doubtValidation';
+import { buildQuotaLimitCopy, getTimeUntilQuotaReset } from '../utils/client/doubtQuotaMessage';
 
 const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -24,6 +26,8 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
   const [mismatchDetails, setMismatchDetails] = useState(null);
   const [showQuotaErrorPopup, setShowQuotaErrorPopup] = useState(false);
   const [quotaErrorMessage, setQuotaErrorMessage] = useState('');
+  const [quotaPopupBody, setQuotaPopupBody] = useState('');
+  const [quotaResetLabel, setQuotaResetLabel] = useState('');
   const [quotaDetails, setQuotaDetails] = useState(null);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
@@ -234,23 +238,40 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
       
       // Check if backend returned errors
       if (!result.success) {
+        const errText = String(result.error || result.message || '').toLowerCase();
+        const isQuotaError =
+          Boolean(result.quotaDetails) ||
+          errText.includes('quota') ||
+          errText.includes('limit') ||
+          errText.includes('slots') ||
+          errText.includes('daily');
+
         if (result.fieldErrors) {
           setErrors(result.fieldErrors);
-        } else if (result.error === 'SUBJECT_MISMATCH' || result.message) {
-          // Show subject mismatch popup
+        } else if (isQuotaError) {
+          const copy = buildQuotaLimitCopy(result.quotaDetails, doubtCategory);
+          const { durationLabel, resetTimeLabel } = getTimeUntilQuotaReset();
+          setQuotaErrorMessage(copy.headline);
+          setQuotaPopupBody(copy.popupBody);
+          setQuotaResetLabel(`Resets in ~${durationLabel} · 12:00 AM (${resetTimeLabel})`);
+          setQuotaDetails(result.quotaDetails || null);
+          setShowQuotaErrorPopup(true);
+          toast.error(copy.toast, {
+            duration: 9000,
+            icon: '⏳',
+            style: { maxWidth: '420px' },
+          });
+        } else if (result.error === 'SUBJECT_MISMATCH') {
           setMismatchDetails({
-            message: result.message || 'Please ask subject-related doubts. Your doubt description does not match the selected subject.',
+            message:
+              result.message ||
+              'Please ask subject-related doubts. Your doubt description does not match the selected subject.',
             reason: result.validationDetails?.reason || '',
             confidence: result.validationDetails?.confidence || 0,
           });
           setShowSubjectMismatchPopup(true);
-        } else if (result.error && (result.error.toLowerCase().includes('quota') || result.error.toLowerCase().includes('completed') || result.error.toLowerCase().includes('limit'))) {
-          // Show quota exceeded error popup
-          setQuotaErrorMessage(result.error || 'You\'ve reached your daily doubt limit. Your quota will reset after 12 AM. Please try again tomorrow!');
-          setQuotaDetails(result.quotaDetails || null);
-          setShowQuotaErrorPopup(true);
         } else {
-          alert(result.error || 'Failed to submit doubt. Please check your input and try again.');
+          alert(result.error || result.message || 'Failed to submit doubt. Please check your input and try again.');
         }
         setUploading(false);
         return;
@@ -355,11 +376,17 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
       
       if (errorMessage.toLowerCase().includes('quota') || 
           errorMessage.toLowerCase().includes('completed') || 
-          errorMessage.toLowerCase().includes('limit')) {
-        // Show quota error popup instead of alert
-        setQuotaErrorMessage(errorMessage);
+          errorMessage.toLowerCase().includes('limit') ||
+          errorMessage.toLowerCase().includes('slots') ||
+          errorMessage.toLowerCase().includes('daily')) {
+        const copy = buildQuotaLimitCopy(error.quotaDetails, doubtCategory);
+        const { durationLabel, resetTimeLabel } = getTimeUntilQuotaReset();
+        setQuotaErrorMessage(copy.headline);
+        setQuotaPopupBody(copy.popupBody);
+        setQuotaResetLabel(`Resets in ~${durationLabel} · 12:00 AM (${resetTimeLabel})`);
         setQuotaDetails(error.quotaDetails || null);
         setShowQuotaErrorPopup(true);
+        toast.error(copy.toast, { duration: 9000, icon: '⏳', style: { maxWidth: '420px' } });
       } else {
         // For other errors, show a user-friendly message
         alert(`Failed to submit doubt: ${errorMessage}`);
@@ -634,11 +661,17 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 transition-colors">
-                  Alert
+                  {quotaErrorMessage || 'Daily doubt limit reached'}
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-4 transition-colors leading-relaxed">
-                  {quotaErrorMessage || 'You\'ve reached your daily doubt limit. Your quota will reset after 12 AM. Please try again tomorrow!'}
+                <p className="text-gray-700 dark:text-gray-300 mb-3 transition-colors leading-relaxed">
+                  {quotaPopupBody ||
+                    'You\'ve reached your daily doubt limit. Quotas reset at 12:00 AM each night.'}
                 </p>
+                {quotaResetLabel ? (
+                  <p className="mb-4 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 px-3 py-2 text-sm font-medium text-orange-800 dark:text-orange-200">
+                    {quotaResetLabel}
+                  </p>
+                ) : null}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-4 transition-colors">
                   <div className="flex items-start space-x-2">
                     <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
@@ -663,7 +696,10 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
                         </li>
                       </ul>
                       <p className="mt-3 pt-2 border-t border-blue-200 dark:border-blue-700 text-xs">
-                        💡 Your quota will automatically reset after <strong>12:00 AM</strong>. You can continue asking doubts tomorrow!
+                        💡 Limits reset every day at <strong>12:00 AM</strong> (local time).
+                        {quotaResetLabel ? (
+                          <> You can try this doubt type again <strong>{quotaResetLabel.replace(/^Resets in ~/, 'in ~')}</strong>.</>
+                        ) : null}
                       </p>
                     </div>
                   </div>
@@ -673,6 +709,8 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
                     onClick={() => {
                       setShowQuotaErrorPopup(false);
                       setQuotaErrorMessage('');
+                      setQuotaPopupBody('');
+                      setQuotaResetLabel('');
                       setQuotaDetails(null);
                       setUploading(false);
                     }}
@@ -686,6 +724,8 @@ const AskDoubt = ({ hideTrigger = false, externalOpenSignal = 0 }) => {
                 onClick={() => {
                   setShowQuotaErrorPopup(false);
                   setQuotaErrorMessage('');
+                  setQuotaPopupBody('');
+                  setQuotaResetLabel('');
                   setQuotaDetails(null);
                   setUploading(false);
                 }}

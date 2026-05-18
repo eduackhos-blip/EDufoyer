@@ -2,6 +2,7 @@ export enum SOCKET_EVENTS {
   PING = "ping",
   PONG = "pong",
   JOIN_ROOM = "join-room",
+  LEAVE_ROOM = "leave-room",
   ROOM_JOINED_CONFIRMATION = "room_joined_confirmation",
   OTHER_PERSON_JOINED = "other_person_joined",
   WEBRTC_OFFER = "webrtc_offer",
@@ -13,4 +14,10 @@ export enum SOCKET_EVENTS {
   RECEIVE_MESSAGE = "receive_message",
   ROOM_ERROR = "room-error",
   SCREEN_SHARE_STOP = "screen_share_stop",
+  SESSION_BOTH_JOINED = "session:both-joined",
+  SESSION_ASKER_LEFT = "session:asker-left",
+  SESSION_ASKER_REJOINED = "session:asker-rejoined",
+  SESSION_TIMER_START = "session:timer-start",
+  SESSION_SOLVER_LEFT = "session:solver-left",
+  SESSION_PROCESSED = "session:processed",
 }

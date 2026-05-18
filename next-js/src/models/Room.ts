@@ -37,6 +37,24 @@ const RoomSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    hasSolverEverJoined: {
+      type: Boolean,
+      default: false,
+    },
+    hasAskerEverJoined: {
+      type: Boolean,
+      default: false,
+    },
+    /** Max session length in seconds (from doubt category at room creation). */
+    maxSessionSeconds: {
+      type: Number,
+      default: null,
+    },
+    /** Set once when both participants have joined for the first time (timer anchor). */
+    sessionStartedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

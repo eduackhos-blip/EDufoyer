@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { CheckCircle, Video, User, Clock, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { buildSessionRoomId } from '@/src/lib/session/roomId';
 
 const SolverAcceptanceNotification = ({ 
   isVisible, 
   onClose, 
-  doubtId, 
-  solverName, 
+  doubtId,
+  solverId,
+  solverName,
   doubtTitle,
-  sessionUrl 
+  sessionUrl,
 }) => {
   const router = useRouter();
   const [isJoining, setIsJoining] = useState(false);
@@ -17,7 +19,11 @@ const SolverAcceptanceNotification = ({
     setIsJoining(true);
     try {
       // Navigate to session page
-      router.push(`/dashboard/session/${doubtId}`);
+      const target =
+        sessionUrl ||
+        (solverId && doubtId ? `/dashboard/session/${encodeURIComponent(buildSessionRoomId(String(doubtId), String(solverId)))}` : null) ||
+        `/dashboard/session/${encodeURIComponent(String(doubtId))}`;
+      router.push(target);
     } catch (error) {
       console.error('Error joining session:', error);
     } finally {

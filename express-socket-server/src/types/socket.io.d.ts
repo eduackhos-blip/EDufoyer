@@ -9,5 +9,8 @@ declare module "socket.io" {
       email: string;
       name?: string;
     };
+    data: {
+      sessionRoomId?: string;
+    };
   }
 }
