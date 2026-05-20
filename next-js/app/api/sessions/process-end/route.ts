@@ -11,10 +11,18 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   roomId: z.string().min(1),
-  reason: z.enum(["solver_left", "asker_left_timeout", "solver_left_during_asker_grace"]),
+  reason: z.enum([
+    "solver_left",
+    "asker_left_timeout",
+    "asker_left_rated",
+    "timer_completed",
+    "solver_left_during_asker_grace",
+  ]),
   elapsedSeconds: z.number().min(0),
   plannedSeconds: z.number().positive().optional(),
   solverId: z.string().optional(),
+  askerRating: z.number().min(1).max(5).optional(),
+  askerComment: z.string().max(1000).optional(),
 });
 
 const requireInternalKey = (req: NextRequest) => {
@@ -38,6 +46,8 @@ export async function POST(req: NextRequest) {
       elapsedSeconds: body.elapsedSeconds,
       plannedSeconds: body.plannedSeconds,
       solverId: body.solverId,
+      askerRating: body.askerRating,
+      askerComment: body.askerComment,
     });
 
     if (!result.success) {

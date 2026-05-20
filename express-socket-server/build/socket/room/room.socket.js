@@ -22,6 +22,13 @@ function isUserStillInRoom(io, roomId, userId) {
     }
     return false;
 }
+function isSessionFinalizeReason(value) {
+    return (value === "solver_left" ||
+        value === "asker_left_timeout" ||
+        value === "asker_left_rated" ||
+        value === "timer_completed" ||
+        value === "solver_left_during_asker_grace");
+}
 async function finalizeSession(io, input) {
     const parsed = (0, roomId_1.parseSessionRoomId)(input.roomId);
     if (!parsed)
@@ -55,6 +62,8 @@ async function finalizeSession(io, input) {
                     reason,
                     elapsedSeconds: elapsed,
                     solverId,
+                    askerRating: input.askerRating,
+                    askerComment: input.askerComment,
                 }),
             });
             const data = (await res.json().catch(() => ({})));
@@ -92,6 +101,14 @@ async function finalizeSession(io, input) {
             elapsedSeconds: elapsed,
             ...processedPayload,
         });
+        if (reason === "timer_completed") {
+            io.to(input.roomId).emit(events_1.SOCKET_EVENTS.SESSION_END_INTIMATION, {
+                roomId: input.roomId,
+                reason,
+                message: "Your session has ended. You will be redirected to the dashboard in 5 seconds.",
+                redirectSeconds: 5,
+            });
+        }
     }
     finally {
         finalizingRooms.delete(input.roomId);
@@ -200,7 +217,7 @@ const registerRoomSocketHandlers = (socket, io) => {
             });
         }
     });
-    socket.on(events_1.SOCKET_EVENTS.LEAVE_ROOM, ({ roomId, elapsedSeconds, finalizeAs } = {}) => {
+    socket.on(events_1.SOCKET_EVENTS.LEAVE_ROOM, ({ roomId, elapsedSeconds, finalizeAs, askerRatedOnLeave, askerRating, askerComment, } = {}) => {
         if (!roomId)
             return;
         const match = roomId.trim().match(ROOM_ID_PATTERN);
@@ -222,13 +239,28 @@ const registerRoomSocketHandlers = (socket, io) => {
             }
             if (!role)
                 return;
+            const elapsed = elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0;
             if (role === "solver") {
                 await finalizeSession(io, {
                     roomId,
                     doubtId,
                     solverId,
-                    reason: finalizeAs,
-                    elapsedSeconds: elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0,
+                    reason: isSessionFinalizeReason(finalizeAs) ? finalizeAs : "solver_left",
+                    elapsedSeconds: elapsed,
+                });
+                return;
+            }
+            if (finalizeAs === "timer_completed") {
+                socket.leave(roomId);
+                const askerId = String(roomDoc.doubter_id ?? userId);
+                if (isUserStillInRoom(io, roomId, askerId))
+                    return;
+                await finalizeSession(io, {
+                    roomId,
+                    doubtId,
+                    solverId,
+                    reason: "timer_completed",
+                    elapsedSeconds: elapsed,
                 });
                 return;
             }
@@ -236,6 +268,22 @@ const registerRoomSocketHandlers = (socket, io) => {
             const askerId = String(roomDoc.doubter_id ?? userId);
             if (isUserStillInRoom(io, roomId, askerId))
                 return;
+            const rated = askerRatedOnLeave === true &&
+                typeof askerRating === "number" &&
+                askerRating >= 1 &&
+                askerRating <= 5;
+            if (rated) {
+                await finalizeSession(io, {
+                    roomId,
+                    doubtId,
+                    solverId,
+                    reason: "asker_left_rated",
+                    elapsedSeconds: elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0,
+                    askerRating: Math.round(askerRating),
+                    askerComment: typeof askerComment === "string" ? askerComment : undefined,
+                });
+                return;
+            }
             io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_LEFT, {
                 roomId,
                 graceSeconds: 3 * 60,

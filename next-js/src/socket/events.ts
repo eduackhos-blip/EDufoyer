@@ -20,6 +20,7 @@ export const SOCKET_EVENTS = {
   SESSION_TIMER_START: "session:timer-start",
   SESSION_SOLVER_LEFT: "session:solver-left",
   SESSION_PROCESSED: "session:processed",
+  SESSION_END_INTIMATION: "session:end-intimation",
 } as const;
 
 export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

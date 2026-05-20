@@ -17,7 +17,7 @@ export async function getAverageRating(solverId: string) {
 const solvedDoubts = await SolverDoubts.find({
       solver_id: solverId,
       resolution_status: {
-        $in: ["session_completed", "ended_solver_left", "ended_asker_timeout"],
+        $in: ["session_completed", "ended_solver_left", "ended_asker_timeout", "ended_asker_rated"],
       },
       feedback_rating: { $exists: true, $ne: null },
     }).select("feedback_rating");
@@ -33,7 +33,7 @@ export async function recalculateAllCoins(solverId: string) {
     const solvedDoubts = await SolverDoubts.find({
       solver_id: solverId,
       resolution_status: {
-        $in: ["session_completed", "ended_solver_left", "ended_asker_timeout"],
+        $in: ["session_completed", "ended_solver_left", "ended_asker_timeout", "ended_asker_rated"],
       },
       feedback_rating: { $exists: true, $ne: null },
     }).populate("doubt_id", "category rating");

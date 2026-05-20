@@ -24,4 +24,5 @@ var SOCKET_EVENTS;
     SOCKET_EVENTS["SESSION_TIMER_START"] = "session:timer-start";
     SOCKET_EVENTS["SESSION_SOLVER_LEFT"] = "session:solver-left";
     SOCKET_EVENTS["SESSION_PROCESSED"] = "session:processed";
+    SOCKET_EVENTS["SESSION_END_INTIMATION"] = "session:end-intimation";
 })(SOCKET_EVENTS || (exports.SOCKET_EVENTS = SOCKET_EVENTS = {}));

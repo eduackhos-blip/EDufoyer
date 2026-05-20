@@ -26,6 +26,7 @@ const SolverDoubtsSchema = new mongoose.Schema({
       'session_completed',
       'ended_solver_left',
       'ended_asker_timeout',
+      'ended_asker_rated',
       'ended_solver_abandoned_grace',
       'accepted',
       'rejected',
