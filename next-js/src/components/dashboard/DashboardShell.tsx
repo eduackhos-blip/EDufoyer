@@ -26,10 +26,12 @@ function NavItemHandler({
   item,
   router,
   children,
+  align = 'center',
 }: {
   item: DashboardSidebarItem;
   router: ReturnType<typeof useRouter>;
   children: React.ReactNode;
+  align?: 'center' | 'start';
 }) {
   const handleClick = () => {
     if (item.onClick) item.onClick();
@@ -40,7 +42,9 @@ function NavItemHandler({
     <button
       type="button"
       onClick={handleClick}
-      className="flex w-full items-center justify-center border-0 bg-transparent p-0"
+      className={`flex w-full items-center border-0 bg-transparent p-0 ${
+        align === 'start' ? 'justify-start' : 'justify-center'
+      }`}
       aria-label={item.label}
     >
       {children}
@@ -99,14 +103,14 @@ export default function DashboardShell({
     const Icon = item.icon;
     const logout = isLogout(item.label);
     return (
-      <NavItemHandler key={index} item={item} router={router}>
+      <NavItemHandler key={index} item={item} router={router} align="start">
         <div
-          className={`mb-1 flex min-w-0 items-center gap-2.5 rounded-full px-3 py-2.5 text-[12px] font-bold transition-colors ${
+          className={`mb-1 flex w-full min-w-0 items-center gap-2 rounded-full px-2.5 py-2 text-[11px] font-bold transition-colors ${
             item.active
               ? 'text-white shadow-sm'
               : logout
                 ? 'text-red-600 hover:bg-red-50'
-                : 'text-[var(--dash-forest)] hover:bg-[var(--dash-card-mint)]/60'
+                : 'text-[var(--dash-forest)] hover:bg-[var(--dash-card-mint)]/40'
           }`}
           style={item.active ? { backgroundColor: 'var(--dash-forest)' } : undefined}
         >
@@ -132,7 +136,7 @@ export default function DashboardShell({
   };
 
   const expandedNav = (
-    <nav className="flex flex-1 flex-col overflow-y-auto px-2.5 py-3" aria-label="Main navigation">
+    <nav className="flex flex-1 flex-col overflow-y-auto px-1.5 py-3" aria-label="Main navigation">
       {sidebarItems.map(renderExpandedRow)}
     </nav>
   );
@@ -141,11 +145,19 @@ export default function DashboardShell({
   const drawerTopClass = 'top-[4.75rem]';
   return (
     <div
-      className="dash-shell flex h-screen w-full overflow-hidden lg:grid"
+      className={`dash-shell flex h-screen w-full overflow-hidden lg:grid${
+        isExpanded ? ' dash-shell--sidebar-open' : ''
+      }`}
       style={{ backgroundColor: 'var(--dash-shell-bg)' }}
     >
       {/* Icon rail + drawer anchored under the menu toggle */}
-      <div className="dash-shell-rail relative z-40 flex h-full w-[var(--dash-rail-w)] shrink-0 flex-col items-center">
+      <div
+        className={`dash-shell-rail relative z-40 flex h-full shrink-0 flex-col ${
+          isExpanded
+            ? 'w-[var(--dash-rail-w)] items-center max-lg:items-center lg:w-full lg:items-stretch'
+            : 'w-[var(--dash-rail-w)] items-center'
+        }`}
+      >
         <button
           type="button"
           onClick={() => setIsExpanded((o) => !o)}
@@ -157,31 +169,24 @@ export default function DashboardShell({
           <Menu className="h-5 w-5 text-white" strokeWidth={2.4} />
         </button>
 
-        {isExpanded && (
-          <aside
-            className={`absolute ${drawerTopClass} bottom-4 left-1/2 z-40 hidden w-[var(--dash-drawer-w)] -translate-x-1/2 flex-col overflow-hidden rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:flex`}
-            style={{ backgroundColor: 'var(--dash-sidebar-open)' }}
-          >
-            {expandedNav}
-          </aside>
-        )}
+        <aside className="dash-expanded-drawer hidden min-h-0 w-full flex-col overflow-hidden bg-white lg:flex">
+          {expandedNav}
+        </aside>
 
-        {!isExpanded && (
-          <nav
-            className="hidden min-h-0 w-[4.25rem] flex-1 flex-col items-center gap-0.5 overflow-y-auto rounded-[999px] px-1 py-3 shadow-[0_8px_32px_rgba(7,62,54,0.1)] lg:flex"
-            style={{ backgroundColor: 'var(--dash-sidebar-rail)' }}
-            aria-label="Main navigation"
-          >
-            <div className="flex w-full flex-col items-center gap-0.5">
-              {mainItems.map(renderCollapsedIcon)}
+        <nav
+          className="dash-shell-collapsed-nav hidden min-h-0 w-[4.25rem] flex-1 flex-col items-center gap-0.5 overflow-y-auto rounded-[999px] px-1 py-3 shadow-[0_8px_32px_rgba(7,62,54,0.1)] lg:flex"
+          style={{ backgroundColor: 'var(--dash-sidebar-rail)' }}
+          aria-label="Main navigation"
+        >
+          <div className="flex w-full flex-col items-center gap-0.5">
+            {mainItems.map(renderCollapsedIcon)}
+          </div>
+          {logoutItem ? (
+            <div className="mt-auto flex w-full flex-col items-center pt-2">
+              {renderCollapsedIcon(logoutItem, sidebarItems.length - 1)}
             </div>
-            {logoutItem ? (
-              <div className="mt-auto flex w-full flex-col items-center pt-2">
-                {renderCollapsedIcon(logoutItem, sidebarItems.length - 1)}
-              </div>
-            ) : null}
-          </nav>
-        )}
+          ) : null}
+        </nav>
       </div>
 
       {/* Mobile / tablet: overlay + drawer */}
@@ -189,12 +194,12 @@ export default function DashboardShell({
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/25 lg:hidden"
+            className="dash-shell-mobile-overlay fixed inset-0 z-40 bg-black/25 lg:hidden"
             aria-label="Close menu overlay"
             onClick={() => setIsExpanded(false)}
           />
           <aside
-            className={`fixed left-2 z-50 flex w-[var(--dash-drawer-w)] max-w-[85vw] flex-col rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:hidden ${drawerTopClass} bottom-4`}
+            className={`dash-shell-mobile-drawer fixed left-2 z-50 flex w-[var(--dash-drawer-w)] max-w-[85vw] flex-col rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:hidden ${drawerTopClass} bottom-4`}
             style={{ backgroundColor: 'var(--dash-sidebar-open)' }}
           >
             {expandedNav}
@@ -210,7 +215,7 @@ export default function DashboardShell({
       >
         {topBar ? <div className="dash-shell-topbar shrink-0">{topBar}</div> : null}
         {contentVariant === 'card' ? (
-          <div className="min-h-0 w-full flex-1 bg-white px-4 py-5 md:px-7 md:py-7">
+          <div className="dash-shell-content min-h-0 w-full flex-1 px-4 py-5 md:px-7 md:py-7">
             {children}
           </div>
         ) : (

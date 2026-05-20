@@ -211,7 +211,7 @@ const AwaitingSolverPage = () => {
     const secs = seconds % 60;
     if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
     if (minutes > 0) return `${minutes}m ${secs}s`;
-    return `${secs}s`;
+      return `${secs}s`;
   };
 
   const fetchDoubtDetails = async () => {
@@ -503,7 +503,7 @@ const AwaitingSolverPage = () => {
                   <div className="pointer-events-none absolute inset-0 z-0 will-change-transform rounded-full border-[5px] border-white/18 border-t-white border-r-white/60 shadow-[0_0_18px_rgba(255,255,255,0.18)] motion-reduce:animate-none animate-[spin_1.1s_linear_infinite]" />
                   {/* Inner ring: counter-clockwise */}
                   <div className="pointer-events-none absolute inset-[6px] z-[1] will-change-transform rounded-full border-[4px] border-white/12 border-t-white border-r-white/50 shadow-[inset_0_0_8px_rgba(255,255,255,0.06),0_0_14px_rgba(255,255,255,0.12)] motion-reduce:animate-none animate-[spin_0.85s_linear_infinite_reverse] md:inset-[7px]" />
-                </div>
+            </div>
                 <div>
                   <h1 className="flex flex-wrap items-center gap-2 text-[28px] font-bold leading-[1.1] tracking-tight text-white md:gap-3 md:text-[36px]">
                     <span className="inline-block font-bold">Waiting Room</span>
@@ -571,7 +571,7 @@ const AwaitingSolverPage = () => {
                     {categoryDisplay}
                   </span>
                 </div>
-                <div>
+                  <div>
                   <p className="mb-1.5 text-[12px] font-semibold text-[#4b5c57]">Description</p>
                   <div className="min-h-[72px] rounded-[14px] border border-[#c5d5cf] bg-[#f7faf6] px-3 py-2.5 text-[13px] leading-relaxed text-[#1a2e2c]">
                     {doubt?.description || 'Description unavailable'}
@@ -674,7 +674,7 @@ const AwaitingSolverPage = () => {
             </div>
           </div>
         </div>
-        </div>
+      </div>
       </div>
 
       <SolverAcceptanceNotification

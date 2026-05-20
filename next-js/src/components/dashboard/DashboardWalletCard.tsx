@@ -24,7 +24,7 @@ export default function DashboardWalletCard() {
       </div>
 
       <div
-        className="relative mb-3 min-h-[6.25rem] overflow-hidden rounded-[16px] px-4 py-3.5"
+        className="relative mb-3 flex min-h-[10rem] items-center overflow-hidden rounded-[16px] px-4 py-6"
         style={{ backgroundColor: 'var(--dash-card-mint)' }}
       >
         <img
@@ -39,12 +39,12 @@ export default function DashboardWalletCard() {
           aria-hidden
           className="pointer-events-none absolute right-3 top-3 h-4 w-4 object-contain"
         />
-        <div className="flex items-center gap-3.5">
+        <div className="flex w-full items-center gap-3.5">
           <img
             src="/walletImageDashboard.png"
             alt=""
             aria-hidden
-            className="h-[4.25rem] w-auto shrink-0 object-contain"
+            className="h-[7.25rem] w-auto shrink-0 object-contain"
             decoding="async"
           />
           <div className="min-w-0 flex-1">

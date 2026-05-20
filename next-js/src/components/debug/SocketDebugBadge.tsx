@@ -29,10 +29,10 @@ export function SocketDebugBadge() {
 
   const statusStyles =
     status === "connected"
-      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+      ? "border-[var(--dash-panel-border)] bg-[var(--dash-card-mint)] text-[var(--dash-forest)]"
       : status === "no-token"
-        ? "bg-amber-500/20 text-amber-200 border-amber-500/40"
-        : "bg-red-500/20 text-red-300 border-red-500/40";
+        ? "border-amber-200 bg-amber-50 text-amber-900"
+        : "border-red-200 bg-red-50 text-red-700";
 
   return (
     <div
@@ -42,17 +42,17 @@ export function SocketDebugBadge() {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur-md transition ${statusStyles}`}
+        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-[var(--dash-inner-shadow)] transition ${statusStyles}`}
         aria-expanded={expanded}
         aria-label="Socket connection debug"
       >
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${
             status === "connected"
-              ? "bg-emerald-400 animate-pulse"
+              ? "bg-[var(--dash-forest)] animate-pulse"
               : status === "no-token"
-                ? "bg-amber-400"
-                : "bg-red-400"
+                ? "bg-amber-500"
+                : "bg-red-500"
           }`}
         />
         <span className="font-semibold uppercase tracking-wide">

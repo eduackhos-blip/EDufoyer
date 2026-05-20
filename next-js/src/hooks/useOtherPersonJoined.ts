@@ -7,6 +7,8 @@ import { SOCKET_EVENTS } from "../socket/events";
 type OtherPersonJoinedPayload = {
   roomId: string;
   joinedSocketId: string;
+  /** True when this peer was already in the room — wait for their WebRTC offer. */
+  isExistingParticipant?: boolean;
   user: { userId: string; username: string; email: string };
 };
 
@@ -20,9 +22,15 @@ export const useOtherPersonJoined = (
     if (!socket) return;
 
     const handleOtherPersonJoined = (payload: OtherPersonJoinedPayload) => {
-      toast.success(`${payload.user.username} joined room ${payload.roomId}`);
       setRemoteSocketId(payload.joinedSocketId);
       setRemoteUser(payload.user);
+
+      if (payload.isExistingParticipant) {
+        toast.success(`${payload.user.username} is already in the session`);
+        return;
+      }
+
+      toast.success(`${payload.user.username} joined room ${payload.roomId}`);
 
       if (!myStream) {
         toast.error("Local camera and microphone are not ready yet.");

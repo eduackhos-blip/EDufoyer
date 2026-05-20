@@ -165,7 +165,13 @@ export default function RoomPage() {
   }
 
   return (
-    <main className="min-h-[100dvh] bg-slate-950 px-1.5 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] text-slate-100 lg:p-4 lg:pb-4 lg:pt-4">
+    <main
+      className={
+        showLobbyScreen
+          ? "min-h-[100dvh] bg-[var(--dash-content-canvas)] px-1.5 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] text-[var(--dash-text-body)] lg:p-4 lg:pb-4 lg:pt-4"
+          : "min-h-[100dvh] bg-slate-950 px-1.5 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] text-slate-100 lg:p-4 lg:pb-4 lg:pt-4"
+      }
+    >
       {showLobbyScreen ? (
         <RoomPreJoinLobby
           roomId={roomId}

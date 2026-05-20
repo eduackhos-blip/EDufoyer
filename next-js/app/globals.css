@@ -68,7 +68,12 @@
   --dash-inner-shadow: 0 2px 6px rgba(7, 63, 54, 0.04), 0 10px 36px rgba(7, 63, 54, 0.1);
   /* Shell: icon rail + main; expanded drawer is narrow and overlays beside the rail */
   --dash-rail-w: 5.75rem;
-  --dash-drawer-w: 11.25rem;
+  /* Extra width when sidebar is open (collapsed rail stays --dash-rail-w) */
+  --dash-drawer-w: 8.75rem;
+  /* Figma: mint panel behind card grid when sidebar is open */
+  --dash-content-canvas: #e2eed7;
+  --dash-shell-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dash-shell-duration: 0.34s;
 }
 
 /* Elevated white dashboard panels (wallet, withdraw status, etc.) */
@@ -79,12 +84,79 @@
   box-shadow: var(--dash-panel-shadow);
 }
 
+/* Stat cards (solver rating, daily streak, performance chart) */
+.dash-stat-card-shadow {
+  box-shadow: var(--dash-card-shadow);
+}
+
+/* Daily streak: mint on white dashboard (closed), white on mint canvas (open) */
+.daily-streak-card {
+  background-color: var(--dash-card-mint);
+  transition: background-color var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+@media (min-width: 1024px) {
+  .dash-shell--sidebar-open .daily-streak-card {
+    background-color: #ffffff;
+  }
+}
+
 /* Sidebar rail padding (custom px: wider left, narrow right) */
 .dash-shell-rail {
   padding-top: 1.25rem;
   padding-bottom: 1rem;
   padding-left: 2.5rem;
   padding-right: 0.5rem;
+  transition:
+    background-color var(--dash-shell-duration) var(--dash-shell-ease),
+    padding-left var(--dash-shell-duration) var(--dash-shell-ease),
+    padding-right var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+/* Card area: white when closed → mint canvas when sidebar open */
+.dash-shell-content {
+  background-color: #ffffff;
+  border-radius: 0;
+  transition:
+    background-color var(--dash-shell-duration) var(--dash-shell-ease),
+    border-radius var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+/* Collapsed mint pill ↔ expanded white nav (desktop) */
+.dash-shell-collapsed-nav {
+  transition:
+    opacity calc(var(--dash-shell-duration) * 0.85) var(--dash-shell-ease),
+    transform var(--dash-shell-duration) var(--dash-shell-ease),
+    box-shadow var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+.dash-expanded-drawer {
+  transition:
+    opacity var(--dash-shell-duration) var(--dash-shell-ease),
+    transform var(--dash-shell-duration) var(--dash-shell-ease),
+    flex var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+.dash-shell-mobile-overlay {
+  transition: opacity var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+.dash-shell-mobile-drawer {
+  transition:
+    transform var(--dash-shell-duration) var(--dash-shell-ease),
+    opacity calc(var(--dash-shell-duration) * 0.9) var(--dash-shell-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-shell-rail,
+  .dash-shell-content,
+  .dash-shell-collapsed-nav,
+  .dash-expanded-drawer,
+  .dash-shell-mobile-overlay,
+  .dash-shell-mobile-drawer,
+  .dash-shell {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Dashboard shell grid (lg+): main uses full remaining width */
@@ -92,6 +164,7 @@
   .dash-shell {
     display: grid;
     grid-template-columns: var(--dash-rail-w) minmax(0, 1fr);
+    transition: grid-template-columns var(--dash-shell-duration) var(--dash-shell-ease);
   }
 
   .dash-shell-rail {
@@ -107,6 +180,85 @@
     padding-right: 1rem;
   }
 
+  /* Open sidebar (desktop): white dissolved nav + mint card canvas */
+  .dash-shell--sidebar-open {
+    grid-template-columns: calc(var(--dash-rail-w) + var(--dash-drawer-w)) minmax(0, 1fr);
+  }
+
+  .dash-shell--sidebar-open .dash-shell-rail {
+    width: 100%;
+    min-width: 0;
+    align-items: stretch;
+    background: #ffffff;
+    padding-left: 1rem;
+    padding-right: 0.5rem;
+  }
+
+  .dash-shell--sidebar-open .dash-shell-rail > button[type='button'] {
+    align-self: flex-start;
+  }
+
+  .dash-expanded-drawer {
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: 4.5rem;
+    bottom: 1rem;
+    z-index: 2;
+    display: flex;
+    width: auto;
+    min-height: 0;
+    flex: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: none;
+    background: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-10px);
+  }
+
+  .dash-shell-collapsed-nav {
+    position: relative;
+    z-index: 1;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .dash-shell--sidebar-open .dash-expanded-drawer {
+    position: static;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    flex: 1 1 auto;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .dash-shell--sidebar-open .dash-shell-collapsed-nav {
+    position: absolute;
+    inset: 4.5rem 0.5rem 1rem 0.5rem;
+    z-index: 0;
+    width: 4.25rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.97);
+    box-shadow: none;
+  }
+
+  .dash-shell--sidebar-open .dash-expanded-drawer nav {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  .dash-shell--sidebar-open .dash-shell-content {
+    background-color: var(--dash-content-canvas);
+    border-radius: 22px;
+  }
 }
 
 .dash-shell-main--with-topbar {

@@ -155,6 +155,7 @@ export function RoomCallSession({
               categoryLabel={categorySessionLabel}
               isRunning={isTimerRunning}
               compact
+              variant="dark"
             />
           ) : (
             <div />

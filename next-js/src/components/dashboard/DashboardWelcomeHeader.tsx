@@ -9,14 +9,26 @@ type DashboardWelcomeHeaderProps = {
   showSolveDoubt?: boolean;
 };
 
-function CornerArrow({ className = '' }: { className?: string }) {
+const CTA_ARROW_SRC = '/Arrow%20up-left.png';
+
+function CtaArrow({ tone }: { tone: 'white' | 'forest-dark' }) {
+  const color = tone === 'white' ? '#ffffff' : '#073E36';
+
   return (
-    <img
-      src="/aboutus&contactusarrow.png"
-      alt=""
+    <span
       aria-hidden
-      className={`h-3.5 w-auto object-contain ${className}`}
-      decoding="async"
+      className="block h-5 w-5 shrink-0"
+      style={{
+        backgroundColor: color,
+        maskImage: `url("${CTA_ARROW_SRC}")`,
+        WebkitMaskImage: `url("${CTA_ARROW_SRC}")`,
+        maskSize: 'contain',
+        WebkitMaskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        WebkitMaskPosition: 'center',
+      }}
     />
   );
 }
@@ -66,7 +78,7 @@ export default function DashboardWelcomeHeader({
           className="inline-flex items-center gap-2 rounded-full border-2 border-[var(--dash-forest)] bg-white px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--dash-forest)] shadow-[0_4px_14px_rgba(7,62,54,0.08)] transition-opacity hover:opacity-90"
         >
           Ask doubt
-          <CornerArrow />
+          <CtaArrow tone="forest-dark" />
         </button>
         {showSolveDoubt ? (
           <button
@@ -76,7 +88,7 @@ export default function DashboardWelcomeHeader({
             style={{ backgroundColor: 'var(--dash-forest)' }}
           >
             Solve doubt
-            <CornerArrow className="brightness-0 invert" />
+            <CtaArrow tone="white" />
           </button>
         ) : null}
       </div>

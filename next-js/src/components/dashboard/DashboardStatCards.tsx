@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -19,35 +19,38 @@ const SOLVER_PERFORMANCE_DATA = [
   { name: 'Sat', value: 2.0 },
 ];
 
-const ASKER_QUESTIONS_DATA = [
-  { name: 'Mon', value: 2 },
-  { name: 'Tue', value: 1 },
-  { name: 'Wed', value: 3 },
-  { name: 'Thu', value: 1 },
-  { name: 'Fri', value: 4 },
-  { name: 'Sat', value: 2 },
-];
-
 const MINI_STAT_CARD_SHELL =
-  'relative flex h-[7rem] w-full min-h-0 flex-col rounded-[20px] p-3.5 shadow-[var(--dash-card-shadow)]';
+  'dash-stat-card-shadow relative flex h-[8.25rem] w-full min-h-0 flex-col gap-2.5 rounded-[20px] p-4';
 
 const MINI_STAT_PILL_CLASS =
-  'mt-auto self-start rounded-full bg-white px-2.5 py-1 text-[9px] font-semibold leading-snug text-[var(--dash-forest)] shadow-[0_2px_6px_rgba(7,63,54,0.1)]';
+  'self-start rounded-full bg-white px-2.5 py-1 text-[9px] font-semibold leading-snug text-[var(--dash-forest)] shadow-[0_2px_6px_rgba(7,63,54,0.1)]';
 
-function CardArrow({ className = '' }: { className?: string }) {
+const MINI_STAT_ARROW_SRC = '/Arrow%20up-left.png';
+
+function CardArrow({ tone }: { tone: 'white' | 'forest-dark' }) {
+  const color = tone === 'white' ? '#ffffff' : '#073E36';
+
   return (
-    <img
-      src="/aboutus&contactusarrow.png"
-      alt=""
+    <span
       aria-hidden
-      className={`h-3 w-auto object-contain opacity-90 ${className}`.trim()}
-      decoding="async"
+      className="pointer-events-none absolute right-4 top-4 block h-6 w-6 shrink-0"
+      style={{
+        backgroundColor: color,
+        maskImage: `url("${MINI_STAT_ARROW_SRC}")`,
+        WebkitMaskImage: `url("${MINI_STAT_ARROW_SRC}")`,
+        maskSize: 'contain',
+        WebkitMaskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        WebkitMaskPosition: 'center',
+      }}
     />
   );
 }
 
 type MiniStatCardProps = {
-  variant: 'forest' | 'mint';
+  variant: 'forest' | 'mint' | 'canvas-adaptive';
   title: string;
   value: string;
   trend: string;
@@ -56,17 +59,25 @@ type MiniStatCardProps = {
 
 function MiniStatCard({ variant, title, value, trend, suffix }: MiniStatCardProps) {
   const isForest = variant === 'forest';
+  const isCanvasAdaptive = variant === 'canvas-adaptive';
+  const backgroundColor = isForest
+    ? 'var(--dash-forest)'
+    : isCanvasAdaptive
+      ? undefined
+      : 'var(--dash-card-mint)';
 
   return (
     <article
-      className={`${MINI_STAT_CARD_SHELL} ${isForest ? 'text-white' : 'text-[var(--dash-forest)]'}`}
-      style={{ backgroundColor: isForest ? 'var(--dash-forest)' : 'var(--dash-card-mint)' }}
+      className={`${MINI_STAT_CARD_SHELL} ${isCanvasAdaptive ? 'daily-streak-card' : ''} ${
+        isForest ? 'text-white' : 'text-[var(--dash-forest)]'
+      }`}
+      style={backgroundColor ? { backgroundColor } : undefined}
     >
-      <div className="mb-2 flex items-start justify-between gap-1.5">
+      <CardArrow tone={isForest ? 'white' : 'forest-dark'} />
+      <div>
         <h2 className="text-[11px] font-bold leading-tight">{title}</h2>
-        <CardArrow className={`shrink-0 ${isForest ? 'brightness-0 invert' : ''}`} />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white">
           <span className="text-[1.25rem] font-extrabold leading-none text-[var(--dash-forest)]">{value}</span>
         </div>
@@ -85,16 +96,10 @@ export function SolverRatingCard() {
   );
 }
 
-export function QuestionsAskedCard() {
-  return (
-    <MiniStatCard variant="forest" title="Questions asked" value="12" trend="+ 3 vs last week" />
-  );
-}
-
 export function DailyStreakCard() {
   return (
     <MiniStatCard
-      variant="mint"
+      variant="canvas-adaptive"
       title="Daily streak"
       value="5"
       suffix="Days"
@@ -103,98 +108,91 @@ export function DailyStreakCard() {
   );
 }
 
-type PerformanceCardProps = {
-  isSolver: boolean;
-};
-
-export function PerformanceCard({ isSolver }: PerformanceCardProps) {
+export function PerformanceCard() {
   const [activeTab, setActiveTab] = useState<'Overall' | 'Completed'>('Overall');
-  const chartData = isSolver ? SOLVER_PERFORMANCE_DATA : ASKER_QUESTIONS_DATA;
-  const title = isSolver ? 'Performance' : 'Questions asked';
-  const yDomain: [number, number] = isSolver ? [1, 4] : [0, 5];
-  const yTicks = isSolver ? [1, 1.75, 2.5, 3.25, 4] : [0, 1, 2, 3, 4, 5];
+  const [chartReady, setChartReady] = useState(false);
+
+  useEffect(() => {
+    setChartReady(true);
+  }, []);
 
   return (
     <article
-      className="flex flex-col rounded-[22px] border-[3px] bg-white p-5 shadow-[var(--dash-card-shadow)]"
+      className="dash-stat-card-shadow flex flex-col rounded-[22px] border-[5px] bg-white p-5"
       style={{ borderColor: 'var(--dash-forest)' }}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[15px] font-bold text-[var(--dash-forest)]">{title}</h2>
-        {isSolver ? (
-          <div className="flex items-center gap-3 text-[12px] font-semibold text-[var(--dash-forest)]">
-            {(['Overall', 'Completed'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={activeTab === tab ? 'underline underline-offset-4' : 'opacity-60'}
-              >
-                {tab}
-              </button>
-            ))}
-            <svg className="h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-              <path
-                fillRule="evenodd"
-                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-        ) : (
-          <span className="text-[12px] font-semibold text-[var(--dash-text-muted)]">This week</span>
-        )}
+        <h2 className="text-[15px] font-bold text-[var(--dash-forest)]">Performance</h2>
+        <div className="flex items-center gap-3 text-[12px] font-semibold text-[var(--dash-forest)]">
+          {(['Overall', 'Completed'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={activeTab === tab ? 'underline underline-offset-4' : 'opacity-60'}
+            >
+              {tab}
+            </button>
+          ))}
+          <svg className="h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+            <path
+              fillRule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
       </div>
-      <div className="h-52 w-full min-w-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e8ece9" vertical={false} />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'var(--dash-text-muted)', fontSize: 11 }}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'var(--dash-text-muted)', fontSize: 11 }}
-              domain={yDomain}
-              ticks={yTicks}
-              allowDecimals={!isSolver}
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="var(--dash-forest)"
-              strokeWidth={2.5}
-              dot={{
-                fill: 'var(--dash-card-mint)',
-                stroke: 'var(--dash-forest)',
-                strokeWidth: 2,
-                r: 5,
-              }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className="h-64 w-full min-h-[19.5rem] min-w-0">
+        {chartReady ? (
+          <ResponsiveContainer width="100%" height="100%" minHeight={256}>
+            <LineChart data={SOLVER_PERFORMANCE_DATA} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8ece9" vertical={false} />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: 'var(--dash-text-muted)', fontSize: 11 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: 'var(--dash-text-muted)', fontSize: 11 }}
+                domain={[1, 4]}
+                ticks={[1, 1.75, 2.5, 3.25, 4]}
+                allowDecimals
+              />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="var(--dash-forest)"
+                strokeWidth={2.5}
+                dot={{
+                  fill: 'var(--dash-card-mint)',
+                  stroke: 'var(--dash-forest)',
+                  strokeWidth: 2,
+                  r: 5,
+                }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full w-full animate-pulse rounded-lg bg-[var(--dash-card-mint)]/40" aria-hidden />
+        )}
       </div>
     </article>
   );
 }
 
-type DashboardStatCardsProps = {
-  isSolver: boolean;
-};
-
-export default function DashboardStatCards({ isSolver }: DashboardStatCardsProps) {
+export default function DashboardStatCards() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
-        {isSolver ? <SolverRatingCard /> : <QuestionsAskedCard />}
+        <SolverRatingCard />
         <DailyStreakCard />
       </div>
-      <PerformanceCard isSolver={isSolver} />
+      <PerformanceCard />
     </div>
   );
 }

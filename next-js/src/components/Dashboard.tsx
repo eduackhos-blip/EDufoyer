@@ -12,7 +12,6 @@ import DashboardWelcomeHeader from './dashboard/DashboardWelcomeHeader';
 import DashboardStatCards from './dashboard/DashboardStatCards';
 import DashboardWalletCard from './dashboard/DashboardWalletCard';
 import DashboardWithdrawTimeline from './dashboard/DashboardWithdrawTimeline';
-import DashboardRatingsGiven from './dashboard/DashboardRatingsGiven';
 import { isDashboardSolver } from '../utils/dashboardUserUtils';
 
 const Dashboard = () => {
@@ -412,17 +411,13 @@ const Dashboard = () => {
         }
       >
         <div
-          className={`grid grid-cols-1 gap-5 ${isSolver ? 'xl:grid-cols-2' : ''} xl:gap-6`}
+          className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:gap-6"
         >
-          <DashboardStatCards isSolver={isSolver} />
-          {isSolver ? (
-            <div className="flex flex-col gap-3">
-              <DashboardWalletCard />
-              <DashboardWithdrawTimeline />
-            </div>
-          ) : (
-            <DashboardRatingsGiven />
-          )}
+          <DashboardStatCards />
+          <div className="flex flex-col gap-3">
+            <DashboardWalletCard />
+            <DashboardWithdrawTimeline />
+          </div>
         </div>
       </DashboardShell>
 

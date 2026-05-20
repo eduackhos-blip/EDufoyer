@@ -173,6 +173,25 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
     socket.join(roomId);
     socket.data.sessionRoomId = roomId;
 
+    const peersInRoom = socket.nsp.adapter.rooms.get(roomId);
+    if (peersInRoom) {
+      for (const peerSocketId of peersInRoom) {
+        if (peerSocketId === socket.id) continue;
+        const peer = io.sockets.sockets.get(peerSocketId);
+        if (!peer?.user) continue;
+        socket.emit(SOCKET_EVENTS.OTHER_PERSON_JOINED, {
+          roomId,
+          joinedSocketId: peerSocketId,
+          isExistingParticipant: true,
+          user: {
+            userId: peer.user.userId,
+            username: peer.user.username,
+            email: peer.user.email,
+          },
+        });
+      }
+    }
+
     const joinUpdate = isSolver ? { hasSolverEverJoined: true } : { hasAskerEverJoined: true };
     const updated = await Room.findOneAndUpdate({ roomId }, { $set: joinUpdate }, { new: true });
 
@@ -222,6 +241,7 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
       socket.to(roomId).emit(SOCKET_EVENTS.OTHER_PERSON_JOINED, {
         roomId,
         joinedSocketId: socket.id,
+        isExistingParticipant: false,
         user: {
           userId: socket.user.userId,
           username: socket.user.username,

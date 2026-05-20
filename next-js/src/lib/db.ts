@@ -26,11 +26,20 @@ export const connectDb = async () => {
   }
 
   if (!globalCache.promise) {
-    globalCache.promise = mongoose.connect(serverEnv.mongoUri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-    });
+    globalCache.promise = mongoose
+      .connect(serverEnv.mongoUri, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        bufferCommands: false,
+      })
+      .then((conn) => {
+        if (process.env.NODE_ENV === "development") {
+          console.info("[mongo] connected");
+        }
+        return conn;
+      });
   }
 
   globalCache.conn = await globalCache.promise;

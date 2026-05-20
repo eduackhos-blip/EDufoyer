@@ -49,8 +49,7 @@ ProfileSchema.pre('save', function() {
   this.set('updatedAt', new Date());
 });
 
-// Indexes for better query performance
-ProfileSchema.index({ userId: 1 }); // Already unique, but explicit index helps
+// Indexes for better query performance (userId already unique)
 ProfileSchema.index({ strongSubject: 1 }); // For subject-based queries
 ProfileSchema.index({ universityName: 1 }); // For university-based queries
 
