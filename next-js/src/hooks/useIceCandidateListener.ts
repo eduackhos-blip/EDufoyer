@@ -7,9 +7,15 @@ type UseIceCandidateListenerParams = {
   socket: Socket | null;
   roomId?: string;
   remoteSocketId: string | null;
+  peerConnectionEpoch?: number;
 };
 
-export const useIceCandidateListener = ({ socket, roomId, remoteSocketId }: UseIceCandidateListenerParams) => {
+export const useIceCandidateListener = ({
+  socket,
+  roomId,
+  remoteSocketId,
+  peerConnectionEpoch = 0,
+}: UseIceCandidateListenerParams) => {
   const handleICECandidate = useCallback(
     (event: RTCPeerConnectionIceEvent) => {
       if (!event.candidate) return;
@@ -29,5 +35,5 @@ export const useIceCandidateListener = ({ socket, roomId, remoteSocketId }: UseI
     return () => {
       peer.peer?.removeEventListener("icecandidate", handleICECandidate);
     };
-  }, [handleICECandidate]);
+  }, [handleICECandidate, peerConnectionEpoch]);
 };

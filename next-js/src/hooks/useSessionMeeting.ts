@@ -48,6 +48,8 @@ export function useSessionMeeting({
   const [plannedSeconds, setPlannedSeconds] = useState<number | null>(null);
   const [meetingRemainingSecs, setMeetingRemainingSecs] = useState<number | null>(null);
   const [askerGraceRemainingSecs, setAskerGraceRemainingSecs] = useState<number | null>(null);
+  const [askerTemporaryDisconnect, setAskerTemporaryDisconnect] = useState(false);
+  const [solverTemporaryDisconnect, setSolverTemporaryDisconnect] = useState(false);
   const [bothJoinedAt, setBothJoinedAt] = useState<number | null>(null);
   const [sessionProcessed, setSessionProcessed] = useState(false);
   const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
@@ -103,26 +105,62 @@ export function useSessionMeeting({
       applyTimer(payload);
     };
 
+    const onAskerDisconnected = (payload?: { message?: string }) => {
+      if (!isSolver) return;
+      setAskerTemporaryDisconnect(true);
+      toast(
+        payload?.message?.trim() ||
+          "The asker may have reloaded or has a temporary connection issue. Please wait.",
+        { icon: "📡" }
+      );
+    };
+
     const onAskerLeft = (payload?: { graceSeconds?: number }) => {
       if (!isSolver) return;
+      setAskerTemporaryDisconnect(false);
       const secs = payload?.graceSeconds ?? ASKER_REJOIN_GRACE_SECONDS;
       graceExpiredEmittedRef.current = false;
       setAskerGraceRemainingSecs(secs);
       toast("Asker left — please wait up to 3 minutes for them to rejoin.", { icon: "⏳" });
     };
 
-    const onAskerRejoined = () => {
+    const onAskerRejoined = (payload?: { message?: string }) => {
+      if (!isSolver) return;
       graceExpiredEmittedRef.current = false;
+      setAskerTemporaryDisconnect(false);
       setAskerGraceRemainingSecs(null);
-      toast.success("Asker has rejoined the session.");
+      toast.success(payload?.message?.trim() || "Asker has rejoined the session.");
+    };
+
+    const onSolverDisconnected = (payload?: { message?: string }) => {
+      if (!isAsker) return;
+      setSolverTemporaryDisconnect(true);
+      toast(
+        payload?.message?.trim() ||
+          "Your solver may have reloaded or has a temporary connection issue. Please wait.",
+        { icon: "📡" }
+      );
+    };
+
+    const onSolverRejoined = (payload?: { message?: string }) => {
+      if (!isAsker) return;
+      setSolverTemporaryDisconnect(false);
+      toast.success(payload?.message?.trim() || "Solver has rejoined the session.");
     };
 
     const onOtherJoined = (payload?: { user?: { userId?: string } }) => {
-      if (!isSolver || !parsed) return;
+      if (!parsed) return;
       const joinedUserId = payload?.user?.userId;
-      if (joinedUserId && joinedUserId !== parsed.solverId) {
+      if (!joinedUserId) return;
+
+      if (isSolver && joinedUserId !== parsed.solverId) {
         graceExpiredEmittedRef.current = false;
+        setAskerTemporaryDisconnect(false);
         setAskerGraceRemainingSecs(null);
+      }
+
+      if (isAsker && joinedUserId === parsed.solverId) {
+        setSolverTemporaryDisconnect(false);
       }
     };
 
@@ -134,6 +172,8 @@ export function useSessionMeeting({
       setSessionProcessed(true);
       setSessionEndReason(payload?.reason ?? null);
       setAskerGraceRemainingSecs(null);
+      setAskerTemporaryDisconnect(false);
+      setSolverTemporaryDisconnect(false);
       if (isSolver && payload?.reason === "solver_left") {
         const rating = payload.feedbackRating;
         const credited = payload.walletCredited;
@@ -180,21 +220,27 @@ export function useSessionMeeting({
     };
 
     socket.on(SOCKET_EVENTS.SESSION_TIMER_START, onTimerStart);
+    socket.on(SOCKET_EVENTS.SESSION_ASKER_DISCONNECTED, onAskerDisconnected);
     socket.on(SOCKET_EVENTS.SESSION_ASKER_LEFT, onAskerLeft);
     socket.on(SOCKET_EVENTS.SESSION_ASKER_REJOINED, onAskerRejoined);
+    socket.on(SOCKET_EVENTS.SESSION_SOLVER_DISCONNECTED, onSolverDisconnected);
+    socket.on(SOCKET_EVENTS.SESSION_SOLVER_REJOINED, onSolverRejoined);
     socket.on(SOCKET_EVENTS.SESSION_PROCESSED, onProcessed);
     socket.on(SOCKET_EVENTS.SESSION_END_INTIMATION, onSessionEndIntimation);
     socket.on(SOCKET_EVENTS.OTHER_PERSON_JOINED, onOtherJoined);
 
     return () => {
       socket.off(SOCKET_EVENTS.SESSION_TIMER_START, onTimerStart);
+      socket.off(SOCKET_EVENTS.SESSION_ASKER_DISCONNECTED, onAskerDisconnected);
       socket.off(SOCKET_EVENTS.SESSION_ASKER_LEFT, onAskerLeft);
       socket.off(SOCKET_EVENTS.SESSION_ASKER_REJOINED, onAskerRejoined);
+      socket.off(SOCKET_EVENTS.SESSION_SOLVER_DISCONNECTED, onSolverDisconnected);
+      socket.off(SOCKET_EVENTS.SESSION_SOLVER_REJOINED, onSolverRejoined);
       socket.off(SOCKET_EVENTS.SESSION_PROCESSED, onProcessed);
       socket.off(SOCKET_EVENTS.SESSION_END_INTIMATION, onSessionEndIntimation);
       socket.off(SOCKET_EVENTS.OTHER_PERSON_JOINED, onOtherJoined);
     };
-  }, [socket, isSolver, parsed, plannedSeconds, maxSessionSecondsFromRoom]);
+  }, [socket, isSolver, isAsker, parsed, plannedSeconds, maxSessionSecondsFromRoom]);
 
   useEffect(() => {
     if (!bothJoinedAt || meetingRemainingSecs == null || meetingRemainingSecs <= 0) return;
@@ -317,6 +363,8 @@ export function useSessionMeeting({
     askerGraceLabel:
       askerGraceRemainingSecs != null ? formatCountdown(askerGraceRemainingSecs) : null,
     showAskerGraceBanner: isSolver && isInAskerGrace,
+    showAskerReconnectBanner: isSolver && askerTemporaryDisconnect && !isInAskerGrace,
+    showSolverReconnectBanner: isAsker && solverTemporaryDisconnect,
     sessionProcessed,
     sessionEndReason,
     sessionEndNotice,

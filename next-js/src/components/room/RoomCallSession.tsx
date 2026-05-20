@@ -33,6 +33,8 @@ export type RoomCallSessionProps = {
   isTimerRunning?: boolean;
   showAskerGraceBanner?: boolean;
   askerGraceLabel?: string | null;
+  showAskerReconnectBanner?: boolean;
+  showSolverReconnectBanner?: boolean;
   messages: RoomChatMessage[];
   chatInput: string;
   setChatInput: (value: string) => void;
@@ -78,6 +80,8 @@ export function RoomCallSession({
   isTimerRunning = false,
   showAskerGraceBanner,
   askerGraceLabel,
+  showAskerReconnectBanner,
+  showSolverReconnectBanner,
   messages,
   chatInput,
   setChatInput,
@@ -114,10 +118,14 @@ export function RoomCallSession({
   }, [remoteVideoStream, hasLiveRemoteVideo]);
 
   useEffect(() => {
-    if (!localVideoRef.current) return;
-    if (localVideoRef.current.srcObject !== myStream) {
-      localVideoRef.current.srcObject = myStream;
+    const el = localVideoRef.current;
+    if (!el || !myStream || !isCameraOn) return;
+    if (el.srcObject !== myStream) {
+      el.srcObject = myStream;
     }
+    void el.play().catch(() => {
+      /* autoplay policies may block until user gesture */
+    });
   }, [myStream, isCameraOn]);
 
   useEffect(() => {
@@ -181,6 +189,26 @@ export function RoomCallSession({
             </Link>
           </div>
         </header>
+
+        {showAskerReconnectBanner ? (
+          <div className="rounded-lg border border-sky-500/40 bg-sky-500/15 px-3 py-2 text-sm text-sky-100">
+            <p className="font-medium">Waiting for asker to reconnect</p>
+            <p className="mt-1 text-sky-200/90">
+              The asker may have reloaded the page or has a temporary connection issue. Please stay
+              on this page — the session will continue if they return shortly.
+            </p>
+          </div>
+        ) : null}
+
+        {showSolverReconnectBanner ? (
+          <div className="rounded-lg border border-violet-500/40 bg-violet-500/15 px-3 py-2 text-sm text-violet-100">
+            <p className="font-medium">Waiting for solver to reconnect</p>
+            <p className="mt-1 text-violet-200/90">
+              Your solver may have reloaded the page or has a temporary connection issue. Please stay
+              on this page — the session will continue if they return shortly.
+            </p>
+          </div>
+        ) : null}
 
         {showAskerGraceBanner && askerGraceLabel ? (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-sm text-amber-100">

@@ -23,6 +23,7 @@ import { useUserPreferences } from "@/src/hooks/useUserPreferences";
 import { useWebRtcAnswer } from "@/src/hooks/useWebRtcAnswer";
 import { useWebRtcIceCandidate } from "@/src/hooks/useWebRtcIceCandidate";
 import { useWebRtcOffer } from "@/src/hooks/useWebRtcOffer";
+import { useWebRtcReconnect } from "@/src/hooks/useWebRtcReconnect";
 import { useResolvedSessionRoomId } from "@/src/hooks/useResolvedSessionRoomId";
 import { useSolverLeftRating } from "@/src/hooks/useSolverLeftRating";
 import { SessionRoomUnavailable } from "@/src/components/sessions/SessionRoomUnavailable";
@@ -58,6 +59,7 @@ export default function RoomPage() {
   const initiateConnection = !showLobbyScreen;
 
   const [remoteSocketId, setRemoteSocketId] = useState<string | null>(null);
+  const [peerConnectionEpoch, setPeerConnectionEpoch] = useState(() => peer.connectionEpoch);
   const { isScreenSharing, toggleScreenShare, stopScreenShare } = useScreenShare({
     roomId,
     toSocketId: remoteSocketId,
@@ -65,7 +67,26 @@ export default function RoomPage() {
   const [remoteUser, setRemoteUser] = useState<{ userId: string; username: string; email: string } | null>(null);
 
   const { myStream, mediaError } = useLocalMediaStream();
-  const { isMicOn, isCameraOn, handleMicToggle, handleCameraToggle } = useUserPreferences(myStream);
+  const {
+    isMicOn,
+    isCameraOn,
+    handleMicToggle: toggleMicPreference,
+    handleCameraToggle: toggleCameraPreference,
+  } = useUserPreferences(myStream);
+
+  const syncLocalMediaToPeer = useCallback(() => {
+    if (!myStream || !peer.peer) return;
+    void peer.attachLocalStream(myStream);
+  }, [myStream]);
+
+  useEffect(() => {
+    peer.onConnectionEpochChange = () => {
+      setPeerConnectionEpoch(peer.connectionEpoch);
+    };
+    return () => {
+      peer.onConnectionEpochChange = null;
+    };
+  }, []);
 
   const sessionMeeting = useSessionMeeting({
     roomId,
@@ -94,12 +115,55 @@ export default function RoomPage() {
   useWebRtcAnswer(activeSocket);
   useNegotiationNeededAnswer(activeSocket);
   useNegotiationRemoteAnswer(activeSocket);
-  useNegotiationNeeded({ socket: activeSocket, roomId, remoteSocketId, enabled: initiateConnection });
+  useNegotiationNeeded({
+    socket: activeSocket,
+    roomId,
+    remoteSocketId,
+    enabled: initiateConnection,
+    peerConnectionEpoch,
+  });
   useWebRtcIceCandidate(activeSocket);
-  useIceCandidateListener({ socket: activeSocket, roomId, remoteSocketId });
+  useIceCandidateListener({
+    socket: activeSocket,
+    roomId,
+    remoteSocketId,
+    peerConnectionEpoch,
+  });
 
-  const { remoteStream, remoteAudioStream, remoteVideoStream, remoteScreenShareStream, clearRemoteScreenShare } =
-    useRemoteTrackListener({ remoteSocketId });
+  const {
+    remoteStream,
+    remoteAudioStream,
+    remoteVideoStream,
+    remoteScreenShareStream,
+    clearRemoteScreenShare,
+    clearRemoteMedia,
+  } = useRemoteTrackListener({ remoteSocketId, peerConnectionEpoch });
+
+  const resetWebRtcSession = useCallback(() => {
+    peer.closeConnection();
+    setRemoteSocketId(null);
+    setRemoteUser(null);
+    clearRemoteMedia();
+    setPeerConnectionEpoch(peer.connectionEpoch);
+  }, [clearRemoteMedia]);
+
+  useWebRtcReconnect({
+    socket: activeSocket,
+    enabled: initiateConnection,
+    isSolver: sessionMeeting.isSolver,
+    isAsker: sessionMeeting.isAsker,
+    onReset: resetWebRtcSession,
+  });
+
+  const handleMicToggle = useCallback(() => {
+    toggleMicPreference();
+    syncLocalMediaToPeer();
+  }, [toggleMicPreference, syncLocalMediaToPeer]);
+
+  const handleCameraToggle = useCallback(() => {
+    toggleCameraPreference();
+    syncLocalMediaToPeer();
+  }, [toggleCameraPreference, syncLocalMediaToPeer]);
 
   useScreenShareStopListener({
     socket: activeSocket,
@@ -277,6 +341,8 @@ export default function RoomPage() {
           isTimerRunning={sessionMeeting.isTimerRunning}
           showAskerGraceBanner={sessionMeeting.showAskerGraceBanner}
           askerGraceLabel={sessionMeeting.askerGraceLabel}
+          showAskerReconnectBanner={sessionMeeting.showAskerReconnectBanner}
+          showSolverReconnectBanner={sessionMeeting.showSolverReconnectBanner}
           messages={messages}
           chatInput={chatInput}
           setChatInput={setChatInput}

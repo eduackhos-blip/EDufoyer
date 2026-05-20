@@ -9,6 +9,7 @@ type UseNegotiationNeededParams = {
   roomId: string | undefined;
   remoteSocketId: string | null;
   enabled?: boolean;
+  peerConnectionEpoch?: number;
 };
 
 export const useNegotiationNeeded = ({
@@ -16,6 +17,7 @@ export const useNegotiationNeeded = ({
   roomId,
   remoteSocketId,
   enabled = true,
+  peerConnectionEpoch = 0,
 }: UseNegotiationNeededParams) => {
   const makingOfferRef = useRef(false);
 
@@ -49,5 +51,5 @@ export const useNegotiationNeeded = ({
     return () => {
       peer.peer?.removeEventListener("negotiationneeded", handleNegoNeeded);
     };
-  }, [handleNegoNeeded, enabled, socket, roomId, remoteSocketId]);
+  }, [handleNegoNeeded, enabled, socket, roomId, remoteSocketId, peerConnectionEpoch]);
 };
