@@ -16,12 +16,15 @@ export const useOtherPersonJoined = (
   socket: Socket | null,
   setRemoteSocketId: (socketId: string) => void,
   setRemoteUser: (user: { userId: string; username: string; email: string }) => void,
-  myStream: MediaStream | null
+  myStream: MediaStream | null,
+  initiateConnection = true
 ) => {
   useEffect(() => {
     if (!socket) return;
 
     const handleOtherPersonJoined = (payload: OtherPersonJoinedPayload) => {
+      if (!initiateConnection) return;
+
       setRemoteSocketId(payload.joinedSocketId);
       setRemoteUser(payload.user);
 
@@ -60,5 +63,5 @@ export const useOtherPersonJoined = (
     return () => {
       socket.off(SOCKET_EVENTS.OTHER_PERSON_JOINED, handleOtherPersonJoined);
     };
-  }, [socket, myStream, setRemoteSocketId, setRemoteUser]);
+  }, [socket, myStream, setRemoteSocketId, setRemoteUser, initiateConnection]);
 };

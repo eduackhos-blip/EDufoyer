@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     const parsed = parseSessionRoomId(roomId);
     const room = await Room.findOne({ roomId })
-      .select("status maxSessionSeconds sessionStartedAt")
+      .select("status maxSessionSeconds sessionStartedAt subject")
       .lean();
     if (!room) {
       return NextResponse.json(
@@ -39,8 +39,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const doubt = await Doubt.findById(parsed!.doubtId).select("category").lean();
+    const doubt = await Doubt.findById(parsed!.doubtId)
+      .select("category subject description")
+      .lean();
     const doubtCategory = (doubt as { category?: string } | null)?.category;
+    const doubtSubject = (doubt as { subject?: string } | null)?.subject?.trim();
+    const doubtDescription = (doubt as { description?: string } | null)?.description?.trim();
+    const roomSubject = (room as { subject?: string }).subject?.trim();
     const maxSessionSeconds = resolveMaxSessionSeconds(
       (room as { maxSessionSeconds?: number }).maxSessionSeconds,
       doubtCategory
@@ -58,6 +63,8 @@ export async function GET(req: NextRequest) {
         valid: true,
         maxSessionSeconds,
         sessionStartedAt: sessionStartedAt ? new Date(sessionStartedAt).getTime() : null,
+        meetingTitle: doubtSubject || roomSubject || "Meeting session",
+        meetingDescription: doubtDescription || "Description of the meeting",
       },
       { status: 200 }
     );

@@ -94,6 +94,7 @@ export function useSessionMeeting({
     };
 
     const onTimerStart = (payload?: { startedAt?: number; maxSessionSeconds?: number }) => {
+      if (!initiateConnection) return;
       applyTimer(payload);
     };
 
@@ -151,15 +152,22 @@ export function useSessionMeeting({
       socket.off(SOCKET_EVENTS.SESSION_PROCESSED, onProcessed);
       socket.off(SOCKET_EVENTS.OTHER_PERSON_JOINED, onOtherJoined);
     };
-  }, [socket, isSolver, parsed, plannedSeconds, maxSessionSecondsFromRoom]);
+  }, [socket, isSolver, parsed, plannedSeconds, maxSessionSecondsFromRoom, initiateConnection]);
 
   useEffect(() => {
-    if (!bothJoinedAt || meetingRemainingSecs == null || meetingRemainingSecs <= 0) return;
+    if (
+      !initiateConnection ||
+      !bothJoinedAt ||
+      meetingRemainingSecs == null ||
+      meetingRemainingSecs <= 0
+    ) {
+      return;
+    }
     const t = setInterval(() => {
       setMeetingRemainingSecs((s) => (s != null && s > 0 ? s - 1 : s));
     }, 1000);
     return () => clearInterval(t);
-  }, [meetingRemainingSecs, bothJoinedAt]);
+  }, [meetingRemainingSecs, bothJoinedAt, initiateConnection]);
 
   useEffect(() => {
     if (askerGraceRemainingSecs == null || askerGraceRemainingSecs <= 0) return;
@@ -198,8 +206,11 @@ export function useSessionMeeting({
   }, [socket, roomId, isInAskerGrace, solverElapsedSeconds]);
 
   const effectivePlannedSeconds = plannedSeconds ?? maxSessionSecondsFromRoom ?? 30 * 60;
-  const displaySeconds = meetingRemainingSecs ?? effectivePlannedSeconds;
-  const isTimerRunning = bothJoinedAt != null && (meetingRemainingSecs ?? 0) > 0;
+  const isTimerRunning =
+    initiateConnection && bothJoinedAt != null && (meetingRemainingSecs ?? 0) > 0;
+  const displaySeconds = isTimerRunning
+    ? (meetingRemainingSecs ?? effectivePlannedSeconds)
+    : effectivePlannedSeconds;
 
   return {
     isSolver,

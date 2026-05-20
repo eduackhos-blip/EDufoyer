@@ -1,5 +1,8 @@
+import { MonitorUp, ScreenShareOff } from "lucide-react";
+
 type MicIconProps = { muted?: boolean };
 type CameraIconProps = { off?: boolean };
+type ScreenShareIconProps = { active?: boolean };
 
 export const MicIcon = ({ muted = false }: MicIconProps) => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -18,3 +21,11 @@ export const CameraIcon = ({ off = false }: CameraIconProps) => (
     {off ? <path d="M4 4l16 16" /> : null}
   </svg>
 );
+
+/** Monitor with share arrow — toggles to “stop sharing” when active. */
+export const ScreenShareIcon = ({ active = false }: ScreenShareIconProps) =>
+  active ? (
+    <ScreenShareOff className="h-5 w-5" strokeWidth={2} aria-hidden />
+  ) : (
+    <MonitorUp className="h-5 w-5" strokeWidth={2} aria-hidden />
+  );

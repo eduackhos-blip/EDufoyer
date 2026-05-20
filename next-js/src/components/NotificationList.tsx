@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, MessageSquare, AlertTriangle, Clock, User, Video, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Bell, CheckCircle, MessageSquare, AlertTriangle, User } from 'lucide-react';
 import notificationService from '../services/notificationService';
-import DarkModeToggle from './DarkModeToggle';
+import DashboardPageLayout from './dashboard/DashboardPageLayout';
+import DashboardSplashTitle from './dashboard/DashboardSplashTitle';
 
 // Simple date formatting function
 const formatTimeAgo = (date) => {
@@ -17,7 +17,6 @@ const formatTimeAgo = (date) => {
 };
 
 const NotificationList = () => {
-  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -77,21 +76,71 @@ const NotificationList = () => {
   const getNotificationIcon = (messageType) => {
     switch (messageType) {
       case 'ASSIGNED_TO_SOLVER':
-        return <User className="h-5 w-5 text-blue-400" />;
+        return <User className="h-5 w-5 text-[var(--dash-forest)]" />;
       case 'SOLUTION_SUBMITTED':
-        return <MessageSquare className="h-5 w-5 text-yellow-400" />;
+        return <MessageSquare className="h-5 w-5 text-[var(--dash-forest)]" />;
       case 'SOLUTION_ACCEPTED':
-        return <CheckCircle className="h-5 w-5 text-green-400" />;
+        return <CheckCircle className="h-5 w-5 text-[var(--dash-forest)]" />;
       case 'DOUBT_SUBMITTED':
-        return <Bell className="h-5 w-5 text-blue-400" />;
+        return <Bell className="h-5 w-5 text-[var(--dash-forest)]" />;
       case 'DOUBT_ASSIGNED':
-        return <User className="h-5 w-5 text-green-400" />;
+        return <User className="h-5 w-5 text-[var(--dash-forest)]" />;
       case 'DOUBT_AVAILABLE':
-        return <Bell className="h-5 w-5 text-yellow-400" />;
+        return <Bell className="h-5 w-5 text-[var(--dash-forest)]" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-400" />;
+        return <Bell className="h-5 w-5 text-[var(--dash-forest)]" />;
     }
   };
+
+  const formatTime = (date) => {
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    return d
+      .toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+      .toLowerCase();
+  };
+
+  const getDayKey = (dateValue) => {
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return 'older';
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(todayStart.getDate() - 1);
+    const itemStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+    if (itemStart.getTime() === todayStart.getTime()) return 'today';
+    if (itemStart.getTime() === yesterdayStart.getTime()) return 'yesterday';
+    return itemStart.toISOString().slice(0, 10);
+  };
+
+  const groupedNotifications = useMemo(() => {
+    const map = new Map();
+    notifications.forEach((notification) => {
+      const key = getDayKey(notification.createdAt);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(notification);
+    });
+
+    const sections = [];
+    if (map.has('today')) sections.push({ label: 'Today', items: map.get('today') });
+    if (map.has('yesterday')) sections.push({ label: 'Yesterday', items: map.get('yesterday') });
+
+    const olderKeys = [...map.keys()]
+      .filter((k) => k !== 'today' && k !== 'yesterday')
+      .sort((a, b) => (a < b ? 1 : -1));
+
+    olderKeys.forEach((key) => {
+      const label = new Date(key).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      sections.push({ label, items: map.get(key) });
+    });
+
+    return sections;
+  }, [notifications]);
 
   useEffect(() => {
     fetchNotifications();
@@ -99,107 +148,109 @@ const NotificationList = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-64 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400"></div>
-        <span className="ml-3 text-gray-600 dark:text-gray-400">Loading notifications...</span>
-      </div>
+      <DashboardPageLayout loadingMessage="Loading notifications…">
+        <div className="flex min-h-[16rem] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[var(--dash-forest)]" />
+          <span className="ml-3 text-[var(--dash-text-body)]">Loading notifications...</span>
+        </div>
+      </DashboardPageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center transition-colors duration-300">
-        <AlertTriangle className="w-8 h-8 text-red-500 dark:text-red-400 mx-auto mb-2" />
-        <p className="text-red-600 dark:text-red-400">{error}</p>
-        <button 
-          onClick={fetchNotifications} 
-          className="mt-3 text-blue-500 dark:text-blue-400 hover:underline text-sm transition-colors">
-          Try again
-        </button>
-      </div>
+      <DashboardPageLayout loadingMessage="Loading notifications…" contentVariant="card">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-red-500" />
+          <p className="text-red-600">{error}</p>
+          <button onClick={fetchNotifications} className="mt-3 text-sm text-red-700 underline">
+            Try again
+          </button>
+        </div>
+      </DashboardPageLayout>
     );
   }
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const notificationsHeader = (
+    <header className="dash-page-header mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-5">
+      <DashboardSplashTitle variant="page">Notifications</DashboardSplashTitle>
+      <div className="flex items-center gap-2">
+        {unreadCount > 0 && (
+          <button
+            onClick={markAllAsRead}
+            disabled={isMarkingRead}
+            className="inline-flex shrink-0 items-center rounded-full border border-[var(--dash-panel-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--dash-forest)] shadow-[var(--dash-inner-shadow)] transition-colors hover:bg-[var(--dash-card-mint)] disabled:opacity-50"
+          >
+            {isMarkingRead ? 'Marking...' : 'Mark all as read'}
+          </button>
+        )}
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#073E36] px-4 py-2 text-sm font-semibold text-white shadow-[var(--dash-inner-shadow)]">
+          {unreadCount} unread
+        </span>
+      </div>
+    </header>
+  );
 
   return (
-    <div className="px-6 pt-2 md:pt-4 pb-10 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden w-full max-w-7xl mx-auto mt-0 transition-colors duration-300">
-      {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back</span>
-            </button>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center transition-colors duration-300">
-              <Bell className="h-5 w-5 mr-2" />
-              Notifications
-              {unreadCount > 0 && (
-                <span className="ml-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs px-2 py-0.5 rounded-full transition-colors duration-300">
-                  {unreadCount} new
-                </span>
-              )}
-            </h3>
-          </div>
-          <div className="flex items-center gap-3">
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                disabled={isMarkingRead}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 transition-colors"
-              >
-                {isMarkingRead ? 'Marking...' : 'Mark all as read'}
-              </button>
-            )}
-            <DarkModeToggle />
-          </div>
-      </div>
-
-      {/* Notifications List */}
+    <DashboardPageLayout loadingMessage="Loading notifications…" contentVariant="card" topBar={notificationsHeader}>
       {notifications.length === 0 ? (
-        <div className="p-8 text-center">
-          <Bell className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">No notifications yet.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+        <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[20px] bg-white/60 px-6 py-14 text-center">
+          <Bell className="mb-4 h-12 w-12 text-[var(--dash-text-muted)]" />
+          <p className="text-sm font-medium text-[var(--dash-text-body)]">No notifications yet.</p>
+          <p className="mt-1 text-xs text-[var(--dash-text-muted)]">
             Updates about your doubts will appear here.
           </p>
         </div>
       ) : (
-        <div className="max-h-[80vh] overflow-y-auto pb-6">
-          {notifications.map((notification) => (
-            <div
-              key={notification._id}
-              className={`flex items-start gap-4 p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-300 ${
-                !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-              }`}>
-              <div className="flex-shrink-0 mt-1">
-                {getNotificationIcon(notification.message_type)}
-              </div>
-              <div className="flex-1">
-                <p className={`text-sm transition-colors duration-300 ${
-                  !notification.is_read ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  {linkifyText(notification.content)}
-                </p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatTimeAgo(notification.createdAt)}
-                  </span>
-                  {!notification.is_read && (
-                    <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                  )}
+        <div className="space-y-5">
+          {groupedNotifications.map((section) => (
+            <section key={section.label} className="space-y-3">
+              <h2 className="text-[1.9rem] font-extrabold leading-none tracking-tight text-[var(--dash-forest)]">
+                {section.label}
+              </h2>
+              <div className="rounded-[18px] border border-[var(--dash-panel-border)] bg-white p-4 shadow-[var(--dash-inner-shadow)]">
+                <div className="space-y-3">
+                  {section.items.map((notification) => (
+                    <article
+                      key={notification._id}
+                      className="rounded-[14px] border border-[#edf2e9] bg-white px-4 py-3 shadow-[0_4px_18px_rgba(7,62,54,0.08)]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 h-16 w-[5px] shrink-0 rounded-full bg-[#073E36]" />
+                        <div className="mt-1 shrink-0">{getNotificationIcon(notification.message_type)}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <p
+                              className={`text-base font-semibold ${
+                                notification.is_read ? 'text-[#243833]' : 'text-black'
+                              }`}
+                            >
+                              {notification.title || 'Notification'}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="whitespace-nowrap text-xs text-[var(--dash-text-muted)]">
+                                {formatTime(notification.createdAt)}
+                              </span>
+                              {!notification.is_read ? (
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#073E36]" />
+                              ) : null}
+                            </div>
+                          </div>
+                          <p className="mt-1 text-sm leading-relaxed text-[var(--dash-text-body)]">
+                            {linkifyText(notification.content)}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
-      </div>
-    </div>
+    </DashboardPageLayout>
   );
 };
 

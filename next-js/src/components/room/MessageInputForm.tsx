@@ -5,9 +5,29 @@ export type MessageInputFormProps = {
   chatInput: string;
   setChatInput: (value: string) => void;
   handleChatSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  variant?: "default" | "meeting";
 };
 
-export function MessageInputForm({ chatInput, setChatInput, handleChatSubmit }: MessageInputFormProps) {
+export function MessageInputForm({
+  chatInput,
+  setChatInput,
+  handleChatSubmit,
+  variant = "default",
+}: MessageInputFormProps) {
+  if (variant === "meeting") {
+    return (
+      <form onSubmit={handleChatSubmit} className="meet-chat__form">
+        <input
+          type="text"
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          placeholder="Type a message"
+          className="meet-chat__input"
+        />
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={handleChatSubmit} className="flex shrink-0 gap-1.5 lg:gap-2">
       <input

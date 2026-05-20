@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, ArrowLeft, Search, TrendingUp } from 'lucide-react';
+import { Loader2, Search, TrendingUp } from 'lucide-react';
 import {
   XAxis,
   YAxis,
@@ -11,13 +11,17 @@ import {
 } from 'recharts';
 import authService from '../services/authService';
 import doubtService from '../services/doubtService';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import WalletDisplay from './WalletDisplay';
 import DarkModeToggle from './DarkModeToggle';
 import DashboardPageLayout from './dashboard/DashboardPageLayout';
+import DashboardSplashTitle from './dashboard/DashboardSplashTitle';
 import ProfileAskDoubtCard from './ProfileAskDoubtCard';
 
 const DEFAULT_PROFILE_COVER_URL = '/cover-photo-profile-page.jpg';
+
+const FOREST = '#073E36';
+const FOREST_SOFT = 'rgba(7, 62, 54, 0.12)';
 
 /** Deterministic “weekly” series from user id + activity so the chart shape is stable per user */
 function buildPerformanceSeries(userId, solvedCount, mode) {
@@ -36,11 +40,11 @@ function buildPerformanceSeries(userId, solvedCount, mode) {
   });
 }
 
+const inputSearchClass =
+  'w-full rounded-full border border-[var(--dash-panel-border)] bg-white py-2.5 pl-10 pr-4 text-sm text-[var(--dash-text-body)] shadow-[var(--dash-inner-shadow)] outline-none placeholder:text-[var(--dash-text-muted)] focus:border-[var(--dash-forest)] focus:ring-2 focus:ring-[var(--dash-forest)]/15';
+
 const ProfilePage = () => {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const location = { pathname, search: searchParams.toString() ? `?${searchParams.toString()}` : '', hash: typeof window !== 'undefined' ? window.location.hash : '' };
   const [user, setUser] = useState(null);
   const [extProfile, setExtProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,7 +145,7 @@ const ProfilePage = () => {
 
   const getAvatarUrl = (name) => {
     const safe = name || 'User';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(safe)}&background=e0e7ff&color=3730a3&size=256&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(safe)}&background=e3edd8&color=073E36&size=256&bold=true`;
   };
 
   const displayAvatarSrc = (u) => {
@@ -153,8 +157,9 @@ const ProfilePage = () => {
   const coverBannerStyle = useMemo(() => {
     const raw = user?.coverImageUrl && String(user.coverImageUrl).trim();
     const imageUrl = raw || DEFAULT_PROFILE_COVER_URL;
+    const safe = String(imageUrl).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     return {
-      backgroundImage: `url(${JSON.stringify(imageUrl)})`,
+      backgroundImage: `url('${safe}')`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     };
@@ -162,199 +167,183 @@ const ProfilePage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-        <span className="ml-3 text-gray-600 dark:text-gray-300">Loading profile…</span>
-      </div>
+      <DashboardPageLayout loadingMessage="Loading profile…">
+        <div className="flex min-h-[16rem] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--dash-forest)]" />
+          <span className="ml-3 text-[var(--dash-text-body)]">Loading profile…</span>
+        </div>
+      </DashboardPageLayout>
     );
   }
 
+  const profileHeader = (
+    <header className="dash-page-header mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-5">
+      <DashboardSplashTitle variant="page">Profile</DashboardSplashTitle>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="relative min-w-[10rem] max-w-xs flex-1 sm:min-w-[14rem] sm:flex-initial">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQ.trim()) {
+                router.push(`/dashboard/doubts?tab=available`);
+              }
+            }}
+            placeholder="Search doubt"
+            className={inputSearchClass}
+            aria-label="Search doubt"
+          />
+        </div>
+        <DarkModeToggle />
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/profile/edit')}
+          className="inline-flex shrink-0 items-center rounded-full border border-[var(--dash-panel-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--dash-forest)] shadow-[var(--dash-inner-shadow)] transition-colors hover:bg-[var(--dash-card-mint)]"
+        >
+          Edit profile
+        </button>
+      </div>
+    </header>
+  );
+
   return (
-    <DashboardPageLayout loadingMessage="Loading profile…">
-      <div className="flex min-h-full flex-col overflow-hidden bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
-        <header className="shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-            <div className="flex items-center gap-2 min-w-0 shrink-0">
-              <button
-                type="button"
-                onClick={() => router.push('/dashboard')}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400"
-                aria-label="Back to dashboard"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <span className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
-                {user?.name || 'Profile'}
-              </span>
+    <DashboardPageLayout loadingMessage="Loading profile…" contentVariant="card" topBar={profileHeader}>
+      <div className="dash-panel-card overflow-hidden font-sans">
+        <div
+          key={`cover-${user?.updatedAt}-${(user?.coverImageUrl || '').length}`}
+          className="h-44 w-full bg-cover bg-center md:h-52"
+          style={coverBannerStyle}
+        />
+
+        <div className="border-b border-[var(--dash-panel-border)] px-4 pb-6 pt-0 sm:px-6 md:px-10">
+          <div className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+            <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+              <div className="-mt-14 shrink-0 self-center sm:mx-0 sm:self-start md:-mt-16">
+                <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-white shadow-[var(--dash-panel-shadow)] ring-1 ring-[var(--dash-panel-border)] md:h-32 md:w-32">
+                  <img
+                    key={`hero-${user?.updatedAt}-${(user?.avatarUrl || '').length}`}
+                    src={displayAvatarSrc(user)}
+                    alt={user?.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5 pt-2 text-center sm:pt-4 sm:text-left">
+                <h2 className="break-words text-2xl font-bold leading-tight text-[var(--dash-forest)] md:text-3xl">
+                  {user?.name}
+                </h2>
+                <p className="break-all text-base font-medium text-[var(--dash-text-muted)] sm:break-words">
+                  {handleFromEmail}
+                </p>
+                <p className="mx-auto max-w-2xl break-words text-sm leading-snug text-[var(--dash-text-body)] sm:mx-0 md:text-base">
+                  {subtitleLine}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 text-sm text-[var(--dash-text-body)] sm:justify-start">
+                  <span>
+                    <strong className="text-[var(--dash-forest)]">{solvedThisMonth}</strong>{' '}
+                    <span className="text-[var(--dash-text-muted)]">Solved</span>
+                    <span className="ml-1 text-xs text-[var(--dash-text-muted)]">(this month)</span>
+                  </span>
+                  <span>
+                    <strong className="text-[var(--dash-forest)]">{askedCount}</strong>{' '}
+                    <span className="text-[var(--dash-text-muted)]">Asked</span>
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 w-full sm:min-w-0 relative max-w-xl sm:mx-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-              <input
-                type="search"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQ.trim()) {
-                    router.push(`/dashboard/doubts?tab=available`);
-                  }
-                }}
-                placeholder="Search Doubt"
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div className="flex justify-end sm:justify-start shrink-0">
-              <DarkModeToggle />
+            <div className="shrink-0 pt-2 text-center lg:pt-4 lg:text-right">
+              <p className="text-sm text-[var(--dash-text-body)]">
+                Average rating:{' '}
+                <span className="font-bold text-[var(--dash-forest)]">
+                  {avgRating != null ? avgRating.toFixed(1) : '—'}
+                </span>
+              </p>
             </div>
           </div>
-        </header>
+        </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden font-sans">
-            <div className="mt-0 overflow-hidden">
-              <div
-                key={`cover-${user?.updatedAt}-${(user?.coverImageUrl || '').length}`}
-                className="h-44 md:h-52 w-full bg-cover bg-center"
-                style={coverBannerStyle}
-              />
-            </div>
+        <div className="grid grid-cols-1 gap-5 border-t border-[var(--dash-panel-border)] bg-[var(--dash-card-mint)]/25 p-4 md:grid-cols-2 md:p-6 xl:grid-cols-3">
+          <WalletDisplay />
 
-            <div className="px-4 sm:px-6 md:px-10 pt-0">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-8 pb-2">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4 flex-1 min-w-0">
-                  <div className="-mt-14 md:-mt-16 shrink-0 mx-auto sm:mx-0">
-                    <div className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-white dark:border-gray-800 shadow-lg overflow-hidden bg-white dark:bg-gray-800 ring-1 ring-black/5 dark:ring-white/10">
-                      <img
-                        key={`hero-${user?.updatedAt}-${(user?.avatarUrl || '').length}`}
-                        src={displayAvatarSrc(user)}
-                        alt={user?.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className="w-full text-center sm:text-left space-y-1.5 pt-2 sm:pt-4 min-w-0 flex-1">
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white break-words leading-tight">
-                      {user?.name}
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 font-medium text-base break-all sm:break-words">
-                      {handleFromEmail}
-                    </p>
-                    <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 leading-snug break-words max-w-2xl mx-auto sm:mx-0">
-                      {subtitleLine}
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 pt-2 text-sm text-gray-600 dark:text-gray-300">
-                      <span>
-                        <strong className="text-gray-900 dark:text-white">{solvedThisMonth}</strong>{' '}
-                        <span className="text-gray-500 dark:text-gray-400">Solved</span>
-                        <span className="text-gray-400 dark:text-gray-500 text-xs ml-1">(this month)</span>
-                      </span>
-                      <span>
-                        <strong className="text-gray-900 dark:text-white">{askedCount}</strong>{' '}
-                        <span className="text-gray-500 dark:text-gray-400">Asked</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="shrink-0 text-center lg:text-right pt-2 lg:pt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Average rating:{' '}
-                    <span className="font-bold text-blue-600 dark:text-blue-400">
-                      {avgRating != null ? avgRating.toFixed(1) : '—'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 pb-6 md:pb-8">
-                <button
-                  type="button"
-                  id="account-section"
-                  onClick={() => router.push('/dashboard/profile/edit')}
-                  className="px-5 py-2.5 rounded-xl border-2 border-blue-500 text-blue-600 dark:text-blue-400 font-semibold text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors w-full sm:w-auto"
-                >
-                  Edit profile
-                </button>
+          <article className="dash-panel-card p-5 md:p-6">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <h3 className="text-lg font-semibold text-[var(--dash-forest)]">Performance</h3>
+              <div className="flex rounded-full border border-[var(--dash-panel-border)] bg-[var(--dash-card-mint)]/40 p-1">
+                {['Overall', 'Pending'].map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setPerfTab(tab)}
+                    className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                      perfTab === tab
+                        ? 'bg-[var(--dash-forest)] text-white shadow-sm'
+                        : 'text-[var(--dash-text-body)] hover:bg-white/60'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
-
-            <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 border-t border-gray-100 dark:border-gray-700">
-              <WalletDisplay />
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 md:p-6 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance</h3>
-                  <div className="flex rounded-full bg-gray-100 dark:bg-gray-700/80 p-1">
-                    {['Overall', 'Pending'].map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setPerfTab(tab)}
-                        className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors ${
-                          perfTab === tab
-                            ? 'bg-blue-500 text-white shadow-sm'
-                            : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-sm font-semibold mb-4">
-                  <TrendingUp className="w-4 h-4" />
-                  Performance: {perfDelta >= 0 ? '+' : ''}
-                  {perfDelta} last week
-                </div>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="profilePerfFillBlue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#2563eb" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" className="dark:stroke-gray-600" />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#9ca3af', fontSize: 12 }}
-                      />
-                      <YAxis
-                        domain={[1, 4]}
-                        ticks={[1, 1.75, 2.5, 3.25, 4]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#9ca3af', fontSize: 11 }}
-                        width={36}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: 12,
-                          border: '1px solid #e5e7eb',
-                          boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
-                        }}
-                        labelStyle={{ fontWeight: 600 }}
-                        formatter={(v) => [`${v}`, perfTab === 'Pending' ? 'Pending load' : 'Score']}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#2563eb"
-                        strokeWidth={2.5}
-                        fill="url(#profilePerfFillBlue)"
-                        dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 xl:col-span-1">
-                <ProfileAskDoubtCard />
-              </div>
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--dash-forest)]">
+              <TrendingUp className="h-4 w-4 shrink-0" />
+              Performance: {perfDelta >= 0 ? '+' : ''}
+              {perfDelta} last week
             </div>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="profilePerfFillForest" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={FOREST} stopOpacity={0.28} />
+                      <stop offset="100%" stopColor={FOREST} stopOpacity={0.04} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={FOREST_SOFT} />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#6b7a76', fontSize: 12 }}
+                  />
+                  <YAxis
+                    domain={[1, 4]}
+                    ticks={[1, 1.75, 2.5, 3.25, 4]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#6b7a76', fontSize: 11 }}
+                    width={36}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: '1px solid var(--dash-panel-border)',
+                      boxShadow: 'var(--dash-inner-shadow)',
+                    }}
+                    labelStyle={{ fontWeight: 600, color: FOREST }}
+                    formatter={(v) => [`${v}`, perfTab === 'Pending' ? 'Pending load' : 'Score']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={FOREST}
+                    strokeWidth={2.5}
+                    fill="url(#profilePerfFillForest)"
+                    dot={{ r: 4, fill: FOREST, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 6 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <div className="md:col-span-2 xl:col-span-1">
+            <ProfileAskDoubtCard />
           </div>
         </div>
       </div>

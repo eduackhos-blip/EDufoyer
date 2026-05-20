@@ -24,6 +24,8 @@ import { useWebRtcAnswer } from "@/src/hooks/useWebRtcAnswer";
 import { useWebRtcIceCandidate } from "@/src/hooks/useWebRtcIceCandidate";
 import { useWebRtcOffer } from "@/src/hooks/useWebRtcOffer";
 import { useResolvedSessionRoomId } from "@/src/hooks/useResolvedSessionRoomId";
+import { useLobbyRoomPresence } from "@/src/hooks/useLobbyRoomPresence";
+import { getFirstNameInitial } from "@/src/lib/userInitial";
 import { useSolverLeftRating } from "@/src/hooks/useSolverLeftRating";
 import { SessionRoomUnavailable } from "@/src/components/sessions/SessionRoomUnavailable";
 import { SolverLeftRatingModal } from "@/src/components/sessions/SolverLeftRatingModal";
@@ -41,6 +43,8 @@ export default function RoomPage() {
     roomId,
     parsed,
     maxSessionSeconds,
+    meetingTitle,
+    meetingDescription,
     isResolving,
     resolveError,
     roomUnavailable,
@@ -55,7 +59,7 @@ export default function RoomPage() {
   const initiateConnection = !showLobbyScreen;
 
   const [remoteSocketId, setRemoteSocketId] = useState<string | null>(null);
-  const { isScreenSharing, toggleScreenShare, stopScreenShare } = useScreenShare({
+  const { isScreenSharing, userScreenShareStream, toggleScreenShare, stopScreenShare } = useScreenShare({
     roomId,
     toSocketId: remoteSocketId,
   });
@@ -85,8 +89,20 @@ export default function RoomPage() {
     onSessionEnd: handleSolverLeftSessionEnd,
   });
 
-  useRoomJoinedConfirmation(activeSocket);
-  useOtherPersonJoined(activeSocket, setRemoteSocketId, setRemoteUser, myStream);
+  const { peersCount, peersInRoom } = useLobbyRoomPresence({
+    roomId,
+    socket: activeSocket,
+    enabled: showLobbyScreen && Boolean(roomId) && maxSessionSeconds != null,
+  });
+
+  useRoomJoinedConfirmation(activeSocket, !showLobbyScreen);
+  useOtherPersonJoined(
+    activeSocket,
+    setRemoteSocketId,
+    setRemoteUser,
+    myStream,
+    !showLobbyScreen
+  );
   useWebRtcOffer(activeSocket, myStream, setRemoteSocketId, setRemoteUser);
   useWebRtcAnswer(activeSocket);
   useNegotiationNeededAnswer(activeSocket);
@@ -95,8 +111,14 @@ export default function RoomPage() {
   useWebRtcIceCandidate(activeSocket);
   useIceCandidateListener({ socket: activeSocket, roomId, remoteSocketId });
 
-  const { remoteStream, remoteAudioStream, remoteVideoStream, remoteScreenShareStream, clearRemoteScreenShare } =
-    useRemoteTrackListener({ remoteSocketId });
+  const {
+    remoteStream,
+    remoteAudioStream,
+    remoteVideoStream,
+    remoteScreenShareStream,
+    isRemoteCameraEnabled,
+    clearRemoteScreenShare,
+  } = useRemoteTrackListener({ remoteSocketId });
 
   useScreenShareStopListener({
     socket: activeSocket,
@@ -107,13 +129,17 @@ export default function RoomPage() {
 
   const { messages, chatInput, setChatInput, handleChatSubmit } = useRoomChat(activeSocket, roomId);
 
-  const hasLiveRemoteVideo = Boolean(remoteVideoStream?.getVideoTracks().some((track) => track.enabled && track.readyState === "live"));
+  const hasLiveRemoteVideo = isRemoteCameraEnabled && Boolean(remoteVideoStream);
   const isRemoteMicEnabled = remoteAudioStream?.getAudioTracks()[0]?.enabled ?? false;
-  const isRemoteCameraEnabled = remoteVideoStream?.getVideoTracks()[0]?.enabled ?? false;
 
   const handleReadyToJoin = useCallback(() => {
+    const waitingPeer = peersInRoom[0];
+    if (waitingPeer) {
+      setRemoteSocketId(waitingPeer.socketId);
+      setRemoteUser(waitingPeer.user);
+    }
     setShowLobbyScreen(false);
-  }, []);
+  }, [peersInRoom]);
 
   const handleLeaveRequest = useCallback(() => {
     setShowLeaveModal(true);
@@ -168,16 +194,22 @@ export default function RoomPage() {
     <main
       className={
         showLobbyScreen
-          ? "min-h-[100dvh] bg-[var(--dash-content-canvas)] px-1.5 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] text-[var(--dash-text-body)] lg:p-4 lg:pb-4 lg:pt-4"
-          : "min-h-[100dvh] bg-slate-950 px-1.5 py-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] text-slate-100 lg:p-4 lg:pb-4 lg:pt-4"
+          ? "min-h-[100dvh] bg-[var(--lobby-page-bg)] p-0 text-[var(--dash-text-body)]"
+          : "min-h-[100dvh] bg-[var(--meet-page-bg)] p-0 text-[var(--dash-text-body)]"
       }
     >
       {showLobbyScreen ? (
         <RoomPreJoinLobby
-          roomId={roomId}
+          meetingTitle={meetingTitle ?? "Meeting session"}
+          meetingDescription={meetingDescription ?? "Description of the meeting"}
           meetingTimerLabel={sessionMeeting.meetingTimerLabel}
-          categorySessionLabel={sessionMeeting.categorySessionLabel}
           isTimerRunning={sessionMeeting.isTimerRunning}
+          peersCount={peersCount}
+          waitingPeerInitial={
+            peersInRoom[0]
+              ? getFirstNameInitial(peersInRoom[0].user.username, peersInRoom[0].user.email)
+              : undefined
+          }
           myStream={myStream}
           mediaError={mediaError}
           isMicOn={isMicOn}
@@ -188,12 +220,14 @@ export default function RoomPage() {
         />
       ) : (
         <RoomCallSession
-          roomId={roomId}
+          meetingTitle={meetingTitle ?? "Meeting session"}
+          meetingDescription={meetingDescription ?? "Description of the meeting"}
           isRemoteMicEnabled={isRemoteMicEnabled}
           isRemoteCameraEnabled={isRemoteCameraEnabled}
           remoteAudioStream={remoteAudioStream}
           remoteVideoStream={remoteVideoStream}
           remoteScreenShareStream={remoteScreenShareStream}
+          localScreenShareStream={userScreenShareStream}
           remoteUser={remoteUser}
           remoteStream={remoteStream}
           remoteSocketId={remoteSocketId}
@@ -207,7 +241,6 @@ export default function RoomPage() {
           onScreenShareClick={toggleScreenShare}
           onLeaveClick={handleLeaveRequest}
           meetingTimerLabel={sessionMeeting.meetingTimerLabel}
-          categorySessionLabel={sessionMeeting.categorySessionLabel}
           isTimerRunning={sessionMeeting.isTimerRunning}
           showAskerGraceBanner={sessionMeeting.showAskerGraceBanner}
           askerGraceLabel={sessionMeeting.askerGraceLabel}

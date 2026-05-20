@@ -410,9 +410,7 @@ const Dashboard = () => {
           />
         }
       >
-        <div
-          className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:gap-6"
-        >
+        <div className="grid grid-cols-1 gap-5 pb-2 xl:grid-cols-2 xl:items-start xl:gap-6">
           <DashboardStatCards />
           <div className="flex flex-col gap-3">
             <DashboardWalletCard />

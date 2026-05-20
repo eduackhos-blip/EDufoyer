@@ -1,29 +1,23 @@
-import {
-  Home,
-  BookOpen,
-  LogOut,
-  Bell,
-  User,
-  Users,
-  Share2,
-  Building2,
-  UserPlus,
-  Calendar,
-} from 'lucide-react';
+import { Home, List, LogOut, Bell, User, Users } from 'lucide-react';
+import MyDoubtsNavIcon from './icons/MyDoubtsNavIcon';
+
+function getDoubtsTabFromSearch(search) {
+  const raw = (search || '').replace(/^\?/, '');
+  const tab = new URLSearchParams(raw).get('tab');
+  if (tab === 'my-doubts' || tab === 'available' || tab === 'assigned') return tab;
+  return 'available';
+}
 
 /**
- * Main dashboard nav (same order/labels/paths as Profile). `active` follows current route.
+ * Main dashboard nav. `active` follows current route + doubts tab query.
  */
 export function buildDashboardSidebarItems({ user, pathname, search, onLogout }) {
-  const userId = user?.id || user?._id || 'default_user';
   const activeHome = pathname === '/dashboard';
-  const activeDoubts =
-    pathname === '/dashboard/doubts' || pathname === '/dashboard/solved-doubts';
-  const activeSocial =
-    pathname === '/dashboard/social' || pathname.startsWith('/dashboard/social/');
-  const activeCorp = pathname === '/dashboard/corporate-connect';
-  const activeReferral = pathname === '/dashboard/referral-system';
-  const activePyq = pathname === '/dashboard/pyq' || pathname.startsWith('/dashboard/pyq/');
+  const onDoubtsPage = pathname === '/dashboard/doubts';
+  const doubtsTab = onDoubtsPage ? getDoubtsTabFromSearch(search) : null;
+  const activeMyDoubts = doubtsTab === 'my-doubts';
+  const activeAvailableDoubts =
+    onDoubtsPage && (doubtsTab === 'available' || doubtsTab === 'assigned');
   const activeNotif = pathname === '/dashboard/notifications';
   const activeProfile =
     pathname === '/dashboard/profile' || pathname.startsWith('/dashboard/profile/');
@@ -31,30 +25,17 @@ export function buildDashboardSidebarItems({ user, pathname, search, onLogout })
 
   const baseItems = [
     { icon: Home, label: 'Home', path: '/dashboard', active: activeHome },
-    { icon: BookOpen, label: 'Doubts', path: '/dashboard/doubts', active: activeDoubts },
     {
-      icon: Share2,
-      label: 'Educational Social',
-      path: `/dashboard/social/${userId}`,
-      active: activeSocial,
+      icon: MyDoubtsNavIcon,
+      label: 'My doubts',
+      path: '/dashboard/doubts?tab=my-doubts',
+      active: activeMyDoubts,
     },
     {
-      icon: Building2,
-      label: 'Corporate Connect',
-      path: '/dashboard/corporate-connect',
-      active: activeCorp,
-    },
-    {
-      icon: UserPlus,
-      label: 'Online Referral System',
-      path: '/dashboard/referral-system',
-      active: activeReferral,
-    },
-    {
-      icon: Calendar,
-      label: 'Previous Year Live',
-      path: '/dashboard/pyq',
-      active: activePyq,
+      icon: List,
+      label: 'Available doubts',
+      path: '/dashboard/doubts?tab=available',
+      active: activeAvailableDoubts,
     },
     { icon: Bell, label: 'Notifications', path: '/dashboard/notifications', active: activeNotif },
     { icon: User, label: 'Profile', path: '/dashboard/profile', active: activeProfile },

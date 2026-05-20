@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, X, BookOpen } from 'lucide-react';
+import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, X, BookOpen, Calendar } from 'lucide-react';
 import DoubtCard from './DoubtCard';
 import doubtService from '../services/doubtService';
 import solverService from '../services/solverService';
@@ -10,22 +10,22 @@ import DarkModeToggle from './DarkModeToggle';
 import DashboardPageLayout from './dashboard/DashboardPageLayout';
 import AssignedDoubtsSection from './AssignedDoubtsSection';
 import AvailableDoubtsSection from './AvailableDoubtsSection';
+import AvailableDoubtsPageHeader from './doubts/AvailableDoubtsPageHeader';
+import MyDoubtsPageHeader from './doubts/MyDoubtsPageHeader';
 import MyDoubtsSection from './MyDoubtsSection';
-import SolvedDoubtsList from './SolvedDoubtsList';
 import { useSocket } from '../contexts/SocketContext';
 
 const DOUBT_TABS = [
   { id: 'my-doubts', label: 'My Doubts' },
   { id: 'available', label: 'Available' },
   { id: 'assigned', label: 'Assigned' },
-  { id: 'solved', label: 'Solved' },
 ];
 
 function parseDoubtsTab(tabFromUrl) {
-  if (tabFromUrl === 'available' || tabFromUrl === 'assigned' || tabFromUrl === 'solved') {
+  if (tabFromUrl === 'available' || tabFromUrl === 'assigned' || tabFromUrl === 'my-doubts') {
     return tabFromUrl;
   }
-  return 'my-doubts';
+  return 'available';
 }
 
 const DoubtManagement = () => {
@@ -48,6 +48,7 @@ const DoubtManagement = () => {
   const seenAvailableIdsRef = useRef(new Set());
   const pollingRef = useRef(null);
   const [toast, setToast] = useState(null);
+  const [solvedCount, setSolvedCount] = useState(0);
   const { socket: sharedSocket, connectSocket, isConnected } = useSocket();
 
   const fetchMyDoubts = async () => {
@@ -107,14 +108,18 @@ const DoubtManagement = () => {
   const setDoubtsTab = (tab) => {
     setActiveTab(tab);
     const params = new URLSearchParams();
-    if (tab !== 'my-doubts') params.set('tab', tab);
-    const query = params.toString();
-    router.replace(query ? `/dashboard/doubts?${query}` : '/dashboard/doubts', { scroll: false });
+    params.set('tab', tab);
+    router.replace(`/dashboard/doubts?${params.toString()}`, { scroll: false });
   };
 
   useEffect(() => {
-    setActiveTab(parseDoubtsTab(searchParams.get('tab')));
-  }, [searchParams]);
+    const tab = searchParams.get('tab');
+    if (tab === 'solved') {
+      router.replace('/dashboard/solved-doubts');
+      return;
+    }
+    setActiveTab(parseDoubtsTab(tab));
+  }, [searchParams, router]);
 
   const tabCounts = {
     'my-doubts': myDoubts.length,
@@ -138,7 +143,10 @@ const DoubtManagement = () => {
         await Promise.all([
           fetchMyDoubts(),
           fetchAvailableDoubts(),
-          fetchAssignedDoubts()
+          fetchAssignedDoubts(),
+          solverService.getSolvedDoubts(1, 1).then((data) => {
+            setSolvedCount(data?.pagination?.totalCount ?? 0);
+          }).catch(() => setSolvedCount(0)),
         ]);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -387,6 +395,185 @@ const DoubtManagement = () => {
     }
   };
 
+  const renderDoubtsOverlays = ({ includeViewAnswer = false } = {}) => (
+    <>
+      {toast ? (
+        <div className="fixed top-4 right-4 z-50 rounded-lg bg-gray-900 px-4 py-3 text-white shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-green-400" />
+            <span className="text-sm">{toast.message}</span>
+          </div>
+        </div>
+      ) : null}
+      {showAvailableModal && incomingDoubt ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+          <div className="mx-4 w-full max-w-md animate-in fade-in-0 zoom-in-95 rounded-xl bg-white shadow-2xl duration-300 transition-colors dark:bg-gray-800">
+            <div className="rounded-t-xl bg-gradient-to-r from-green-500 to-green-600 p-4 text-white transition-colors dark:from-green-600 dark:to-green-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 transition-colors dark:bg-white/30">
+                    <CheckCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold">New Doubt Available!</h3>
+                    <p className="text-xs text-green-100 dark:text-green-200">A new doubt is waiting for you</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isJoiningSession) {
+                      setShowAvailableModal(false);
+                      setIncomingDoubt(null);
+                    }
+                  }}
+                  disabled={isJoiningSession}
+                  className="text-white/80 transition-colors hover:text-white disabled:opacity-50 dark:text-white/90"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="mb-4 text-center">
+                <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 transition-colors dark:bg-green-900/30">
+                  <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h4 className="mb-1 text-lg font-semibold text-gray-800 transition-colors dark:text-gray-100">
+                  New Doubt Available
+                </h4>
+                <p className="text-sm text-gray-600 transition-colors dark:text-gray-400">
+                  &quot;{incomingDoubt.subject}&quot; needs your expertise
+                </p>
+              </div>
+              <div className="mb-4 rounded-lg bg-gray-50 p-3 transition-colors dark:bg-gray-700/50">
+                <div className="mb-2 flex items-center space-x-2 text-gray-700 transition-colors dark:text-gray-300">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  <span className="text-sm font-medium">Doubt Details</span>
+                </div>
+                <div className="space-y-1 text-sm text-gray-600 transition-colors dark:text-gray-400">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-xs">Subject: {incomingDoubt.subject}</span>
+                  </div>
+                  {incomingDoubt.is_scheduled && incomingDoubt.scheduled_date ? (
+                    <div className="mt-1.5 flex items-center space-x-2 rounded border border-blue-200 bg-blue-50 p-1.5 dark:border-blue-800 dark:bg-blue-900/20">
+                      <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                        Scheduled:{' '}
+                        {new Date(incomingDoubt.scheduled_date).toLocaleDateString('en-IN', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}{' '}
+                        at{' '}
+                        {incomingDoubt.scheduled_time ||
+                          new Date(incomingDoubt.scheduled_date).toLocaleTimeString('en-IN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="mt-1.5 text-gray-700 dark:text-gray-300">
+                    <p className="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Description:</p>
+                    <p className="line-clamp-2 text-xs">{incomingDoubt.description}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleAcceptFromModal}
+                  disabled={isJoiningSession}
+                  className="flex w-full items-center justify-center space-x-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700"
+                >
+                  {isJoiningSession ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                      <span>{incomingDoubt.is_scheduled ? 'Accepting...' : 'Joining Session...'}</span>
+                    </>
+                  ) : incomingDoubt.is_scheduled ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Accept</span>
+                    </>
+                  ) : (
+                    <>
+                      <Video className="h-4 w-4" />
+                      <span>Accept & Join</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isJoiningSession) {
+                      setShowAvailableModal(false);
+                      setIncomingDoubt(null);
+                    }
+                  }}
+                  disabled={isJoiningSession}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isJoiningSession ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 dark:bg-black/50">
+          <div className="flex items-center gap-3 rounded-lg bg-white p-4 shadow transition-colors duration-300 dark:bg-gray-800">
+            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-blue-600 dark:border-blue-400" />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Preparing your session…</span>
+          </div>
+        </div>
+      ) : null}
+      {includeViewAnswer && viewAnswerModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 dark:bg-black/70">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl transition-colors duration-300 dark:bg-gray-800">
+            <div className="flex items-start justify-between gap-3 border-b border-gray-200 p-5 transition-colors duration-300 dark:border-gray-700">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-600">
+                    New Answer
+                  </span>
+                  {viewAnswerModal.timeLabel ? (
+                    <span className="text-xs text-gray-500">{viewAnswerModal.timeLabel}</span>
+                  ) : null}
+                </div>
+                <h3 className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">
+                  {viewAnswerModal.solverName} answered your question
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+                onClick={() => setViewAnswerModal(null)}
+                aria-label="Close answer modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <div className="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Question</div>
+              <div className="whitespace-pre-wrap rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-100">
+                {viewAnswerModal.questionText}
+              </div>
+              <div className="mb-2 mt-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Answer</div>
+              <div className="whitespace-pre-wrap rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200">
+                &quot;{viewAnswerModal.answerText}&quot;
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-64 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -406,6 +593,35 @@ const DoubtManagement = () => {
           Try again
         </button>
       </div>
+    );
+  }
+
+  if (activeTab === 'available') {
+    return (
+      <DashboardPageLayout
+        loadingMessage="Loading doubts…"
+        contentVariant="card"
+        topBar={<AvailableDoubtsPageHeader solvedCount={solvedCount} />}
+      >
+        {renderDoubtsOverlays()}
+        <AvailableDoubtsSection availableDoubts={availableDoubts} onAcceptDoubt={handleAcceptDoubt} />
+      </DashboardPageLayout>
+    );
+  }
+
+  if (activeTab === 'my-doubts') {
+    return (
+      <DashboardPageLayout
+        loadingMessage="Loading doubts…"
+        contentVariant="card"
+        topBar={<MyDoubtsPageHeader availableCount={availableDoubts.length} solvedCount={solvedCount} />}
+      >
+        {renderDoubtsOverlays({ includeViewAnswer: true })}
+        <MyDoubtsSection
+          myDoubts={myDoubts}
+          onViewAnswer={(payload) => setViewAnswerModal(payload)}
+        />
+      </DashboardPageLayout>
     );
   }
 
@@ -460,205 +676,9 @@ const DoubtManagement = () => {
 
         {/* Body */}
         <div className="p-4 overflow-y-auto h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
-            <span className="text-sm">{toast.message}</span>
-          </div>
-        </div>
-      )}
-      {showAvailableModal && incomingDoubt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 animate-in fade-in-0 zoom-in-95 duration-300 transition-colors">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-t-xl p-4 text-white transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-10 h-10 bg-white/20 dark:bg-white/30 rounded-full flex items-center justify-center transition-colors">
-                    <CheckCircle className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold">New Doubt Available!</h3>
-                    <p className="text-green-100 dark:text-green-200 text-xs">A new doubt is waiting for you</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { if (!isJoiningSession) { setShowAvailableModal(false); setIncomingDoubt(null); } }}
-                  disabled={isJoiningSession}
-                  className="text-white/80 dark:text-white/90 hover:text-white transition-colors disabled:opacity-50"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-4">
-              <div className="text-center mb-4">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-2 transition-colors">
-                  <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1 transition-colors">
-                  New Doubt Available
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">
-                  "{incomingDoubt.subject}" needs your expertise
-                </p>
-              </div>
-
-              {/* Doubt Details */}
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4 transition-colors">
-                <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 mb-2 transition-colors">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span className="font-medium text-sm">Doubt Details</span>
-                </div>
-                <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 transition-colors">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-3 h-3" />
-                    <span className="text-xs">Subject: {incomingDoubt.subject}</span>
-                  </div>
-                  {incomingDoubt.is_scheduled && incomingDoubt.scheduled_date && (
-                    <div className="flex items-center space-x-2 mt-1.5 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                      <Calendar className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                      <span className="text-blue-700 dark:text-blue-300 font-semibold text-xs">
-                        Scheduled: {new Date(incomingDoubt.scheduled_date).toLocaleDateString('en-IN', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })} at {incomingDoubt.scheduled_time || new Date(incomingDoubt.scheduled_date).toLocaleTimeString('en-IN', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  <div className="mt-1.5 text-gray-700 dark:text-gray-300">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Description:</p>
-                    <p className="line-clamp-2 text-xs">{incomingDoubt.description}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <button
-                  onClick={handleAcceptFromModal}
-                  disabled={isJoiningSession}
-                  className="w-full bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
-                >
-                  {isJoiningSession ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>{incomingDoubt.is_scheduled ? 'Accepting...' : 'Joining Session...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      {incomingDoubt.is_scheduled ? (
-                        <>
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Accept</span>
-                        </>
-                      ) : (
-                        <>
-                          <Video className="w-4 h-4" />
-                          <span>Accept & Join</span>
-                        </>
-                      )}
-                    </>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => { if (!isJoiningSession) { setShowAvailableModal(false); setIncomingDoubt(null); } }}
-                  disabled={isJoiningSession}
-                  className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 text-sm"
-                >
-                  Dismiss
-                </button>
-              </div>
-
-              {/* Additional Info */}
-              <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-colors">
-                <p className="text-xs text-blue-700 dark:text-blue-300 text-center transition-colors">
-                  💡 You can also accept doubts from your dashboard anytime
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isJoiningSession && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 dark:bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3 transition-colors duration-300">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400"></div>
-            <span className="text-sm text-gray-700 dark:text-gray-300">Preparing your session…</span>
-          </div>
-        </div>
-      )}
-
-      {viewAnswerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md transition-colors duration-300">
-            <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-3 transition-colors duration-300">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 text-xs font-semibold">
-                    New Answer
-                  </span>
-                  {viewAnswerModal.timeLabel && (
-                    <span className="text-xs text-gray-500">{viewAnswerModal.timeLabel}</span>
-                  )}
-                </div>
-                <h3 className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {viewAnswerModal.solverName} answered your question
-                </h3>
-              </div>
-              <button
-                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                onClick={() => setViewAnswerModal(null)}
-                aria-label="Close answer modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5">
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Question</div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 whitespace-pre-wrap">
-                {viewAnswerModal.questionText}
-              </div>
-
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-4 mb-2">Answer</div>
-              <div className="text-sm text-gray-800 dark:text-gray-200 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 whitespace-pre-wrap">
-                &quot;{viewAnswerModal.answerText}&quot;
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderDoubtsOverlays({ includeViewAnswer: true })}
           {/* Lists */}
           <div className="mt-4">
-        {activeTab === 'my-doubts' && (
-          <div>
-            <MyDoubtsSection
-              myDoubts={myDoubts}
-              onViewAnswer={(payload) => setViewAnswerModal(payload)}
-            />
-          </div>
-        )}
-
-        {activeTab === 'available' && (
-          <div>
-            <AvailableDoubtsSection
-              availableDoubts={availableDoubts}
-              onAcceptDoubt={handleAcceptDoubt}
-            />
-          </div>
-        )}
-
         {activeTab === 'assigned' && (
           <div>
             <AssignedDoubtsSection
@@ -668,11 +688,6 @@ const DoubtManagement = () => {
           </div>
         )}
 
-        {activeTab === 'solved' && (
-          <div>
-            <SolvedDoubtsList />
-          </div>
-        )}
           </div>
         </div>
       </div>

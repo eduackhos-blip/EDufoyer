@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import DashboardSplashTitle from './DashboardSplashTitle';
 
 type DashboardWelcomeHeaderProps = {
   userName: string;
@@ -43,33 +44,19 @@ export default function DashboardWelcomeHeader({
 
   return (
     <header className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <h1
-        className="relative inline-block text-[clamp(1.35rem,3.2vw,2rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-[var(--dash-forest)]"
-        style={{
-          textShadow:
-            '0 2px 6px rgba(6, 64, 43, 0.22), 0 8px 28px rgba(6, 64, 43, 0.18), 0 16px 40px rgba(6, 64, 43, 0.12), 0 1px 0 rgba(6, 64, 43, 0.28)',
-        }}
-      >
-        <img
-          src="/aboveMarks.png"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute h-5 w-7 object-contain md:h-[3.5rem] md:w-[4rem]"
-          style={{ left: '-43px', top: '-31px' }}
-          decoding="async"
-        />
+      <DashboardSplashTitle variant="welcome">
         Welcome{' '}
         <span
           className="text-[var(--dash-forest)]"
           style={{
             textShadow:
-              '0 3px 8px rgba(6, 64, 43, 0.32), 0 10px 32px rgba(6, 64, 43, 0.22), 0 20px 48px rgba(6, 64, 43, 0.14), 0 1px 0 rgba(6, 64, 43, 0.36)',
+              '0 3px 8px rgba(7, 62, 54, 0.32), 0 10px 32px rgba(7, 62, 54, 0.22), 0 20px 48px rgba(7, 62, 54, 0.14), 0 1px 0 rgba(7, 62, 54, 0.36)',
           }}
         >
           {displayName}
         </span>{' '}
         !
-      </h1>
+      </DashboardSplashTitle>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2.5 sm:gap-3">
         <button

@@ -28,6 +28,8 @@ type SessionEndReason = "solver_left" | "asker_left_timeout" | "solver_left_duri
 
 type JoinRoomPayload = {
   roomId?: string;
+  /** True when waiting in pre-join lobby — presence only, does not start session timer. */
+  lobbyOnly?: boolean;
 };
 
 type LeaveRoomPayload = {
@@ -133,6 +135,8 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
       typeof payload === "string"
         ? payload.trim() || undefined
         : payload?.roomId?.trim() || undefined;
+    const lobbyOnly =
+      typeof payload === "object" && payload != null && payload.lobbyOnly === true;
 
     if (!roomId) {
       socket.emit(SOCKET_EVENTS.ROOM_ERROR, { message: "roomId is required to join room" });
@@ -192,14 +196,6 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
       }
     }
 
-    const joinUpdate = isSolver ? { hasSolverEverJoined: true } : { hasAskerEverJoined: true };
-    const updated = await Room.findOneAndUpdate({ roomId }, { $set: joinUpdate }, { new: true });
-
-    if (!updated) {
-      socket.emit(SOCKET_EVENTS.ROOM_ERROR, { message: "Failed to update room join state" });
-      return;
-    }
-
     const doubt = await Doubt.findById(parsed.doubtId).select("category").lean();
     const doubtCategory = (doubt as { category?: string } | null)?.category;
     let maxSessionSeconds = resolveMaxSessionSeconds(
@@ -213,27 +209,41 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
 
     socket.emit(SOCKET_EVENTS.ROOM_JOINED_CONFIRMATION, { roomId, maxSessionSeconds });
 
-    const bothBefore = Boolean(room.hasSolverEverJoined && room.hasAskerEverJoined);
-    const bothNow = Boolean(updated.hasSolverEverJoined && updated.hasAskerEverJoined);
-    const sessionAnchor = updated.sessionStartedAt ?? room.sessionStartedAt;
+    let updated = room;
+    if (!lobbyOnly) {
+      const joinUpdate = isSolver ? { hasSolverEverJoined: true } : { hasAskerEverJoined: true };
+      const joinResult = await Room.findOneAndUpdate({ roomId }, { $set: joinUpdate }, { new: true });
 
-    if (bothNow && !bothBefore) {
-      const startedAt = Date.now();
-      await Room.findOneAndUpdate({ roomId }, { $set: { sessionStartedAt: new Date(startedAt) } });
-      io.to(roomId).emit(SOCKET_EVENTS.SESSION_TIMER_START, {
-        roomId,
-        startedAt,
-        maxSessionSeconds,
-      });
-    } else if (sessionAnchor) {
-      socket.emit(SOCKET_EVENTS.SESSION_TIMER_START, {
-        roomId,
-        startedAt: new Date(sessionAnchor).getTime(),
-        maxSessionSeconds,
-      });
+      if (!joinResult) {
+        socket.emit(SOCKET_EVENTS.ROOM_ERROR, { message: "Failed to update room join state" });
+        return;
+      }
+      updated = joinResult;
+
+      const bothBefore = Boolean(room.hasSolverEverJoined && room.hasAskerEverJoined);
+      const bothNow = Boolean(updated.hasSolverEverJoined && updated.hasAskerEverJoined);
+      const sessionAnchor = updated.sessionStartedAt ?? room.sessionStartedAt;
+
+      if (bothNow && !bothBefore) {
+        const startedAt = Date.now();
+        await Room.findOneAndUpdate({ roomId }, { $set: { sessionStartedAt: new Date(startedAt) } });
+        io.to(roomId).emit(SOCKET_EVENTS.SESSION_TIMER_START, {
+          roomId,
+          startedAt,
+          maxSessionSeconds,
+        });
+      } else if (sessionAnchor) {
+        socket.emit(SOCKET_EVENTS.SESSION_TIMER_START, {
+          roomId,
+          startedAt: new Date(sessionAnchor).getTime(),
+          maxSessionSeconds,
+        });
+      }
     }
 
-    if (isAsker && hasWaitingParticipant && sessionAnchor) {
+    const sessionAnchor = updated.sessionStartedAt ?? room.sessionStartedAt;
+
+    if (!lobbyOnly && isAsker && hasWaitingParticipant && sessionAnchor) {
       io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_REJOINED, { roomId });
     }
 

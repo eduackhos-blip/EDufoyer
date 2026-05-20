@@ -9,12 +9,14 @@ type DashboardPageLayoutProps = {
   children: React.ReactNode;
   contentVariant?: 'card' | 'plain';
   loadingMessage?: string;
+  topBar?: React.ReactNode;
 };
 
 export default function DashboardPageLayout({
   children,
   contentVariant = 'plain',
   loadingMessage,
+  topBar,
 }: DashboardPageLayoutProps) {
   const { isLoading, sidebarItems } = useDashboardAuth();
 
@@ -23,7 +25,7 @@ export default function DashboardPageLayout({
   }
 
   return (
-    <DashboardShell sidebarItems={sidebarItems} contentVariant={contentVariant}>
+    <DashboardShell sidebarItems={sidebarItems} contentVariant={contentVariant} topBar={topBar}>
       {children}
     </DashboardShell>
   );

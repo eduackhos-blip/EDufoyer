@@ -14,6 +14,8 @@ async function validateSessionRoom(roomId: string): Promise<{
   valid: boolean;
   code?: RoomValidationCode;
   maxSessionSeconds?: number;
+  meetingTitle?: string;
+  meetingDescription?: string;
 }> {
   const token = localStorage.getItem("token");
   const res = await fetch(
@@ -27,11 +29,21 @@ async function validateSessionRoom(roomId: string): Promise<{
     const body = (await res.json().catch(() => ({}))) as {
       valid?: boolean;
       maxSessionSeconds?: number;
+      meetingTitle?: string;
+      meetingDescription?: string;
     };
     return {
       valid: body.valid === true,
       maxSessionSeconds:
         typeof body.maxSessionSeconds === "number" ? body.maxSessionSeconds : undefined,
+      meetingTitle:
+        typeof body.meetingTitle === "string" && body.meetingTitle.trim()
+          ? body.meetingTitle.trim()
+          : undefined,
+      meetingDescription:
+        typeof body.meetingDescription === "string" && body.meetingDescription.trim()
+          ? body.meetingDescription.trim()
+          : undefined,
     };
   }
 
@@ -62,6 +74,8 @@ export function useResolvedSessionRoomId(routeParam: string | undefined) {
   const [roomUnavailable, setRoomUnavailable] = useState(false);
   const [roomUnavailableCode, setRoomUnavailableCode] = useState<RoomValidationCode | null>(null);
   const [maxSessionSeconds, setMaxSessionSeconds] = useState<number | null>(null);
+  const [meetingTitle, setMeetingTitle] = useState<string | null>(null);
+  const [meetingDescription, setMeetingDescription] = useState<string | null>(null);
 
   useEffect(() => {
     const trimmed = routeParam?.trim();
@@ -71,6 +85,8 @@ export function useResolvedSessionRoomId(routeParam: string | undefined) {
       setRoomUnavailable(false);
       setRoomUnavailableCode(null);
       setMaxSessionSeconds(null);
+      setMeetingTitle(null);
+      setMeetingDescription(null);
       return;
     }
 
@@ -89,6 +105,8 @@ export function useResolvedSessionRoomId(routeParam: string | undefined) {
       setRoomUnavailable(false);
       setRoomUnavailableCode(null);
       setMaxSessionSeconds(null);
+      setMeetingTitle(null);
+      setMeetingDescription(null);
 
       try {
         let candidateRoomId: string | undefined;
@@ -134,6 +152,8 @@ export function useResolvedSessionRoomId(routeParam: string | undefined) {
         setRoomUnavailable(false);
         setRoomUnavailableCode(null);
         setMaxSessionSeconds(validation.maxSessionSeconds ?? null);
+        setMeetingTitle(validation.meetingTitle ?? null);
+        setMeetingDescription(validation.meetingDescription ?? null);
       } catch {
         if (!cancelled) {
           setResolvedRoomId(undefined);
@@ -154,6 +174,8 @@ export function useResolvedSessionRoomId(routeParam: string | undefined) {
     roomId: resolvedRoomId,
     parsed: parseSessionRoomId(resolvedRoomId),
     maxSessionSeconds,
+    meetingTitle,
+    meetingDescription,
     isResolving,
     resolveError,
     roomUnavailable,

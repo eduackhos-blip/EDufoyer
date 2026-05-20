@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Clock, Eye, MessageCircle, Video } from 'lucide-react';
 import { DoubtStatusBadge, ResolutionStatusBadge } from './StatusBadges';
-
-const FALLBACK_AVATAR_URL = 'https://mui.com/static/images/avatar/2.jpg';
 
 const getTimeStatus = (status, createdAt) => {
   const created = new Date(createdAt);
@@ -25,155 +23,74 @@ const getTimeStatus = (status, createdAt) => {
   return 'Just now';
 };
 
-const formatTimeAgo = (dateValue) => {
-  if (!dateValue) return '';
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const now = new Date();
-  const diffInSeconds = Math.floor((now - date) / 1000);
-
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  return date.toLocaleDateString('en-IN');
-};
-
-const truncateText = (text, maxLen) => {
-  if (!text) return '';
-  const str = String(text);
-  if (str.length <= maxLen) return str;
-  return `${str.slice(0, maxLen).trim()}...`;
-};
-
 const DoubtCard = ({
   doubt,
   type,
   onAcceptDoubt,
   onJoinSession,
-  onViewAnswer
 }) => {
-  if (type === 'my-doubts') {
-    const [isAvatarBroken, setIsAvatarBroken] = useState(false);
-    const answerText = doubt.solverDoubt?.feedback_comment;
-    const trimmedSolverName = typeof doubt.solver?.name === 'string' ? doubt.solver.name.trim() : '';
-    const hasAnswerText = answerText !== undefined && answerText !== null && String(answerText).trim() !== '';
-    const solverName = trimmedSolverName || 'Solver';
-    const solverAvatarUrl = doubt.solver?.avatarUrl || FALLBACK_AVATAR_URL;
-    const shouldShowAvatarImage = Boolean(solverAvatarUrl) && !isAvatarBroken;
-
-    console.log('[DoubtCard][my-doubts]', {
-      doubtId: doubt?._id,
-      status: doubt?.status,
-      createdAt: doubt?.createdAt,
-      hasSolverDoubt: Boolean(doubt?.solverDoubt),
-      solverDoubt: doubt?.solverDoubt,
-      hasAnswerText,
-      answerTextValue: answerText
-    });
-
-    const timeAgo = formatTimeAgo(doubt.solverDoubt?.resolved_at || doubt.createdAt);
-    const question = doubt.description || '';
-    const answerPreview =
-      !hasAnswerText
-        ? 'Awaiting answer from solver.'
-        : truncateText(answerText, 110);
-    const isNew = hasAnswerText;
-
-    const initials = solverName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
-
-    return (
-      <div className="bg-white border border-[#e8e8f0] rounded-[18px] p-[20px_22px] w-[501.5px] h-[245.5px] box-border overflow-hidden font-sans">
-        <div className="flex items-start gap-3">
-          <div className="w-[46px] h-[46px] rounded-full overflow-hidden shrink-0 bg-[#d0d8f0] flex items-center justify-center text-[16px] font-semibold text-[#0189FF]">
-            {shouldShowAvatarImage ? (
-              <img
-                src={solverAvatarUrl}
-                alt={solverName}
-                className="w-full h-full object-cover"
-                onError={() => setIsAvatarBroken(true)}
-              />
-            ) : (
-              initials
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-              {isNew && (
-                <span className="bg-[#e8eeff] text-[#0189FF] text-[11.5px] font-bold px-[11px] py-[3px] rounded-[20px]">
-                  New Answer
-                </span>
-              )}
-              <span className="text-[12.5px] text-[#aaaabc]">{timeAgo}</span>
-            </div>
-            <div className="text-[14.5px] text-[#1a1a2e]">
-              {hasAnswerText ? (
-                <>
-                  <span className="font-bold">{solverName}</span> answered your question
-                </>
-              ) : (
-                <span className="font-bold">Awaiting solver response</span>
-              )}
-            </div>
-
-            <div className="bg-[#fafbff] border-gray-200 border rounded-[12px] px-4 py-[14px] mt-[14px] mb-[14px]">
-              <div className="text-[13.5px] font-bold text-[#1a1a2e] mb-[5px] leading-[1.45] line-clamp-2">
-                {question}
-              </div>
-              <div className="text-[13px] text-[#888899] leading-[1.5] line-clamp-2">
-                &quot;{answerPreview}&quot;
-              </div>
-            </div>
-
-            <button
-              className="self-start mt-4 font-medium text-[#0189FF] text-[13.5px] hover:underline"
-              onClick={() =>
-                onViewAnswer?.({
-                  doubtId: doubt._id,
-                  solverName,
-                  questionText: question,
-                  answerText: hasAnswerText ? answerText : 'Awaiting answer from solver.',
-                  timeLabel: timeAgo
-                })
-              }
-            >
-              View Answer
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const isSessionReady = type === 'assigned' && doubt.solverDoubt?.resolution_status === 'session_scheduled';
   const isAvailable = type === 'available';
 
+  const formatCardDate = (dateValue) => {
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  };
+
+  if (isAvailable) {
+    return (
+      <article className="doubt-card-available flex h-full flex-col">
+        <div className="doubt-card-available__inner flex min-h-0 flex-1 flex-col">
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <h3 className="text-base font-bold leading-snug text-[#073E36]">{doubt.subject}</h3>
+            <span className="shrink-0 text-xs font-medium text-[var(--dash-text-muted)]">
+              {formatCardDate(doubt.createdAt)}
+            </span>
+          </div>
+          <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-[var(--dash-text-body)]">
+            {doubt.description}
+          </p>
+          <span className="mb-4 inline-flex w-fit rounded-full bg-[#073E36] px-3 py-1 text-[11px] font-semibold text-white">
+            Available
+          </span>
+          <div className="mt-auto flex flex-wrap items-center gap-3 text-xs text-[var(--dash-text-muted)]">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {getTimeStatus(doubt.status, doubt.createdAt)}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {doubt.views || 0}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {doubt.answers?.length || 0}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={() => onAcceptDoubt?.(doubt._id)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#073E36] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--dash-inner-shadow)] transition-opacity hover:opacity-90"
+          >
+            <Video className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden />
+            Accept and join
+          </button>
+        </div>
+      </article>
+    );
+  }
+
   return (
-    <div
-      className={`rounded-xl shadow-sm border p-6 hover:shadow-md transition-all duration-300 overflow-hidden ${
-        isAvailable
-          ? 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:shadow-lg'
-          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-md'
-      }`}
-    >
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 break-words transition-colors duration-300">
-              {doubt.subject}
-            </h3>
-            {isAvailable && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                Available
-              </span>
-            )}
-          </div>
+          <h3 className="mb-2 break-words text-lg font-semibold text-gray-800 dark:text-gray-100">
+            {doubt.subject}
+          </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 break-words break-all overflow-hidden transition-colors duration-300">
             {doubt.description}
           </p>
@@ -205,14 +122,6 @@ const DoubtCard = ({
 
       <div className="flex items-center justify-between">
         <div className="flex space-x-2">
-          {type === 'available' && (
-            <button
-              onClick={() => onAcceptDoubt?.(doubt._id)}
-              className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm font-medium shadow-md hover:shadow-lg"
-            >
-              Accept & Solve
-            </button>
-          )}
           {isSessionReady && (
             <button
               onClick={() => onJoinSession?.(doubt._id)}

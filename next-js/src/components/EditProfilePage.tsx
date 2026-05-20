@@ -1,17 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Eye, EyeOff, Loader2, ArrowLeft, Search } from 'lucide-react';
 import authService from '../services/authService';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DarkModeToggle from './DarkModeToggle';
 import DashboardPageLayout from './dashboard/DashboardPageLayout';
+import DashboardSplashTitle from './dashboard/DashboardSplashTitle';
 
 const DEFAULT_PROFILE_COVER_URL = '/cover-photo-profile-page.jpg';
 
+const inputClass =
+  'w-full rounded-xl border border-[var(--dash-panel-border)] bg-white px-4 py-2.5 text-sm text-[var(--dash-text-body)] shadow-[var(--dash-inner-shadow)] outline-none focus:border-[var(--dash-forest)] focus:ring-2 focus:ring-[var(--dash-forest)]/15';
+
+const inputSearchClass =
+  'w-full rounded-full border border-[var(--dash-panel-border)] bg-white py-2.5 pl-10 pr-4 text-sm text-[var(--dash-text-body)] shadow-[var(--dash-inner-shadow)] outline-none placeholder:text-[var(--dash-text-muted)] focus:border-[var(--dash-forest)] focus:ring-2 focus:ring-[var(--dash-forest)]/15';
+
 const EditProfilePage = () => {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const location = { pathname, search: searchParams.toString() ? `?${searchParams.toString()}` : '', hash: typeof window !== 'undefined' ? window.location.hash : '' };
+  const location = {
+    search: searchParams.toString() ? `?${searchParams.toString()}` : '',
+    hash: typeof window !== 'undefined' ? window.location.hash : '',
+  };
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQ, setSearchQ] = useState('');
@@ -87,7 +96,7 @@ const EditProfilePage = () => {
 
   const getAvatarUrl = (name) => {
     const safe = name || 'User';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(safe)}&background=e0e7ff&color=3730a3&size=256&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(safe)}&background=e3edd8&color=073E36&size=256&bold=true`;
   };
 
   const displayAvatarSrc = (u) => {
@@ -191,15 +200,6 @@ const EditProfilePage = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      router.push('/');
-    } catch {
-      router.push('/');
-    }
-  };
-
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setPasswordError('');
@@ -230,312 +230,292 @@ const EditProfilePage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-        <span className="ml-3 text-gray-600 dark:text-gray-300">Loading…</span>
-      </div>
+      <DashboardPageLayout loadingMessage="Loading profile…">
+        <div className="flex min-h-[16rem] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--dash-forest)]" />
+          <span className="ml-3 text-[var(--dash-text-body)]">Loading…</span>
+        </div>
+      </DashboardPageLayout>
     );
   }
 
+  const coverPreviewUrl =
+    (editProfile.coverImageUrl && editProfile.coverImageUrl.trim()) || DEFAULT_PROFILE_COVER_URL;
+  const coverSafe = String(coverPreviewUrl).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const editProfileHeader = (
+    <header className="dash-page-header mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-5">
+      <DashboardSplashTitle variant="page">Edit profile</DashboardSplashTitle>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/profile')}
+          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--dash-panel-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--dash-forest)] shadow-[var(--dash-inner-shadow)] transition-colors hover:bg-[var(--dash-card-mint)]"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          Back to profile
+        </button>
+        <div className="relative min-w-[10rem] max-w-xs flex-1 sm:min-w-[14rem] sm:flex-initial">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQ.trim()) {
+                router.push(`/dashboard/doubts?tab=available`);
+              }
+            }}
+            placeholder="Search doubt"
+            className={inputSearchClass}
+            aria-label="Search doubt"
+          />
+        </div>
+        <DarkModeToggle />
+      </div>
+    </header>
+  );
+
   return (
-    <DashboardPageLayout loadingMessage="Loading profile…">
-      <div className="flex min-h-full flex-col overflow-hidden bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
-        <header className="shrink-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <div className="flex items-center gap-3 max-w-6xl mx-auto">
-            <div className="flex-1 max-w-xl relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+    <DashboardPageLayout loadingMessage="Loading profile…" contentVariant="card" topBar={editProfileHeader}>
+      <div className="mx-auto max-w-2xl space-y-5">
+        <article className="dash-panel-card p-6 md:p-8">
+          <form onSubmit={handleSaveProfile} className="space-y-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <img
+                src={
+                  editProfile.avatarUrl?.trim()
+                    ? editProfile.avatarUrl.trim()
+                    : getAvatarUrl(editProfile.name || user?.name)
+                }
+                alt=""
+                className="h-24 w-24 shrink-0 rounded-full border-2 border-[var(--dash-panel-border)] object-cover shadow-[var(--dash-inner-shadow)]"
+              />
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onAvatarFileChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  className="rounded-full border border-[var(--dash-panel-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--dash-forest)] shadow-[var(--dash-inner-shadow)] transition-colors hover:bg-[var(--dash-card-mint)]"
+                >
+                  Upload photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditProfile((p) => ({ ...p, avatarUrl: '' }));
+                    setProfileFormError('');
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--dash-text-muted)] transition-colors hover:bg-[var(--dash-card-mint)]/50"
+                >
+                  Remove photo
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-[var(--dash-text-muted)]">
+              JPG/PNG up to ~700 KB, or paste an https image URL. Images are saved on your account.
+            </p>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--dash-forest)]">
+                Profile photo URL (optional)
+              </label>
               <input
-                type="search"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQ.trim()) {
-                    router.push(`/dashboard/doubts?tab=available`);
-                  }
-                }}
-                placeholder="Search Doubt"
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                type="text"
+                inputMode="url"
+                value={editProfile.avatarUrl?.startsWith('data:') ? '' : editProfile.avatarUrl}
+                onChange={(e) => setEditProfile((p) => ({ ...p, avatarUrl: e.target.value }))}
+                placeholder="https://…"
+                className={inputClass}
               />
             </div>
-            <DarkModeToggle />
-          </div>
-        </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="max-w-2xl mx-auto">
-            <div className="mb-6 flex flex-wrap items-center gap-3">
+            <div className="border-t border-[var(--dash-panel-border)] pt-4">
+              <p className="mb-2 text-sm font-semibold text-[var(--dash-forest)]">Cover image</p>
+              <div
+                className="mb-2 h-28 w-full rounded-xl border border-[var(--dash-panel-border)] bg-cover bg-center shadow-[var(--dash-inner-shadow)]"
+                style={{ backgroundImage: `url('${coverSafe}')` }}
+              />
+              <div className="mb-2 flex flex-wrap gap-2">
+                <input
+                  ref={coverFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onCoverFileChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => coverFileInputRef.current?.click()}
+                  className="rounded-full border border-[var(--dash-panel-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--dash-forest)] shadow-[var(--dash-inner-shadow)] transition-colors hover:bg-[var(--dash-card-mint)]"
+                >
+                  Upload cover
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditProfile((p) => ({ ...p, coverImageUrl: '' }));
+                    setProfileFormError('');
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-[var(--dash-text-muted)] transition-colors hover:bg-[var(--dash-card-mint)]/50"
+                >
+                  Reset to default
+                </button>
+              </div>
+              <label className="mb-1 block text-xs font-medium text-[var(--dash-text-muted)]">
+                Cover image URL (optional)
+              </label>
+              <input
+                type="text"
+                inputMode="url"
+                value={editProfile.coverImageUrl?.startsWith('data:') ? '' : editProfile.coverImageUrl}
+                onChange={(e) => setEditProfile((p) => ({ ...p, coverImageUrl: e.target.value }))}
+                placeholder="https://…"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--dash-forest)]">Name</label>
+              <input
+                type="text"
+                value={editProfile.name}
+                onChange={(e) => setEditProfile((p) => ({ ...p, name: e.target.value }))}
+                className={inputClass}
+                minLength={2}
+                maxLength={50}
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--dash-forest)]">Username</label>
+              <input
+                type="text"
+                value={editProfile.username}
+                onChange={(e) =>
+                  setEditProfile((p) => ({
+                    ...p,
+                    username: e.target.value.replace(/^@+/, '').toLowerCase(),
+                  }))
+                }
+                placeholder="your_handle"
+                className={inputClass}
+                maxLength={30}
+              />
+              <p className="mt-1 text-xs text-[var(--dash-text-muted)]">
+                3–30 characters: lowercase letters, numbers, underscore. Leave empty to clear.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--dash-forest)]">Email</label>
+              <input
+                type="email"
+                value={editProfile.email}
+                onChange={(e) => setEditProfile((p) => ({ ...p, email: e.target.value }))}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-[var(--dash-forest)]">Bio</label>
+              <textarea
+                value={editProfile.bio}
+                onChange={(e) => setEditProfile((p) => ({ ...p, bio: e.target.value }))}
+                rows={3}
+                maxLength={280}
+                placeholder="Short line under your name"
+                className={`${inputClass} min-h-[4rem] resize-y`}
+              />
+            </div>
+
+            {profileFormError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{profileFormError}</div>
+            ) : null}
+            {profileFormSuccess ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                {profileFormSuccess}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={isSavingProfile}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#073E36] py-3 text-sm font-semibold text-white shadow-[var(--dash-inner-shadow)] transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Save profile
+            </button>
+          </form>
+        </article>
+
+        <article id="change-password-section" className="dash-panel-card scroll-mt-6 p-6 md:p-8">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--dash-forest)]">
+            <Lock className="h-5 w-5 shrink-0" aria-hidden />
+            Change password
+          </h2>
+          {passwordError ? (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{passwordError}</div>
+          ) : null}
+          {passwordSuccess ? (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+              {passwordSuccess}
+            </div>
+          ) : null}
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            {['currentPassword', 'newPassword', 'confirmPassword'].map((field, idx) => {
+              const labels = ['Current Password', 'New Password', 'Confirm New Password'];
+              const keys = ['current', 'new', 'confirm'];
+              const k = keys[idx];
+              return (
+                <div key={field}>
+                  <label className="mb-2 block text-sm font-semibold text-[var(--dash-forest)]">{labels[idx]}</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords[k] ? 'text' : 'password'}
+                      value={passwordForm[field]}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, [field]: e.target.value })}
+                      className={`${inputClass} pr-10 py-3`}
+                      required
+                      minLength={field === 'currentPassword' ? undefined : 6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords({ ...showPasswords, [k]: !showPasswords[k] })}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--dash-text-muted)] hover:text-[var(--dash-forest)]"
+                      aria-label={showPasswords[k] ? 'Hide password' : 'Show password'}
+                    >
+                      {showPasswords[k] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
               <button
                 type="button"
                 onClick={() => router.push('/dashboard/profile')}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700/80 transition-colors"
+                className="flex-1 rounded-xl border border-[var(--dash-panel-border)] bg-white py-2.5 text-sm font-semibold text-[var(--dash-forest)] shadow-[var(--dash-inner-shadow)] transition-colors hover:bg-[var(--dash-card-mint)]"
               >
-                <ArrowLeft className="w-4 h-4 shrink-0" />
-                Back to profile
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#073E36] py-2.5 text-sm font-semibold text-white shadow-[var(--dash-inner-shadow)] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                Update password
               </button>
             </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 md:p-8">
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Edit profile
-              </h1>
-
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <img
-                    src={
-                      editProfile.avatarUrl?.trim()
-                        ? editProfile.avatarUrl.trim()
-                        : getAvatarUrl(editProfile.name || user?.name)
-                    }
-                    alt=""
-                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shrink-0"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      ref={avatarFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={onAvatarFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => avatarFileInputRef.current?.click()}
-                      className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      Upload photo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditProfile((p) => ({ ...p, avatarUrl: '' }));
-                        setProfileFormError('');
-                      }}
-                      className="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-                    >
-                      Remove photo
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  JPG/PNG up to ~700 KB, or paste an https image URL. Images are saved on your account.
-                </p>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Profile photo URL (optional)
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="url"
-                    value={editProfile.avatarUrl?.startsWith('data:') ? '' : editProfile.avatarUrl}
-                    onChange={(e) => setEditProfile((p) => ({ ...p, avatarUrl: e.target.value }))}
-                    placeholder="https://…"
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-sm"
-                  />
-                </div>
-
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Cover image</p>
-                  <div
-                    className="h-28 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-cover bg-center mb-2"
-                    style={{
-                      backgroundImage: `url(${JSON.stringify(
-                        (editProfile.coverImageUrl && editProfile.coverImageUrl.trim()) ||
-                          DEFAULT_PROFILE_COVER_URL
-                      )})`,
-                    }}
-                  />
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    <input
-                      ref={coverFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={onCoverFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => coverFileInputRef.current?.click()}
-                      className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      Upload cover
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditProfile((p) => ({ ...p, coverImageUrl: '' }));
-                        setProfileFormError('');
-                      }}
-                      className="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-                    >
-                      Reset to default
-                    </button>
-                  </div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    Cover image URL (optional)
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="url"
-                    value={editProfile.coverImageUrl?.startsWith('data:') ? '' : editProfile.coverImageUrl}
-                    onChange={(e) => setEditProfile((p) => ({ ...p, coverImageUrl: e.target.value }))}
-                    placeholder="https://…"
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={editProfile.name}
-                    onChange={(e) => setEditProfile((p) => ({ ...p, name: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                    minLength={2}
-                    maxLength={50}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    value={editProfile.username}
-                    onChange={(e) =>
-                      setEditProfile((p) => ({
-                        ...p,
-                        username: e.target.value.replace(/^@+/, '').toLowerCase(),
-                      }))
-                    }
-                    placeholder="your_handle"
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                    maxLength={30}
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    3–30 characters: lowercase letters, numbers, underscore. Leave empty to clear.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={editProfile.email}
-                    onChange={(e) => setEditProfile((p) => ({ ...p, email: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</label>
-                  <textarea
-                    value={editProfile.bio}
-                    onChange={(e) => setEditProfile((p) => ({ ...p, bio: e.target.value }))}
-                    rows={3}
-                    maxLength={280}
-                    placeholder="Short line under your name"
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white resize-y min-h-[4rem]"
-                  />
-                </div>
-
-                {profileFormError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-                    {profileFormError}
-                  </div>
-                )}
-                {profileFormSuccess && (
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-600 dark:text-green-400 text-sm">
-                    {profileFormSuccess}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Save profile
-                </button>
-              </form>
-
-              <div className="my-8 border-t border-gray-200 dark:border-gray-600" />
-
-              <h2
-                id="change-password-section"
-                className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2 scroll-mt-24"
-              >
-                <Lock className="w-4 h-4" />
-                Change password
-              </h2>
-              {passwordError && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-                  {passwordError}
-                </div>
-              )}
-              {passwordSuccess && (
-                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-600 dark:text-green-400 text-sm">
-                  {passwordSuccess}
-                </div>
-              )}
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                {['currentPassword', 'newPassword', 'confirmPassword'].map((field, idx) => {
-                  const labels = ['Current Password', 'New Password', 'Confirm New Password'];
-                  const keys = ['current', 'new', 'confirm'];
-                  const k = keys[idx];
-                  return (
-                    <div key={field}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {labels[idx]}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPasswords[k] ? 'text' : 'password'}
-                          value={passwordForm[field]}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, [field]: e.target.value })
-                          }
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg pr-10 text-gray-900 dark:text-white"
-                          required
-                          minLength={field === 'currentPassword' ? undefined : 6}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswords({ ...showPasswords, [k]: !showPasswords[k] })}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                        >
-                          {showPasswords[k] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => router.push('/dashboard/profile')}
-                    className="flex-1 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium"
-                  >
-                    Back to profile
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isChangingPassword}
-                    className="flex-1 py-2 bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isChangingPassword ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Lock className="w-4 h-4" />
-                    )}
-                    Update password
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+          </form>
+        </article>
       </div>
     </DashboardPageLayout>
   );

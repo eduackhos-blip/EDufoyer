@@ -105,7 +105,7 @@ export default function DashboardShell({
     return (
       <NavItemHandler key={index} item={item} router={router} align="start">
         <div
-          className={`mb-1 flex w-full min-w-0 items-center gap-2 rounded-full px-2.5 py-2 text-[11px] font-bold transition-colors ${
+          className={`mb-1 flex w-full min-w-0 items-center gap-2.5 rounded-full px-3 py-2 text-[12px] font-bold transition-colors ${
             item.active
               ? 'text-white shadow-sm'
               : logout
@@ -124,7 +124,7 @@ export default function DashboardShell({
           ) : (
             <Icon className="h-[1.05rem] w-[1.05rem] shrink-0" strokeWidth={2.4} />
           )}
-          <span className="truncate">{item.label}</span>
+          <span className="whitespace-normal break-words text-left leading-tight">{item.label}</span>
           {item.badge ? (
             <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--dash-forest)] px-1 text-[10px] text-white">
               {item.badge}
@@ -174,7 +174,7 @@ export default function DashboardShell({
         </aside>
 
         <nav
-          className="dash-shell-collapsed-nav hidden min-h-0 w-[4.25rem] flex-1 flex-col items-center gap-0.5 overflow-y-auto rounded-[999px] px-1 py-3 shadow-[0_8px_32px_rgba(7,62,54,0.1)] lg:flex"
+          className="dash-shell-collapsed-nav hidden min-h-0 w-[4.35rem] flex-1 flex-col items-center gap-0.5 overflow-y-auto rounded-[999px] px-1 py-3 shadow-[0_8px_32px_rgba(7,62,54,0.1)] lg:flex"
           style={{ backgroundColor: 'var(--dash-sidebar-rail)' }}
           aria-label="Main navigation"
         >
@@ -199,7 +199,7 @@ export default function DashboardShell({
             onClick={() => setIsExpanded(false)}
           />
           <aside
-            className={`dash-shell-mobile-drawer fixed left-2 z-50 flex w-[var(--dash-drawer-w)] max-w-[85vw] flex-col rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:hidden ${drawerTopClass} bottom-4`}
+            className={`dash-shell-mobile-drawer fixed left-2 z-50 flex w-[11.5rem] max-w-[85vw] flex-col rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:hidden ${drawerTopClass} bottom-4`}
             style={{ backgroundColor: 'var(--dash-sidebar-open)' }}
           >
             {expandedNav}
@@ -209,17 +209,20 @@ export default function DashboardShell({
 
       {/* Column 3: main dashboard — width unchanged when sidebar opens */}
       <main
-        className={`dash-shell-main flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-white px-3 pb-6 pt-4 lg:flex-none ${
+        className={`dash-shell-main flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-white px-3 pb-6 pt-4 lg:flex-none ${
           topBar ? 'dash-shell-main--with-topbar' : ''
         }`}
       >
         {topBar ? <div className="dash-shell-topbar shrink-0">{topBar}</div> : null}
         {contentVariant === 'card' ? (
-          <div className="dash-shell-content min-h-0 w-full flex-1 px-4 py-5 md:px-7 md:py-7">
+          <div
+            className="dash-shell-content w-full flex-auto px-4 pb-5 pt-0 md:px-7 md:pb-7 md:pt-0"
+            style={{ paddingTop: '1.5rem' }}
+          >
             {children}
           </div>
         ) : (
-          <div className="flex min-h-0 w-full flex-1 flex-col bg-white">{children}</div>
+          <div className="flex w-full flex-auto flex-col bg-white">{children}</div>
         )}
       </main>
     </div>

@@ -1,21 +1,24 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { MoreHorizontal } from "lucide-react";
 import { useCurrentSessionUser } from "@/src/hooks/useCurrentSessionUser";
 import type { RoomChatMessage } from "@/src/hooks/useRoomChat";
+import { CameraIcon, MicIcon, ScreenShareIcon } from "./CallControlIcons";
 import { ChatSidebarContent } from "./ChatSidebarContent";
-import { MicIcon } from "./CallControlIcons";
-import { RoomCallSessionFooter } from "./RoomCallSessionFooter";
-import { MeetingTimerBadge } from "./MeetingTimerBadge";
+import { getFirstNameInitial } from "@/src/lib/userInitial";
+import { MeetWaitingForPeer } from "./MeetWaitingForPeer";
+import { MeetingSessionHeader } from "./MeetingSessionHeader";
 
 type RemoteUser = { userId: string; username: string; email: string };
 
 export type RoomCallSessionProps = {
-  roomId: string | undefined;
+  meetingTitle: string;
+  meetingDescription: string;
   isRemoteMicEnabled: boolean;
   isRemoteCameraEnabled: boolean;
   remoteAudioStream: MediaStream | null;
   remoteVideoStream: MediaStream | null;
   remoteScreenShareStream: MediaStream | null;
+  localScreenShareStream?: MediaStream | null;
   remoteUser: RemoteUser | null;
   remoteStream: MediaStream | null;
   remoteSocketId: string | null;
@@ -29,7 +32,6 @@ export type RoomCallSessionProps = {
   onScreenShareClick: () => void;
   onLeaveClick: () => void;
   meetingTimerLabel?: string | null;
-  categorySessionLabel?: string | null;
   isTimerRunning?: boolean;
   showAskerGraceBanner?: boolean;
   askerGraceLabel?: string | null;
@@ -43,24 +45,15 @@ function isRemoteMicLive(remoteAudioStream: MediaStream | null) {
   return Boolean(remoteAudioStream?.getAudioTracks().some((t) => t.enabled && t.readyState === "live"));
 }
 
-function userInitial(username: string | undefined, email: string | undefined) {
-  const name = username?.trim();
-  if (name) return name.charAt(0).toUpperCase();
-  const em = email?.trim();
-  if (em) {
-    const local = em.split("@")[0];
-    if (local) return local.charAt(0).toUpperCase();
-  }
-  return "?";
-}
-
 export function RoomCallSession({
-  roomId,
+  meetingTitle,
+  meetingDescription,
   isRemoteMicEnabled: _isRemoteMicEnabled,
-  isRemoteCameraEnabled: _isRemoteCameraEnabled,
+  isRemoteCameraEnabled,
   remoteAudioStream,
   remoteVideoStream,
   remoteScreenShareStream,
+  localScreenShareStream = null,
   remoteUser,
   remoteStream: _remoteStream,
   remoteSocketId,
@@ -74,7 +67,6 @@ export function RoomCallSession({
   onScreenShareClick,
   onLeaveClick,
   meetingTimerLabel,
-  categorySessionLabel,
   isTimerRunning = false,
   showAskerGraceBanner,
   askerGraceLabel,
@@ -85,10 +77,18 @@ export function RoomCallSession({
 }: RoomCallSessionProps) {
   const user = useCurrentSessionUser();
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-  const remoteScreenShareVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [showSelfMenu, setShowSelfMenu] = useState(false);
+  const screenShareVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const selfMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const activeScreenShareStream = remoteScreenShareStream ?? localScreenShareStream;
+  const isScreenShareLayout = Boolean(activeScreenShareStream);
+  const screenShareLabel = remoteScreenShareStream
+    ? `${remoteUser?.username?.trim() || "Participant"}'s screen`
+    : "Your screen";
 
   useEffect(() => {
     if (!isMobileChatOpen) return;
@@ -100,18 +100,24 @@ export function RoomCallSession({
   }, [isMobileChatOpen]);
 
   useEffect(() => {
-    if (!remoteScreenShareVideoRef.current) return;
-    if (remoteScreenShareVideoRef.current.srcObject !== remoteScreenShareStream) {
-      remoteScreenShareVideoRef.current.srcObject = remoteScreenShareStream;
+    if (!screenShareVideoRef.current || !activeScreenShareStream) return;
+    if (screenShareVideoRef.current.srcObject !== activeScreenShareStream) {
+      screenShareVideoRef.current.srcObject = activeScreenShareStream;
     }
-  }, [remoteScreenShareStream]);
+  }, [activeScreenShareStream]);
+
+  const showRemoteVideo = Boolean(remoteVideoStream && hasLiveRemoteVideo && isRemoteCameraEnabled);
 
   useEffect(() => {
     if (!remoteVideoRef.current) return;
-    if (remoteVideoRef.current.srcObject !== remoteVideoStream) {
-      remoteVideoRef.current.srcObject = remoteVideoStream;
+    if (showRemoteVideo && remoteVideoStream) {
+      if (remoteVideoRef.current.srcObject !== remoteVideoStream) {
+        remoteVideoRef.current.srcObject = remoteVideoStream;
+      }
+    } else {
+      remoteVideoRef.current.srcObject = null;
     }
-  }, [remoteVideoStream, hasLiveRemoteVideo]);
+  }, [remoteVideoStream, showRemoteVideo]);
 
   useEffect(() => {
     if (!localVideoRef.current) return;
@@ -138,190 +144,206 @@ export function RoomCallSession({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isMobileChatOpen]);
 
-  const remoteMicLive = isRemoteMicLive(remoteAudioStream);
-  const localInitial = userInitial(user?.username, user?.email);
+  useEffect(() => {
+    if (!showSelfMenu) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (selfMenuRef.current && !selfMenuRef.current.contains(event.target as Node)) {
+        setShowSelfMenu(false);
+      }
+    };
+    window.addEventListener("mousedown", onPointerDown);
+    return () => window.removeEventListener("mousedown", onPointerDown);
+  }, [showSelfMenu]);
 
-  return (
-    <div className="flex h-[calc(100dvh-0.5rem)] w-full max-lg:gap-1.5 lg:h-[calc(100vh-2rem)] lg:gap-4">
-      <section className="flex min-w-0 flex-1 flex-col gap-1.5 lg:gap-4">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-slate-800/70 bg-slate-900/70 px-2.5 py-2 max-lg:shadow-sm lg:gap-3 lg:rounded-2xl lg:border-slate-800 lg:px-4 lg:py-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-indigo-400">Room</p>
-            <h1 className="truncate text-sm font-semibold lg:text-lg">{roomId}</h1>
+  const remoteMicLive = isRemoteMicLive(remoteAudioStream);
+  const localInitial = getFirstNameInitial(user?.username, user?.email);
+  const remoteInitial = getFirstNameInitial(remoteUser?.username, remoteUser?.email);
+  const remoteName = remoteUser?.username?.trim() || remoteUser?.email?.split("@")[0] || "Guest";
+  const timerDisplay = isTimerRunning ? (meetingTimerLabel ?? "00:00") : (meetingTimerLabel ?? "00:00");
+  const isPeerReconnectGrace = Boolean(showAskerGraceBanner && askerGraceLabel);
+  const isWaitingForPeer = isPeerReconnectGrace || !remoteSocketId;
+  const waitCountdownLabel = isPeerReconnectGrace ? askerGraceLabel : null;
+
+  const renderRemoteParticipant = (tileClass = "meet-remote") => (
+    <div className={`${tileClass}${isWaitingForPeer ? " meet-remote--waiting" : ""}`}>
+      {isWaitingForPeer ? (
+        <MeetWaitingForPeer
+          countdownLabel={waitCountdownLabel}
+          participantName={remoteSocketId ? remoteName : undefined}
+        />
+      ) : showRemoteVideo ? (
+        <video autoPlay playsInline className="meet-remote__video" ref={remoteVideoRef} />
+      ) : (
+        <div className="meet-remote__avatar" aria-label={`${remoteName} — camera off`}>
+          <span className="meet-remote__avatar-initial">{remoteInitial}</span>
+        </div>
+      )}
+      {remoteSocketId ? (
+        <>
+          <span className="meet-pill meet-pill--tl">{remoteName}</span>
+          <div
+            className={`meet-overlay-btn meet-overlay-btn--tr ${remoteMicLive ? "" : "meet-overlay-btn--muted"}`}
+            aria-label={remoteMicLive ? "Microphone on" : "Microphone muted"}
+          >
+            <MicIcon muted={!remoteMicLive} />
           </div>
-          {meetingTimerLabel ? (
-            <MeetingTimerBadge
-              timerLabel={meetingTimerLabel}
-              categoryLabel={categorySessionLabel}
-              isRunning={isTimerRunning}
-              compact
-              variant="dark"
-            />
-          ) : (
-            <div />
-          )}
-          <div className="flex flex-wrap items-center justify-end gap-2">
+        </>
+      ) : null}
+    </div>
+  );
+
+  const renderSelfParticipant = (tileClass = "meet-self") => (
+    <div className={tileClass}>
+      {isCameraOn && myStream ? (
+        <video autoPlay muted playsInline className="meet-self__video" ref={localVideoRef} />
+      ) : (
+        <div className="meet-self__avatar" aria-label={`Camera off — ${localInitial}`}>
+          <span>{localInitial}</span>
+        </div>
+      )}
+      <span className="meet-pill meet-pill--tl">You</span>
+      <div className="meet-self__menu-wrap" ref={selfMenuRef}>
+        <button
+          type="button"
+          className="meet-overlay-btn meet-overlay-btn--tr"
+          aria-label="More options"
+          aria-expanded={showSelfMenu}
+          onClick={() => setShowSelfMenu((v) => !v)}
+        >
+          <MoreHorizontal className="h-5 w-5 text-white" strokeWidth={2} />
+        </button>
+        {showSelfMenu ? (
+          <div className="meet-self__menu">
             <button
               type="button"
-              onClick={() => setIsMobileChatOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-[11px] font-medium text-slate-200 transition hover:bg-slate-800 lg:hidden"
-              aria-expanded={isMobileChatOpen}
-              aria-controls="mobile-chat-drawer"
+              className="meet-self__menu-item meet-self__menu-item--danger"
+              onClick={() => {
+                setShowSelfMenu(false);
+                onLeaveClick();
+              }}
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              Chat
+              Leave meeting
             </button>
-            <Link
-              href="/dashboard"
-              className="rounded-md border border-slate-700/80 px-2 py-1 text-[11px] font-medium text-slate-200 transition hover:bg-slate-800 max-lg:shrink-0 lg:rounded-lg lg:border-slate-700 lg:px-3 lg:py-1.5 lg:text-xs"
-            >
-              Back to dashboard
-            </Link>
-          </div>
-        </header>
-
-        {showAskerGraceBanner && askerGraceLabel ? (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-sm text-amber-100">
-            <p className="font-medium">Asker left the meeting</p>
-            <p className="mt-1 text-amber-200/90">
-              Please stay on this page. If they do not rejoin within{" "}
-              <span className="font-mono font-semibold">{askerGraceLabel}</span>, the session will
-              end. If you leave before then, wallet credit may not be applied.
-            </p>
-            <p className="mt-1 text-xs text-amber-300/80">
-              If the asker rejoins in time, the session continues as usual.
-            </p>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
 
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-800/60 bg-slate-900/70 p-1 lg:rounded-2xl lg:border-slate-800 lg:p-3">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-            {remoteScreenShareStream ? (
-              <div className="relative min-h-0 w-full max-h-[42dvh] shrink-0 overflow-hidden rounded-md border border-cyan-500/35 bg-black lg:max-h-[45vh] lg:rounded-xl">
-                <div className="pointer-events-none absolute left-2 top-2 z-10 rounded-md border border-cyan-500/30 bg-slate-950/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200/90">
-                  Their screen
-                </div>
-                <video
-                  autoPlay
-                  playsInline
-                  className="h-full w-full object-contain"
-                  ref={remoteScreenShareVideoRef}
-                />
-              </div>
-            ) : null}
+  const chatPanel = (className: string, showClose = false) => (
+    <div className={className}>
+      <ChatSidebarContent
+        messages={messages}
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        handleChatSubmit={handleChatSubmit}
+        userId={user?.id}
+        variant="meeting"
+        isPeerOnline={Boolean(remoteSocketId) && !isPeerReconnectGrace}
+        onClose={showClose ? () => setIsMobileChatOpen(false) : undefined}
+      />
+    </div>
+  );
 
-            <div
-              className={`grid min-h-0 min-w-0 flex-1 gap-2 ${
-                remoteScreenShareStream
-                  ? "grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1"
-                  : "grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1"
-              }`}
-            >
-              <div className="relative flex min-h-[min(200px,32dvh)] min-w-0 flex-col overflow-hidden rounded-md border border-slate-700/80 bg-slate-950 sm:min-h-0 lg:rounded-xl">
-                {!remoteSocketId ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-8">
-                    <p className="text-center text-sm text-slate-500">Waiting for other person...</p>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500 [animation-delay:-0.3s]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500 [animation-delay:-0.15s]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500" />
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {hasLiveRemoteVideo && remoteVideoStream ? (
-                      <video
-                        autoPlay
-                        playsInline
-                        className="absolute inset-0 h-full w-full object-cover"
-                        ref={remoteVideoRef}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
-                        <div
-                          className="flex aspect-square w-[min(42%,7.5rem)] max-w-30 items-center justify-center rounded-full border border-slate-600/50 bg-slate-800/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                          aria-hidden
-                        >
-                          <span className="text-[clamp(1.75rem,10vmin,2.75rem)] font-semibold leading-none tracking-tight text-white">
-                            {(remoteUser?.username?.trim()?.charAt(0) || "?").toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-                {remoteSocketId ? (
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-linear-to-t from-black/80 via-black/40 to-transparent px-2 pb-2 pt-10">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-xs font-medium text-slate-100">{remoteUser?.username ?? "Guest"}</span>
-                      <span className={remoteMicLive ? "text-slate-200" : "text-red-400"}>
-                        <MicIcon muted={!remoteMicLive} />
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+  let mainContent: ReactNode;
 
-              <div className="relative flex min-h-[min(200px,32dvh)] min-w-0 flex-col overflow-hidden rounded-md border border-slate-700/80 bg-slate-950 sm:min-h-0 lg:rounded-xl">
-                {isCameraOn && myStream ? (
-                  <video
-                    autoPlay
-                    muted
-                    playsInline
-                    className="absolute inset-0 h-full w-full object-cover"
-                    ref={localVideoRef}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
-                    <div
-                      className="flex aspect-square w-[min(42%,7.5rem)] max-w-30 items-center justify-center rounded-full border border-slate-600/50 bg-slate-800/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                      aria-hidden
-                    >
-                      <span className="text-[clamp(1.75rem,10vmin,2.75rem)] font-semibold leading-none tracking-tight text-white">{localInitial}</span>
-                    </div>
-                  </div>
-                )}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-linear-to-t from-black/80 via-black/40 to-transparent px-2 pb-2 pt-10">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-medium text-slate-100">You</span>
-                    <span className={isMicOn ? "text-slate-200" : "text-red-400"}>
-                      <MicIcon muted={!isMicOn} />
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <audio
+  if (isScreenShareLayout) {
+    mainContent = (
+      <div className={`meet-body meet-body--screenshare`}>
+        <section className="meet-screenshare-main">
+          <span className="meet-pill meet-pill--overlay">{screenShareLabel}</span>
+          <video
             autoPlay
-            ref={remoteAudioRef}
+            playsInline
+            className="meet-screenshare-main__video"
+            ref={screenShareVideoRef}
           />
-        </div>
+        </section>
 
-        <RoomCallSessionFooter
-          isMicOn={isMicOn}
-          isCameraOn={isCameraOn}
-          handleMicToggle={handleMicToggle}
-          handleCameraToggle={handleCameraToggle}
-          isScreenSharing={isScreenSharing}
-          onScreenShareClick={onScreenShareClick}
-          onLeaveClick={onLeaveClick}
-        />
-      </section>
+        <aside className="meet-side meet-side--screenshare">
+          <div className="meet-participant-stack">
+            {renderRemoteParticipant("meet-participant-tile")}
+            {renderSelfParticipant("meet-participant-tile meet-participant-tile--self")}
+          </div>
+          {chatPanel("meet-side__chat hidden min-h-0 lg:flex")}
+        </aside>
 
-      <aside className="hidden w-[330px] shrink-0 flex-col rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:flex">
-        <ChatSidebarContent
-          messages={messages}
-          chatInput={chatInput}
-          setChatInput={setChatInput}
-          handleChatSubmit={handleChatSubmit}
-          userId={user?.id}
-          variant="docked"
-        />
-      </aside>
+        <button
+          type="button"
+          onClick={() => setIsMobileChatOpen(true)}
+          className="meet-mobile-chat-btn meet-mobile-chat-btn--screenshare lg:hidden"
+          aria-expanded={isMobileChatOpen}
+          aria-controls="mobile-chat-drawer"
+        >
+          Messages
+        </button>
+
+        <audio autoPlay ref={remoteAudioRef} />
+      </div>
+    );
+  } else {
+    mainContent = (
+      <div className="meet-body">
+        <section className="meet-main">
+          {renderRemoteParticipant()}
+          <button
+            type="button"
+            onClick={() => setIsMobileChatOpen(true)}
+            className="meet-mobile-chat-btn lg:hidden"
+            aria-expanded={isMobileChatOpen}
+            aria-controls="mobile-chat-drawer"
+          >
+            Messages
+          </button>
+          <audio autoPlay ref={remoteAudioRef} />
+        </section>
+
+        <aside className="meet-side">
+          {renderSelfParticipant()}
+          {chatPanel("meet-side__chat hidden min-h-0 lg:flex")}
+        </aside>
+      </div>
+    );
+  }
+
+  return (
+    <div className="meet-page">
+      <MeetingSessionHeader
+        meetingTitle={meetingTitle}
+        meetingDescription={meetingDescription}
+        meetingTimerLabel={timerDisplay}
+        onExitClick={onLeaveClick}
+      />
+
+      {mainContent}
+
+      <div className="meet-floating-controls" role="toolbar" aria-label="Meeting controls">
+        <button
+          type="button"
+          onClick={handleMicToggle}
+          aria-label={isMicOn ? "Turn microphone off" : "Turn microphone on"}
+          className={`meet-control-btn ${isMicOn ? "" : "meet-control-btn--off"}`}
+        >
+          <MicIcon muted={!isMicOn} />
+        </button>
+        <button
+          type="button"
+          onClick={handleCameraToggle}
+          aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
+          className={`meet-control-btn ${isCameraOn ? "" : "meet-control-btn--off"}`}
+        >
+          <CameraIcon off={!isCameraOn} />
+        </button>
+        <button
+          type="button"
+          onClick={onScreenShareClick}
+          aria-label={isScreenSharing ? "Stop sharing screen" : "Share screen"}
+          title={isScreenSharing ? "Stop sharing screen" : "Share screen"}
+          className={`meet-control-btn ${isScreenSharing ? "meet-control-btn--active" : ""}`}
+        >
+          <ScreenShareIcon active={isScreenSharing} />
+        </button>
+      </div>
 
       <div
         className={`fixed inset-0 z-40 transition-opacity duration-300 ease-out lg:hidden ${
@@ -329,25 +351,17 @@ export function RoomCallSession({
         }`}
         aria-hidden={!isMobileChatOpen}
       >
-        <button type="button" className="absolute inset-0 bg-black/60" aria-label="Close chat" onClick={() => setIsMobileChatOpen(false)} />
+        <button type="button" className="absolute inset-0 bg-black/50" aria-label="Close chat" onClick={() => setIsMobileChatOpen(false)} />
       </div>
 
       <aside
         id="mobile-chat-drawer"
-        className={`fixed inset-y-0 right-0 z-50 flex min-h-0 w-full max-w-full flex-col border-l border-slate-800/60 bg-slate-900 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] shadow-2xl shadow-black/50 transition-transform duration-300 ease-out sm:max-w-sm sm:border-slate-800 lg:hidden ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] transition-transform duration-300 ease-out lg:hidden ${
           isMobileChatOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!isMobileChatOpen}
       >
-        <ChatSidebarContent
-          messages={messages}
-          chatInput={chatInput}
-          setChatInput={setChatInput}
-          handleChatSubmit={handleChatSubmit}
-          userId={user?.id}
-          variant="drawer"
-          onClose={() => setIsMobileChatOpen(false)}
-        />
+        <div className="h-full min-h-0 flex flex-col">{chatPanel("flex min-h-0 flex-1 flex-col", true)}</div>
       </aside>
     </div>
   );

@@ -1,4 +1,4 @@
-import { CameraIcon, MicIcon } from "./CallControlIcons";
+import { CameraIcon, MicIcon, ScreenShareIcon } from "./CallControlIcons";
 
 export type RoomCallSessionFooterProps = {
   isMicOn: boolean;
@@ -48,13 +48,14 @@ export function RoomCallSessionFooter({
           type="button"
           onClick={onScreenShareClick}
           aria-label={isScreenSharing ? "Stop sharing screen" : "Share screen"}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium transition max-lg:text-[13px] lg:px-4 lg:py-2 ${
+          title={isScreenSharing ? "Stop sharing screen" : "Share screen"}
+          className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium transition max-lg:text-[13px] lg:px-4 lg:py-2 ${
             isScreenSharing
               ? "bg-amber-500/25 text-amber-200 hover:bg-amber-500/35"
               : "bg-slate-800 text-slate-100 hover:bg-slate-700"
           }`}
         >
-          {isScreenSharing ? "Stop sharing" : "Share screen"}
+          <ScreenShareIcon active={isScreenSharing} />
         </button>
         <button
           type="button"

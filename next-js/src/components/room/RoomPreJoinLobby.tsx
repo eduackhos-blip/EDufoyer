@@ -1,11 +1,16 @@
+import { ArrowUpRight, Clock, MoreHorizontal } from "lucide-react";
+import { useCurrentSessionUser } from "@/src/hooks/useCurrentSessionUser";
+import { getFirstNameInitial } from "@/src/lib/userInitial";
 import { CameraIcon, MicIcon } from "./CallControlIcons";
 import { RoomPreJoinLobbyHeader } from "./RoomPreJoinLobbyHeader";
 
 export type RoomPreJoinLobbyProps = {
-  roomId: string | undefined;
+  meetingTitle: string;
+  meetingDescription: string;
   meetingTimerLabel?: string | null;
-  categorySessionLabel?: string | null;
   isTimerRunning?: boolean;
+  peersCount?: number;
+  waitingPeerInitial?: string;
   myStream: MediaStream | null;
   mediaError: string | null;
   isMicOn: boolean;
@@ -15,41 +20,38 @@ export type RoomPreJoinLobbyProps = {
   onReadyToJoin: () => void;
 };
 
-const MEETING_PLACEHOLDER_SRC = "/waitingRoomImage.png";
-
-function PreJoinMeetingPlaceholder({
+function PreJoinCameraOffAvatar({
+  initial,
   statusLine,
-  showCameraHint = true,
 }: {
-  statusLine: string;
-  showCameraHint?: boolean;
+  initial: string;
+  statusLine?: string | null;
 }) {
   return (
     <div className="relative flex h-full w-full flex-col items-center justify-center gap-3 px-6 py-8 text-center">
-      <div className="relative z-[2] flex max-w-[min(88%,20rem)] flex-col items-center gap-3">
-        <img
-          src={MEETING_PLACEHOLDER_SRC}
-          alt=""
-          aria-hidden
-          className="h-auto max-h-[min(42vh,11rem)] w-auto max-w-full object-contain drop-shadow-[0_12px_28px_rgba(7,62,54,0.12)] sm:max-h-[12rem]"
-          decoding="async"
-        />
-        <p className="text-sm font-medium text-[var(--dash-text-body)]">{statusLine}</p>
-        {showCameraHint ? (
-          <p className="max-w-xs text-xs leading-relaxed text-[var(--dash-text-muted)]">
-            Turn your camera on when you are ready to be seen in the session.
-          </p>
-        ) : null}
+      <div className="lobby-preview__avatar" aria-hidden>
+        <span>{initial}</span>
       </div>
+      {statusLine ? (
+        <p className="max-w-xs text-sm font-medium text-white/90">{statusLine}</p>
+      ) : null}
     </div>
   );
 }
 
+function participantLabel(count: number) {
+  if (count <= 0) return null;
+  if (count === 1) return "1 person already in meeting";
+  return `${count} people already in meeting`;
+}
+
 export function RoomPreJoinLobby({
-  roomId,
+  meetingTitle,
+  meetingDescription,
   meetingTimerLabel,
-  categorySessionLabel,
-  isTimerRunning,
+  isTimerRunning = false,
+  peersCount = 0,
+  waitingPeerInitial,
   myStream,
   mediaError,
   isMicOn,
@@ -58,8 +60,12 @@ export function RoomPreJoinLobby({
   handleCameraToggle,
   onReadyToJoin,
 }: RoomPreJoinLobbyProps) {
+  const user = useCurrentSessionUser();
+  const selfInitial = getFirstNameInitial(user?.username, user?.email);
   const userMediaAccessible = Boolean(myStream);
   const showLiveVideo = isCameraOn && Boolean(myStream);
+  const timerDisplay = isTimerRunning ? (meetingTimerLabel ?? "00:00") : "00:00";
+  const peersLabel = participantLabel(peersCount);
 
   const placeholderStatus = !userMediaAccessible && !mediaError
     ? "Requesting camera and microphone…"
@@ -68,104 +74,103 @@ export function RoomPreJoinLobby({
       : "Your meeting preview";
 
   return (
-    <div className="relative mx-auto flex min-h-[calc(100dvh-0.5rem)] w-full max-w-3xl flex-col gap-4 py-3 max-lg:px-2 sm:gap-6 sm:py-6 lg:min-h-[calc(100vh-2rem)] lg:gap-8 lg:py-8">
+    <div className="lobby-page">
       <RoomPreJoinLobbyHeader
-        roomId={roomId}
-        meetingTimerLabel={meetingTimerLabel}
-        categorySessionLabel={categorySessionLabel}
-        isTimerRunning={isTimerRunning}
+        meetingTitle={meetingTitle}
+        meetingDescription={meetingDescription}
       />
 
-      <div className="dash-panel-card relative overflow-hidden rounded-2xl lg:rounded-3xl">
-        <img
-          src="/fillStarBottom.png"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute left-4 top-4 z-[1] h-4 w-auto object-contain"
-          decoding="async"
-        />
-        <img
-          src="/fillStarBottom.png"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute right-4 top-4 z-[1] h-4 w-auto object-contain"
-          decoding="async"
-        />
+      <div className="lobby-shell">
+        <div className="lobby-card">
+          <div className="lobby-preview-wrap">
+            <div className="lobby-preview">
+              {showLiveVideo ? (
+                <video
+                  autoPlay
+                  muted
+                  playsInline
+                  className="h-full w-full object-cover"
+                  ref={(video) => {
+                    if (video) video.srcObject = myStream;
+                  }}
+                />
+              ) : (
+                <PreJoinCameraOffAvatar
+                  initial={selfInitial}
+                  statusLine={
+                    !userMediaAccessible && !mediaError
+                      ? placeholderStatus
+                      : !isCameraOn
+                        ? null
+                        : placeholderStatus
+                  }
+                />
+              )}
 
-        <div className="relative aspect-video w-full overflow-hidden bg-[var(--dash-card-mint)]">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.35]"
-            style={{
-              background:
-                "radial-gradient(ellipse 80% 70% at 50% 40%, rgba(255,255,255,0.9) 0%, transparent 72%)",
-            }}
-            aria-hidden
-          />
+              <div className="lobby-preview__badge lobby-preview__badge--status">
+                <span className="lobby-preview__rec-dot" aria-hidden />
+                <span>Waiting to join</span>
+              </div>
 
-          {showLiveVideo ? (
-            <video
-              autoPlay
-              muted
-              playsInline
-              className="relative z-[2] h-full w-full object-cover"
-              ref={(video) => {
-                if (video) video.srcObject = myStream;
-              }}
-            />
-          ) : (
-            <PreJoinMeetingPlaceholder
-              statusLine={placeholderStatus}
-              showCameraHint={userMediaAccessible && !isCameraOn}
-            />
-          )}
+              <button
+                type="button"
+                className="lobby-preview__menu"
+                aria-label="More options"
+                onClick={() => {}}
+              >
+                <MoreHorizontal className="h-5 w-5 text-white" strokeWidth={2} />
+              </button>
 
-          <div className="absolute bottom-4 left-1/2 z-[3] flex -translate-x-1/2 flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleMicToggle}
-              aria-label={isMicOn ? "Turn microphone off" : "Turn microphone on"}
-              className={`rounded-full border-2 px-5 py-2.5 text-sm font-medium shadow-[var(--dash-inner-shadow)] transition ${
-                isMicOn
-                  ? "border-[var(--dash-forest)] bg-white text-[var(--dash-forest)] hover:bg-[var(--dash-card-mint-alt)]"
-                  : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-              }`}
-            >
-              <MicIcon muted={!isMicOn} />
-            </button>
-            <button
-              type="button"
-              onClick={handleCameraToggle}
-              aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
-              className={`rounded-full border-2 px-5 py-2.5 text-sm font-medium shadow-[var(--dash-inner-shadow)] transition ${
-                isCameraOn
-                  ? "border-[var(--dash-forest)] bg-white text-[var(--dash-forest)] hover:bg-[var(--dash-card-mint-alt)]"
-                  : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-              }`}
-            >
-              <CameraIcon off={!isCameraOn} />
-            </button>
+              <div className="lobby-preview__controls">
+                <button
+                  type="button"
+                  onClick={handleCameraToggle}
+                  aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
+                  className="lobby-preview__control-btn"
+                >
+                  <CameraIcon off={!isCameraOn} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMicToggle}
+                  aria-label={isMicOn ? "Turn microphone off" : "Turn microphone on"}
+                  className="lobby-preview__control-btn"
+                >
+                  <MicIcon muted={!isMicOn} />
+                </button>
+              </div>
+
+              <div className="lobby-preview__badge lobby-preview__badge--timer">
+                <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="font-mono text-sm font-semibold tabular-nums">{timerDisplay}</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="relative border-t border-[var(--dash-panel-border)] bg-white p-3 lg:p-6">
           {mediaError ? (
-            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p className="lobby-card__error">
               {mediaError}. Allow access in your browser settings to continue.
             </p>
           ) : null}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[var(--dash-text-muted)]">
-              {userMediaAccessible
-                ? "When you are ready, join the room. Others will see you after you enter."
-                : "Allow camera and microphone to join."}
-            </p>
+
+          {peersLabel ? (
+            <div className="lobby-card__presence">
+              <span className="lobby-card__presence-avatar" aria-hidden>
+                {waitingPeerInitial ?? "U"}
+              </span>
+              <span className="text-sm font-medium text-white">{peersLabel}</span>
+            </div>
+          ) : null}
+
+          <div className="lobby-card__join-wrap">
             <button
               type="button"
               onClick={onReadyToJoin}
               disabled={!userMediaAccessible}
-              className="rounded-full bg-[#073E36] px-8 py-3 text-sm font-semibold text-white shadow-[var(--dash-inner-shadow)] transition hover:bg-[#052f29] disabled:cursor-not-allowed disabled:opacity-50"
+              className="lobby-join-btn"
             >
-              Ready to join
+              <ArrowUpRight className="h-5 w-5 shrink-0 text-[var(--dash-forest)]" strokeWidth={2.5} aria-hidden />
+              <span>Join</span>
             </button>
           </div>
         </div>
