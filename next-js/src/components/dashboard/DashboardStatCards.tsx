@@ -20,7 +20,7 @@ const SOLVER_PERFORMANCE_DATA = [
 ];
 
 const MINI_STAT_CARD_SHELL =
-  'dash-stat-card-shadow relative flex h-[8.25rem] w-full min-h-0 flex-col gap-2.5 rounded-[20px] p-4';
+  'dash-mini-stat-card-shadow relative flex h-[7.25rem] w-full min-h-0 flex-col gap-2 rounded-[20px] p-3.5';
 
 const MINI_STAT_PILL_CLASS =
   'self-start rounded-full bg-white px-2.5 py-1 text-[9px] font-semibold leading-snug text-[var(--dash-forest)] shadow-[0_2px_6px_rgba(7,63,54,0.1)]';
@@ -77,12 +77,12 @@ function MiniStatCard({ variant, title, value, trend, suffix }: MiniStatCardProp
       <div>
         <h2 className="text-[11px] font-bold leading-tight">{title}</h2>
       </div>
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white">
-          <span className="text-[1.25rem] font-extrabold leading-none text-[var(--dash-forest)]">{value}</span>
+      <div className="flex items-center gap-2">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
+          <span className="text-[1.125rem] font-extrabold leading-none text-[var(--dash-forest)]">{value}</span>
         </div>
         {suffix ? (
-          <span className="text-[1.125rem] font-extrabold leading-none text-[var(--dash-forest)]">{suffix}</span>
+          <span className="text-[1rem] font-extrabold leading-none text-[var(--dash-forest)]">{suffix}</span>
         ) : null}
       </div>
       <div className={MINI_STAT_PILL_CLASS}>{trend}</div>
@@ -118,10 +118,10 @@ export function PerformanceCard() {
 
   return (
     <article
-      className="dash-stat-card-shadow flex flex-col rounded-[22px] border-[5px] bg-white p-5"
+      className="dash-stat-card-shadow flex flex-col rounded-[22px] border-[5px] bg-white p-4"
       style={{ borderColor: 'var(--dash-forest)' }}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[15px] font-bold text-[var(--dash-forest)]">Performance</h2>
         <div className="flex items-center gap-3 text-[12px] font-semibold text-[var(--dash-forest)]">
           {(['Overall', 'Completed'] as const).map((tab) => (
@@ -143,9 +143,9 @@ export function PerformanceCard() {
           </svg>
         </div>
       </div>
-      <div className="h-64 w-full min-h-[19.5rem] min-w-0">
+      <div className="h-[17.5rem] w-full min-h-0 min-w-0">
         {chartReady ? (
-          <ResponsiveContainer width="100%" height="100%" minHeight={256}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={280}>
             <LineChart data={SOLVER_PERFORMANCE_DATA} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e8ece9" vertical={false} />
               <XAxis
@@ -188,7 +188,7 @@ export function PerformanceCard() {
 export default function DashboardStatCards() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         <SolverRatingCard />
         <DailyStreakCard />
       </div>

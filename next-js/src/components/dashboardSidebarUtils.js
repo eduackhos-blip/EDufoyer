@@ -1,4 +1,4 @@
-import { Home, List, LogOut, Bell, User, Users } from 'lucide-react';
+import { Home, Search, LogOut, Bell, User, Users } from 'lucide-react';
 import MyDoubtsNavIcon from './icons/MyDoubtsNavIcon';
 
 function getDoubtsTabFromSearch(search) {
@@ -32,7 +32,7 @@ export function buildDashboardSidebarItems({ user, pathname, search, onLogout })
       active: activeMyDoubts,
     },
     {
-      icon: List,
+      icon: Search,
       label: 'Available doubts',
       path: '/dashboard/doubts?tab=available',
       active: activeAvailableDoubts,

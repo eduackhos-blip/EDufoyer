@@ -45,7 +45,7 @@ const MyDoubtsSection = ({ myDoubts, onViewAnswer }) => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
+        <div className="doubts-list-grid">
           {filteredDoubts.map((doubt) => (
             <MyDoubtCard
               key={doubt._id}

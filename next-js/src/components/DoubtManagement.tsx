@@ -1,6 +1,6 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, X, BookOpen, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MessageCircle, Eye, XCircle, ArrowLeft, X } from 'lucide-react';
 import DoubtCard from './DoubtCard';
 import doubtService from '../services/doubtService';
 import solverService from '../services/solverService';
@@ -8,13 +8,12 @@ import authService from '../services/authService';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import DarkModeToggle from './DarkModeToggle';
 import DashboardPageLayout from './dashboard/DashboardPageLayout';
+import DashboardContentLoading from './dashboard/DashboardContentLoading';
 import AssignedDoubtsSection from './AssignedDoubtsSection';
 import AvailableDoubtsSection from './AvailableDoubtsSection';
 import AvailableDoubtsPageHeader from './doubts/AvailableDoubtsPageHeader';
 import MyDoubtsPageHeader from './doubts/MyDoubtsPageHeader';
 import MyDoubtsSection from './MyDoubtsSection';
-import { useSocket } from '../contexts/SocketContext';
-
 const DOUBT_TABS = [
   { id: 'my-doubts', label: 'My Doubts' },
   { id: 'available', label: 'Available' },
@@ -40,16 +39,8 @@ const DoubtManagement = () => {
   const [assignedDoubts, setAssignedDoubts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [incomingDoubt, setIncomingDoubt] = useState(null);
-  const [showAvailableModal, setShowAvailableModal] = useState(false);
-  const [isJoiningSession, setIsJoiningSession] = useState(false);
   const [viewAnswerModal, setViewAnswerModal] = useState(null);
-  const socketRef = useRef(null);
-  const seenAvailableIdsRef = useRef(new Set());
-  const pollingRef = useRef(null);
-  const [toast, setToast] = useState(null);
   const [solvedCount, setSolvedCount] = useState(0);
-  const { socket: sharedSocket, connectSocket, isConnected } = useSocket();
 
   const fetchMyDoubts = async () => {
     try {
@@ -158,144 +149,16 @@ const DoubtManagement = () => {
 
     loadData();
 
-    // Setup Socket.IO for realtime available doubts
-    let onSocketConnect = null;
-    let onSocketConnectError = null;
-    let onDoubtAvailable = null;
-    let onDoubtAssigned = null;
-    let onDoubtRated = null;
+    const refreshAvailable = () => {
+      void fetchAvailableDoubts();
+    };
+    const refreshAssigned = () => {
+      void fetchAvailableDoubts();
+      void fetchAssignedDoubts();
+    };
 
-    try {
-      const socket = sharedSocket ?? connectSocket();
-      if (socket) {
-        socketRef.current = socket;
-
-      const registerAsSolver = () => {
-        (async () => {
-          try {
-            const user = await authService.getProfile();
-            const userId = user?.id || user?._id;
-            let subjects = [];
-            try {
-              const profRes = await fetch('/api/profile', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-              });
-              const profJson = await profRes.json();
-              const strongSubject = profJson?.data?.strongSubject;
-              subjects = strongSubject ? [String(strongSubject).toLowerCase()] : [];
-            } catch {}
-            socket.emit('registerSolver', { userId, subjects });
-          } catch {
-            socket.emit('registerSolver', { subjects: [] });
-          }
-        })();
-      };
-
-      registerAsSolver();
-
-      onSocketConnect = () => {
-        console.log('✅ Solver socket connected', socket.id);
-        registerAsSolver();
-      };
-      onSocketConnectError = (err) => {
-        console.error('❌ Solver socket connect_error', err);
-      };
-      socket.on('connect', onSocketConnect);
-      socket.on('connect_error', onSocketConnectError);
-
-      onDoubtAvailable = (payload) => {
-        console.log('📥 doubt:available', payload);
-        setIncomingDoubt({
-          doubtId: payload.doubtId,
-          subject: payload.subject,
-          description: payload.description,
-          status: payload.status,
-          createdAt: payload.createdAt,
-          is_scheduled: payload.is_scheduled || false,
-          scheduled_date: payload.scheduled_date,
-          scheduled_time: payload.scheduled_time,
-        });
-        setShowAvailableModal(true);
-        // Optimistically add to Available list so count updates instantly
-        setAvailableDoubts((prev) => {
-          const exists = prev.some((d) => String(d._id || d.id) === String(payload.doubtId));
-          if (exists) return prev;
-          return [{ 
-            _id: payload.doubtId, 
-            subject: payload.subject, 
-            description: payload.description, 
-            status: payload.status, 
-            createdAt: payload.createdAt,
-            is_scheduled: payload.is_scheduled || false,
-            scheduled_date: payload.scheduled_date,
-            scheduled_time: payload.scheduled_time,
-          }, ...prev];
-        });
-      };
-      socket.on('doubt:available', onDoubtAvailable);
-
-      onDoubtAssigned = ({ doubtId }) => {
-        // Remove from available if it was shown
-        setAvailableDoubts((prev) => prev.filter((d) => String(d._id || d.id) !== String(doubtId)));
-        if (incomingDoubt && String(incomingDoubt.doubtId) === String(doubtId)) {
-          setShowAvailableModal(false);
-          setIncomingDoubt(null);
-        }
-      };
-      socket.on('doubt:assigned', onDoubtAssigned);
-
-      // Show toast to solver when asker rates and ends the session
-      onDoubtRated = ({ doubtId, rating }) => {
-        setToast({
-          message: `Asker rated the session${rating ? ` (${rating}/5)` : ''} and left. Doubt ${String(doubtId).slice(-6)}.`,
-        });
-        // Optionally mark assigned doubt as completed in UI
-        setAssignedDoubts((prev) => prev.map((d) => (
-          String(d._id || d.id) === String(doubtId)
-            ? { ...d, solverDoubt: { ...(d.solverDoubt || {}), resolution_status: 'session_completed' } }
-            : d
-        )));
-        // Auto-hide toast after 5s
-        setTimeout(() => setToast(null), 5000);
-      };
-      socket.on('doubt:rated', onDoubtRated);
-      }
-    } catch (sockErr) {
-      console.error('Socket setup error:', sockErr);
-    }
-
-    // Fallback polling to trigger modal if socket fails
-    if (!pollingRef.current) {
-      pollingRef.current = setInterval(async () => {
-        try {
-          const latest = await solverService.getAvailableDoubts();
-          // Seed seen set first time
-          if (seenAvailableIdsRef.current.size === 0) {
-            latest.forEach((d) => seenAvailableIdsRef.current.add(String(d._id || d.id)));
-          }
-          // Detect a newly appeared doubt
-          const newItem = latest.find((d) => !seenAvailableIdsRef.current.has(String(d._id || d.id)));
-          if (newItem) {
-            seenAvailableIdsRef.current.add(String(newItem._id || newItem.id));
-            setAvailableDoubts((prev) => {
-              const exists = prev.some((p) => String(p._id || p.id) === String(newItem._id || newItem.id));
-              return exists ? prev : [newItem, ...prev];
-            });
-            setIncomingDoubt({
-              doubtId: String(newItem._id || newItem.id),
-              subject: newItem.subject,
-              description: newItem.description,
-              status: newItem.status,
-              createdAt: newItem.createdAt,
-              is_scheduled: newItem.is_scheduled || false,
-              scheduled_date: newItem.scheduled_date,
-              scheduled_time: newItem.scheduled_time,
-            });
-            setShowAvailableModal(true);
-          }
-        } catch {}
-      }, 5000);
-    }
+    window.addEventListener('edu:doubt-available', refreshAvailable);
+    window.addEventListener('edu:doubt-assigned', refreshAssigned);
 
     // Listen for doubt creation callback
     const handleDoubtCreated = () => {
@@ -346,192 +209,13 @@ const DoubtManagement = () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handlePageFocus);
       clearInterval(checkInterval);
-      if (socketRef.current) {
-        if (onSocketConnect) socketRef.current.off('connect', onSocketConnect);
-        if (onSocketConnectError) socketRef.current.off('connect_error', onSocketConnectError);
-        if (onDoubtAvailable) socketRef.current.off('doubt:available', onDoubtAvailable);
-        if (onDoubtAssigned) socketRef.current.off('doubt:assigned', onDoubtAssigned);
-        if (onDoubtRated) socketRef.current.off('doubt:rated', onDoubtRated);
-        socketRef.current = null;
-      }
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
+      window.removeEventListener('edu:doubt-available', refreshAvailable);
+      window.removeEventListener('edu:doubt-assigned', refreshAssigned);
     };
-  }, [sharedSocket, connectSocket, isConnected]);
-
-  const handleAcceptFromModal = async () => {
-    if (!incomingDoubt) return;
-    try {
-      setIsJoiningSession(true);
-      const acceptResult = await handleAcceptDoubt(incomingDoubt.doubtId);
-      const sessionRoomId = acceptResult?.data?.roomId;
-      // Brief UX delay to communicate session preparation
-      await new Promise((r) => setTimeout(r, 1500));
-      
-      // For scheduled doubts, only accept (don't join session)
-      if (incomingDoubt.is_scheduled && incomingDoubt.scheduled_date) {
-        setShowAvailableModal(false);
-        setIncomingDoubt(null);
-        setIsJoiningSession(false);
-        // Show success message
-        alert('Doubt accepted successfully! You will receive an email with the meeting link at the scheduled time.');
-        return;
-      }
-
-      if (!sessionRoomId) {
-        throw new Error('Session room id missing after accept.');
-      }
-      
-      // For immediate doubts, accept and join session
-      setShowAvailableModal(false);
-      setIncomingDoubt(null);
-      router.push(`/dashboard/session/${encodeURIComponent(sessionRoomId)}`);
-    } catch (e) {
-      console.error('Error accepting doubt:', e);
-      setError(e?.message || 'Failed to accept doubt.');
-      setIsJoiningSession(false);
-    }
-  };
+  }, []);
 
   const renderDoubtsOverlays = ({ includeViewAnswer = false } = {}) => (
     <>
-      {toast ? (
-        <div className="fixed top-4 right-4 z-50 rounded-lg bg-gray-900 px-4 py-3 text-white shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-green-400" />
-            <span className="text-sm">{toast.message}</span>
-          </div>
-        </div>
-      ) : null}
-      {showAvailableModal && incomingDoubt ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
-          <div className="mx-4 w-full max-w-md animate-in fade-in-0 zoom-in-95 rounded-xl bg-white shadow-2xl duration-300 transition-colors dark:bg-gray-800">
-            <div className="rounded-t-xl bg-gradient-to-r from-green-500 to-green-600 p-4 text-white transition-colors dark:from-green-600 dark:to-green-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 transition-colors dark:bg-white/30">
-                    <CheckCircle className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold">New Doubt Available!</h3>
-                    <p className="text-xs text-green-100 dark:text-green-200">A new doubt is waiting for you</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isJoiningSession) {
-                      setShowAvailableModal(false);
-                      setIncomingDoubt(null);
-                    }
-                  }}
-                  disabled={isJoiningSession}
-                  className="text-white/80 transition-colors hover:text-white disabled:opacity-50 dark:text-white/90"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="mb-4 text-center">
-                <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 transition-colors dark:bg-green-900/30">
-                  <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-                <h4 className="mb-1 text-lg font-semibold text-gray-800 transition-colors dark:text-gray-100">
-                  New Doubt Available
-                </h4>
-                <p className="text-sm text-gray-600 transition-colors dark:text-gray-400">
-                  &quot;{incomingDoubt.subject}&quot; needs your expertise
-                </p>
-              </div>
-              <div className="mb-4 rounded-lg bg-gray-50 p-3 transition-colors dark:bg-gray-700/50">
-                <div className="mb-2 flex items-center space-x-2 text-gray-700 transition-colors dark:text-gray-300">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span className="text-sm font-medium">Doubt Details</span>
-                </div>
-                <div className="space-y-1 text-sm text-gray-600 transition-colors dark:text-gray-400">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-3 w-3" />
-                    <span className="text-xs">Subject: {incomingDoubt.subject}</span>
-                  </div>
-                  {incomingDoubt.is_scheduled && incomingDoubt.scheduled_date ? (
-                    <div className="mt-1.5 flex items-center space-x-2 rounded border border-blue-200 bg-blue-50 p-1.5 dark:border-blue-800 dark:bg-blue-900/20">
-                      <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                        Scheduled:{' '}
-                        {new Date(incomingDoubt.scheduled_date).toLocaleDateString('en-IN', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}{' '}
-                        at{' '}
-                        {incomingDoubt.scheduled_time ||
-                          new Date(incomingDoubt.scheduled_date).toLocaleTimeString('en-IN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="mt-1.5 text-gray-700 dark:text-gray-300">
-                    <p className="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Description:</p>
-                    <p className="line-clamp-2 text-xs">{incomingDoubt.description}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={handleAcceptFromModal}
-                  disabled={isJoiningSession}
-                  className="flex w-full items-center justify-center space-x-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700"
-                >
-                  {isJoiningSession ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
-                      <span>{incomingDoubt.is_scheduled ? 'Accepting...' : 'Joining Session...'}</span>
-                    </>
-                  ) : incomingDoubt.is_scheduled ? (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Accept</span>
-                    </>
-                  ) : (
-                    <>
-                      <Video className="h-4 w-4" />
-                      <span>Accept & Join</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isJoiningSession) {
-                      setShowAvailableModal(false);
-                      setIncomingDoubt(null);
-                    }
-                  }}
-                  disabled={isJoiningSession}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {isJoiningSession ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 dark:bg-black/50">
-          <div className="flex items-center gap-3 rounded-lg bg-white p-4 shadow transition-colors duration-300 dark:bg-gray-800">
-            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-blue-600 dark:border-blue-400" />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Preparing your session…</span>
-          </div>
-        </div>
-      ) : null}
       {includeViewAnswer && viewAnswerModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 dark:bg-black/70">
           <div className="w-full max-w-md rounded-xl bg-white shadow-2xl transition-colors duration-300 dark:bg-gray-800">
@@ -574,59 +258,85 @@ const DoubtManagement = () => {
     </>
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-64 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400"></div>
-        <span className="ml-3 text-gray-600 dark:text-gray-400">Loading doubts...</span>
-      </div>
-    );
-  }
+  const doubtsTopBar =
+    activeTab === 'available' ? (
+      <AvailableDoubtsPageHeader solvedCount={solvedCount} />
+    ) : activeTab === 'my-doubts' ? (
+      <MyDoubtsPageHeader availableCount={availableDoubts.length} solvedCount={solvedCount} />
+    ) : null;
 
-  if (error) {
-    return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center transition-colors duration-300">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="mt-3 text-blue-500 dark:text-blue-400 hover:underline text-sm transition-colors">
-          Try again
-        </button>
-      </div>
-    );
-  }
+  const renderDoubtsMainContent = () => {
+    if (isLoading) {
+      return <DashboardContentLoading message="Loading doubts…" />;
+    }
 
-  if (activeTab === 'available') {
+    if (error) {
+      return (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-3 text-sm text-[var(--dash-forest)] underline"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    if (activeTab === 'available') {
+      return (
+        <>
+          {renderDoubtsOverlays()}
+          <AvailableDoubtsSection availableDoubts={availableDoubts} onAcceptDoubt={handleAcceptDoubt} />
+        </>
+      );
+    }
+
+    if (activeTab === 'my-doubts') {
+      return (
+        <>
+          {renderDoubtsOverlays({ includeViewAnswer: true })}
+          <MyDoubtsSection
+            myDoubts={myDoubts}
+            onViewAnswer={(payload) => setViewAnswerModal(payload)}
+          />
+        </>
+      );
+    }
+
+    return null;
+  };
+
+  if (activeTab === 'available' || activeTab === 'my-doubts') {
     return (
       <DashboardPageLayout
         loadingMessage="Loading doubts…"
         contentVariant="card"
-        topBar={<AvailableDoubtsPageHeader solvedCount={solvedCount} />}
+        topBar={doubtsTopBar}
       >
-        {renderDoubtsOverlays()}
-        <AvailableDoubtsSection availableDoubts={availableDoubts} onAcceptDoubt={handleAcceptDoubt} />
-      </DashboardPageLayout>
-    );
-  }
-
-  if (activeTab === 'my-doubts') {
-    return (
-      <DashboardPageLayout
-        loadingMessage="Loading doubts…"
-        contentVariant="card"
-        topBar={<MyDoubtsPageHeader availableCount={availableDoubts.length} solvedCount={solvedCount} />}
-      >
-        {renderDoubtsOverlays({ includeViewAnswer: true })}
-        <MyDoubtsSection
-          myDoubts={myDoubts}
-          onViewAnswer={(payload) => setViewAnswerModal(payload)}
-        />
+        {renderDoubtsMainContent()}
       </DashboardPageLayout>
     );
   }
 
   return (
-    <DashboardPageLayout loadingMessage="Loading doubts…">
+    <DashboardPageLayout loadingMessage="Loading doubts…" contentVariant="plain">
+      {isLoading ? (
+        <DashboardContentLoading message="Loading doubts…" />
+      ) : error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-3 text-sm text-[var(--dash-forest)] underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : (
       <div className="flex min-h-full flex-col overflow-hidden bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
         <div className="shrink-0 border-b border-gray-200 bg-white p-4 transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -691,6 +401,7 @@ const DoubtManagement = () => {
           </div>
         </div>
       </div>
+      )}
     </DashboardPageLayout>
   );
 };

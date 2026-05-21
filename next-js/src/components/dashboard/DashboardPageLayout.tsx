@@ -2,7 +2,7 @@
 
 import React from 'react';
 import DashboardShell from './DashboardShell';
-import DashboardLoading from './DashboardLoading';
+import DashboardContentLoading from './DashboardContentLoading';
 import { useDashboardAuth } from '../../hooks/useDashboardAuth';
 
 type DashboardPageLayoutProps = {
@@ -10,6 +10,8 @@ type DashboardPageLayoutProps = {
   contentVariant?: 'card' | 'plain';
   loadingMessage?: string;
   topBar?: React.ReactNode;
+  /** When true, show content loading inside shell instead of children */
+  contentLoading?: boolean;
 };
 
 export default function DashboardPageLayout({
@@ -17,16 +19,20 @@ export default function DashboardPageLayout({
   contentVariant = 'plain',
   loadingMessage,
   topBar,
+  contentLoading = false,
 }: DashboardPageLayoutProps) {
-  const { isLoading, sidebarItems } = useDashboardAuth();
+  const { isLoading: authLoading, sidebarItems } = useDashboardAuth();
 
-  if (isLoading) {
-    return <DashboardLoading message={loadingMessage} />;
-  }
+  const mainContent =
+    authLoading || contentLoading ? (
+      <DashboardContentLoading message={loadingMessage} />
+    ) : (
+      children
+    );
 
   return (
     <DashboardShell sidebarItems={sidebarItems} contentVariant={contentVariant} topBar={topBar}>
-      {children}
+      {mainContent}
     </DashboardShell>
   );
 }

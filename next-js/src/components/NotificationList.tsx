@@ -214,21 +214,21 @@ const NotificationList = () => {
                   {section.items.map((notification) => (
                     <article
                       key={notification._id}
-                      className="rounded-[14px] border border-[#edf2e9] bg-white px-4 py-3 shadow-[0_4px_18px_rgba(7,62,54,0.08)]"
+                      className="notification-tile rounded-[14px] border border-[#edf2e9] bg-white px-4 py-3"
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-1 h-16 w-[5px] shrink-0 rounded-full bg-[#073E36]" />
                         <div className="mt-1 shrink-0">{getNotificationIcon(notification.message_type)}</div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
                             <p
-                              className={`text-base font-semibold ${
+                              className={`min-w-0 flex-1 truncate text-base font-semibold ${
                                 notification.is_read ? 'text-[#243833]' : 'text-black'
                               }`}
                             >
                               {notification.title || 'Notification'}
                             </p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex shrink-0 items-center gap-2">
                               <span className="whitespace-nowrap text-xs text-[var(--dash-text-muted)]">
                                 {formatTime(notification.createdAt)}
                               </span>

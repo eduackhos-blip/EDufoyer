@@ -11,7 +11,7 @@ const AssignedDoubtsSection = ({ assignedDoubts, onJoinSession }) => {
           <p className="text-gray-500 dark:text-gray-400">No assigned doubts.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+        <div className="doubts-list-grid">
           {assignedDoubts.map((doubt) => (
             <DoubtCard
               key={doubt._id}

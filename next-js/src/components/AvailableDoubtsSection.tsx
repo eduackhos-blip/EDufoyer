@@ -44,7 +44,7 @@ const AvailableDoubtsSection = ({ availableDoubts, onAcceptDoubt }) => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
+        <div className="doubts-list-grid">
           {filteredDoubts.map((doubt) => (
             <DoubtCard
               key={doubt._id || doubt.id}

@@ -4,7 +4,8 @@ const API_BASE_URL = "/api/auth";
 
 class AuthService {
   constructor() {
-    this.token = localStorage.getItem('token');
+    this.token =
+      typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   }
 
   // Set token in localStorage and memory
@@ -21,7 +22,10 @@ class AuthService {
 
   // Get current token
   getToken() {
-    return this.token || localStorage.getItem('token');
+    return (
+      this.token ||
+      (typeof window !== 'undefined' ? localStorage.getItem('token') : null)
+    );
   }
 
   // Check if user is authenticated

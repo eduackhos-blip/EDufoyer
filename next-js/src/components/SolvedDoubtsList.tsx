@@ -92,7 +92,7 @@ const SolvedDoubtsList = ({ searchQuery = '', onTotalCountChange }: SolvedDoubts
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5 2xl:grid-cols-4">
+      <div className="doubts-list-grid doubts-list-grid--solved">
         {filteredDoubts.map((solverDoubt) => {
           const doubt = solverDoubt.doubt_id;
           const doubter = doubt?.doubter_id;

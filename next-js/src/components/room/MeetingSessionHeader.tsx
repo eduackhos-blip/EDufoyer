@@ -1,5 +1,6 @@
 import { Clock, Video } from "lucide-react";
 import type { ReactNode } from "react";
+import { CtaArrow } from "../CtaArrow";
 
 export type MeetingSessionHeaderProps = {
   meetingTitle: string;
@@ -21,13 +22,13 @@ export function MeetingSessionHeader({
       <div className="meet-header__inner">
         <div className="meet-header__title-row">
           <div className="meet-header__icon-wrap" aria-hidden>
-            <Video className="h-5 w-5 text-white" strokeWidth={2.25} />
+            <Video className="text-white" strokeWidth={2.25} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold leading-tight text-white sm:text-xl lg:text-2xl">
+            <h1 className="meet-header__title truncate font-bold text-white">
               {meetingTitle}
             </h1>
-            <p className="mt-0.5 truncate text-sm font-normal text-white/85 sm:text-base">
+            <p className="meet-header__subtitle truncate font-normal text-white/85">
               {meetingDescription}
             </p>
           </div>
@@ -44,13 +45,7 @@ export function MeetingSessionHeader({
             ) : null}
             {onExitClick ? (
               <button type="button" className="meet-header__exit-btn" onClick={onExitClick}>
-                <img
-                  src="/Arrow up-left.png"
-                  alt=""
-                  aria-hidden
-                  className="meet-header__exit-icon"
-                  decoding="async"
-                />
+                <CtaArrow tone="forest-dark" className="meet-header__exit-arrow" />
                 <span>Exit</span>
               </button>
             ) : (

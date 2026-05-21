@@ -77,8 +77,11 @@ export default function SolvedDoubtCard({
             </span>
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-0.5">
-            <div className="flex items-center gap-0.5" aria-label={`Rating ${safeRating} out of 5`}>
+          <div
+            className="flex shrink-0 items-center gap-1.5"
+            aria-label={`Rating ${safeRating} out of 5`}
+          >
+            <div className="flex items-center gap-0.5">
               {Array.from({ length: 5 }, (_, i) => (
                 <Star
                   key={i}
@@ -92,7 +95,7 @@ export default function SolvedDoubtCard({
                 />
               ))}
             </div>
-            <span className="text-xs font-semibold text-[#073E36]">{safeRating}/5</span>
+            <span className="text-xs font-semibold leading-none text-[#073E36]">{safeRating}/5</span>
           </div>
         </div>
       </div>

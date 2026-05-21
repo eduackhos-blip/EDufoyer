@@ -71,11 +71,34 @@
   --dash-title-shadow-strong: 0 2px 6px rgba(7, 62, 54, 0.22), 0 8px 28px rgba(7, 62, 54, 0.18),
     0 16px 40px rgba(7, 62, 54, 0.12), 0 1px 0 rgba(7, 62, 54, 0.28);
   /* Shell: icon rail + main; expanded drawer is narrow and overlays beside the rail */
-  --dash-rail-w: 5.25rem;
+  --dash-rail-inner-w: 5.25rem;
+  --dash-topbar-pad-left: 2.3rem;
+  --dash-content-pad-left: 1rem;
+  --dash-content-pad-left-md: 1.75rem;
+  --dash-rail-pad-x: calc(var(--dash-topbar-pad-left) / 2);
+  --dash-rail-w: calc(var(--dash-rail-inner-w) + var(--dash-topbar-pad-left));
+  --dash-collapsed-nav-w: 4.35rem;
   /* Extra width when sidebar is open (collapsed rail stays --dash-rail-w) */
-  --dash-drawer-w: 8.5rem;
+  --dash-drawer-w: 7rem;
+  --dash-rail-open-width: 100%;
   /* Figma: mint panel behind card grid when sidebar is open */
+  --dash-tile-shadow: 4px 4px 20px 0 rgba(0, 0, 0, 0.3);
   --dash-content-canvas: #e2eed7;
+  --dash-content-canvas-shadow: var(--dash-tile-shadow);
+  --dash-content-radius-open: 30px;
+  --dash-content-pad-top-open: 1.5rem;
+  --dash-content-pad-left-open: 1.5rem;
+  /* Breathing room between sidebar and mint panel — shadow blooms in the gap */
+  --dash-content-gap-open: 0.75rem;
+  --dash-main-pad-right: 1.5rem;
+  --dash-sidebar-nav-active-shadow: 0 4px 12px rgba(7, 62, 54, 0.28), 0 8px 20px rgba(7, 62, 54, 0.22),
+    0 2px 6px rgba(7, 62, 54, 0.18);
+  --doubt-card-outer-radius: 30px;
+  --doubt-card-inner-radius: 24px;
+  --doubt-card-max-w: 280px;
+  --dash-page-title-text-shadow: 0 4px 4px rgba(0, 0, 0, 0.5);
+  --doubt-card-shadow: var(--dash-tile-shadow);
+  --doubt-card-grid-gap: 1.75rem;
   --dash-shell-ease: cubic-bezier(0.4, 0, 0.2, 1);
   --dash-shell-duration: 0.34s;
   --lobby-page-bg: #f4f3ee;
@@ -104,7 +127,7 @@
 .dash-splash-title--page {
   font-size: clamp(1.25rem, 2.8vw, 1.75rem);
   font-weight: 800;
-  text-shadow: var(--dash-title-shadow);
+  text-shadow: var(--dash-page-title-text-shadow);
 }
 
 .dash-splash-mark {
@@ -151,6 +174,16 @@
   box-shadow: var(--dash-card-shadow);
 }
 
+/* Home mini stat cards (solver rating, daily streak) */
+.dash-mini-stat-card-shadow {
+  box-shadow: var(--dash-tile-shadow);
+}
+
+/* Withdraw status card on home dashboard */
+.dash-panel-card--tile-shadow {
+  box-shadow: var(--dash-tile-shadow);
+}
+
 /* Daily streak: mint on white dashboard (closed), white on mint canvas (open) */
 .daily-streak-card {
   background-color: var(--dash-card-mint);
@@ -163,16 +196,39 @@
   }
 }
 
-/* Sidebar rail padding (custom px: wider left, narrow right) */
+/* Sidebar rail: symmetric — collapsed stack centered in the rail column */
 .dash-shell-rail {
-  padding-top: 1.25rem;
+  padding-top: 0;
   padding-bottom: 1rem;
-  padding-left: 2.5rem;
-  padding-right: 0.5rem;
-  transition:
-    background-color var(--dash-shell-duration) var(--dash-shell-ease),
-    padding-left var(--dash-shell-duration) var(--dash-shell-ease),
-    padding-right var(--dash-shell-duration) var(--dash-shell-ease);
+  padding-left: var(--dash-rail-pad-x);
+  padding-right: var(--dash-rail-pad-x);
+  align-items: center;
+  transition: background-color var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+/* Toggle + mint pill share one vertical center axis */
+.dash-shell-rail-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: var(--dash-rail-inner-w);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Menu toggle: fixed horizontal slot so it does not shift when sidebar opens */
+.dash-shell-menu-toggle-wrap {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 100%;
+  padding-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.dash-shell-menu-toggle-btn {
+  flex-shrink: 0;
 }
 
 /* Card area: white when closed → mint canvas when sidebar open */
@@ -180,6 +236,7 @@
   flex: 1 1 auto;
   min-height: 100%;
   box-sizing: border-box;
+  padding-left: 0;
   background-color: #ffffff;
   border-radius: 0;
   transition:
@@ -200,6 +257,35 @@
     opacity var(--dash-shell-duration) var(--dash-shell-ease),
     transform var(--dash-shell-duration) var(--dash-shell-ease),
     flex var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+/* Expanded sidebar: selected nav pill */
+.dash-expanded-nav-item {
+  transition:
+    background-color var(--dash-shell-duration) var(--dash-shell-ease),
+    color var(--dash-shell-duration) var(--dash-shell-ease),
+    box-shadow var(--dash-shell-duration) var(--dash-shell-ease);
+}
+
+.dash-expanded-nav-item--active {
+  box-shadow: var(--dash-sidebar-nav-active-shadow);
+}
+
+.dash-expanded-nav-item__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Room for active-pill shadow — avoid clipping on the right */
+.dash-expanded-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow-x: visible;
+  padding-right: 0.625rem;
 }
 
 .dash-shell-mobile-overlay {
@@ -242,26 +328,59 @@
     min-width: 0;
     min-height: 0;
     max-height: 100vh;
-    padding: 3.25rem 1rem 2rem 2rem;
+    padding: 3.25rem 1rem 2rem 0;
     overflow: hidden auto;
   }
 
   /* Open sidebar (desktop): white dissolved nav + mint card canvas */
   .dash-shell--sidebar-open {
     grid-template-columns: calc(var(--dash-rail-w) + var(--dash-drawer-w)) minmax(0, 1fr);
+    overflow-x: visible;
+  }
+
+  .dash-shell:not(.dash-shell--sidebar-open) .dash-shell-rail-inner {
+    width: var(--dash-rail-inner-w);
+    max-width: var(--dash-rail-inner-w);
+    margin-inline: auto;
+  }
+
+  .dash-shell-menu-toggle-wrap {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+    justify-content: center;
+  }
+
+  .dash-shell:not(.dash-shell--sidebar-open) .dash-shell-collapsed-nav {
+    width: var(--dash-collapsed-nav-w);
+    max-width: var(--dash-collapsed-nav-w);
+    margin-inline: auto;
+    margin-top: 0.75rem;
+    align-self: center;
   }
 
   .dash-shell--sidebar-open .dash-shell-rail {
-    width: 100%;
+    width: var(--dash-rail-open-width);
+    max-width: var(--dash-rail-open-width);
     min-width: 0;
     align-items: stretch;
     background: #ffffff;
-    padding-left: 1rem;
-    padding-right: 0.75rem;
+    padding-left: var(--dash-rail-pad-x);
+    padding-right: 0;
+    overflow: visible;
   }
 
-  .dash-shell--sidebar-open .dash-shell-rail > button[type='button'] {
-    align-self: flex-start;
+  .dash-shell--sidebar-open .dash-shell-rail-inner {
+    width: var(--dash-rail-w);
+    max-width: var(--dash-rail-w);
+    flex: 0 0 auto;
+    margin-inline: 0;
+  }
+
+  .dash-shell--sidebar-open .dash-shell-menu-toggle-wrap {
+    width: 100%;
+    justify-content: center;
   }
 
   .dash-expanded-drawer {
@@ -299,17 +418,37 @@
     top: auto;
     bottom: auto;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     flex: 1 1 auto;
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0);
+    overflow: visible;
+  }
+
+  .dash-shell--sidebar-open .dash-expanded-nav {
+    overflow-x: visible;
+    overflow-y: auto;
+  }
+
+  /* Nav rows: full width of drawer; labels stay on one line */
+  .dash-shell--sidebar-open .dash-expanded-drawer nav button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dash-shell--sidebar-open .dash-expanded-drawer nav button > div {
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   .dash-shell--sidebar-open .dash-shell-collapsed-nav {
     position: absolute;
     inset: 4.5rem 0.5rem 1rem 0.5rem;
     z-index: 0;
-    width: 4.25rem;
+    width: var(--dash-collapsed-nav-w);
     opacity: 0;
     pointer-events: none;
     transform: scale(0.97);
@@ -317,26 +456,45 @@
   }
 
   .dash-shell--sidebar-open .dash-expanded-drawer nav {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding-top: 2.5rem;
+    padding-bottom: 0.75rem;
+    padding-left: 0.375rem;
+    padding-right: 0.625rem;
+  }
+
+  /* Flush main column against open sidebar — no left gutter */
+  .dash-shell--sidebar-open .dash-shell-main {
+    overflow-x: visible;
+    overflow-y: hidden;
+    padding-left: 0;
+    padding-right: var(--dash-main-pad-right);
+  }
+
+  .dash-shell--sidebar-open .dash-shell-topbar {
+    padding-right: 0;
+    overflow: visible;
+    min-width: 0;
   }
 
   .dash-shell--sidebar-open .dash-shell-content {
+    margin-left: var(--dash-content-gap-open);
     background-color: var(--dash-content-canvas);
-    border-radius: 22px;
+    border-radius: var(--dash-content-radius-open);
+    box-shadow: var(--dash-content-canvas-shadow);
+    padding-top: var(--dash-content-pad-top-open);
+    padding-left: var(--dash-content-pad-left-open);
     padding-bottom: 2rem;
     min-height: 0;
+    overflow-x: visible;
     overflow-y: auto;
-  }
-
-  /* Keep mint panel anchored; scroll content inside it */
-  .dash-shell--sidebar-open .dash-shell-main {
-    overflow-y: hidden;
+    isolation: isolate;
   }
 
   /* Keep page title row above the mint canvas while body stays inside */
   .dash-shell--sidebar-open .dash-page-header {
     margin-top: -1.5rem;
+    overflow: visible;
+    min-width: 0;
   }
 
   /* Solved doubts needs slightly stronger lift to sit fully outside */
@@ -349,13 +507,16 @@
   padding-top: 0;
 }
 
-/* Welcome + actions row — vertically aligned with sidebar menu toggle */
+/* Welcome + page title row — pad reveals dash-splash-mark (left: -30px, top: -22px) */
 .dash-shell-topbar {
   display: flex;
   align-items: center;
-  min-height: calc(1.25rem + 2.75rem);
-  padding-top: 1.25rem;
+  min-height: 5rem;
+  padding-top: 2rem;
   padding-bottom: 0.75rem;
+  padding-left: var(--dash-topbar-pad-left);
+  padding-right: var(--dash-topbar-pad-left);
+  overflow: visible;
 }
 
 .dash-shell-topbar .dash-page-header {
@@ -364,46 +525,73 @@
   margin-bottom: 0;
 }
 
-/* Available doubt cards (mock: olive shell + cream inset) */
-.doubt-card-available {
-  border-radius: 22px;
-  padding: 0.65rem;
-  background-color: #9aab88;
-  box-shadow: var(--dash-card-shadow);
+/* Doubt list grids — consistent card width on available / my / solved pages */
+.doubts-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, var(--doubt-card-max-w)));
+  gap: var(--doubt-card-grid-gap);
+  justify-content: start;
+  align-items: stretch;
 }
 
-.doubt-card-available__inner {
-  border-radius: 18px;
-  padding: 1rem 1.1rem;
-  background-color: #f5f2e8;
+@media (min-width: 1280px) {
+  .doubts-list-grid {
+    gap: 2rem;
+  }
 }
 
-/* Solved doubt cards — same shell as available (sage + cream) */
-.doubt-card-solved {
-  border-radius: 22px;
-  padding: 0.65rem;
-  background-color: #9aab88;
-  box-shadow: var(--dash-card-shadow);
+/* Solved doubts: 3 cards per row, wider cards (height unchanged) */
+.doubts-list-grid--solved {
+  grid-template-columns: 1fr;
 }
 
-.doubt-card-solved__inner {
-  border-radius: 18px;
-  padding: 1rem 1.1rem;
-  background-color: #f5f2e8;
+@media (min-width: 640px) {
+  .doubts-list-grid--solved {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-/* My doubt cards — same shell as available / solved */
+@media (min-width: 1024px) {
+  .doubts-list-grid--solved {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.doubts-list-grid--solved .doubt-card-solved {
+  max-width: none;
+  width: 100%;
+}
+
+/* Doubt cards — shared shell (available, assigned, solved, my) */
+.doubt-card-available,
+.doubt-card-assigned,
+.doubt-card-solved,
 .doubt-card-my {
-  border-radius: 22px;
-  padding: 0.65rem;
+  width: 100%;
+  max-width: var(--doubt-card-max-w);
+  border-radius: var(--doubt-card-outer-radius);
+  padding: 0.8rem;
   background-color: #9aab88;
-  box-shadow: var(--dash-card-shadow);
+  box-shadow: var(--doubt-card-shadow);
 }
 
+.doubt-card-available__inner,
+.doubt-card-assigned__inner,
+.doubt-card-solved__inner,
 .doubt-card-my__inner {
-  border-radius: 18px;
+  border-radius: var(--doubt-card-inner-radius);
   padding: 1rem 1.1rem;
   background-color: #f5f2e8;
+}
+
+/* Keep card shadows visible inside grid cells */
+.doubts-list-grid > article {
+  overflow: visible;
+}
+
+/* Notification list tiles — same elevation as doubt cards */
+.notification-tile {
+  box-shadow: var(--dash-tile-shadow);
 }
 
 body {
@@ -1748,18 +1936,97 @@ html {
   background: var(--lobby-page-bg);
 }
 
+/* Session header — lobby + in-call (flat top, rounded bottom) */
+.meet-header {
+  background: #073e36;
+  border-radius: 1px 1px 72px 72px;
+  padding: 0.75rem 1.25rem 0.875rem;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+@media (min-width: 1024px) {
+  .meet-header {
+    border-radius: 1px 1px 72px 72px;
+    padding: 0.875rem 2rem 1rem;
+    padding-top: max(0.875rem, env(safe-area-inset-top));
+  }
+}
+
+.meet-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 90rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.meet-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.meet-header__title {
+  font-size: 1.0625rem;
+  line-height: 1.25;
+}
+
+@media (min-width: 640px) {
+  .meet-header__title {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .meet-header__title {
+    font-size: 1.25rem;
+  }
+}
+
+.meet-header__subtitle {
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .meet-header__subtitle {
+    font-size: 0.875rem;
+  }
+}
+
+.meet-header__icon-wrap {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.meet-header__icon-wrap svg {
+  height: 1.125rem;
+  width: 1.125rem;
+}
+
 .lobby-header {
-  background: var(--lobby-forest);
-  border-radius: 0 0 1.75rem 1.75rem;
-  padding: 1.25rem 1.25rem 1.5rem;
-  padding-top: max(1.25rem, env(safe-area-inset-top));
+  background: #073e36;
+  border-radius: 1px 1px 72px 72px;
+  padding: 0.75rem 1.25rem 0.875rem;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
 }
 
 @media (min-width: 1024px) {
   .lobby-header {
-    border-radius: 0 0 2rem 2rem;
-    padding: 1.5rem 2rem 1.75rem;
-    padding-top: max(1.5rem, env(safe-area-inset-top));
+    border-radius: 1px 1px 72px 72px;
+    padding: 0.875rem 2rem 1rem;
+    padding-top: max(0.875rem, env(safe-area-inset-top));
   }
 }
 
@@ -1839,29 +2106,32 @@ html {
 }
 
 .lobby-card {
-  width: 100%;
-  max-width: 42rem;
+  width: 85%;
+  max-width: 85%;
+  margin-left: auto;
+  margin-right: auto;
   background: var(--lobby-forest);
   border-radius: 2.25rem;
-  padding: 1.25rem 1.25rem 1.5rem;
+  padding: 0.75rem 1.5rem 0.875rem;
   box-shadow: 0 24px 56px rgba(7, 62, 54, 0.22);
 }
 
 @media (min-width: 640px) {
   .lobby-card {
     border-radius: 2.5rem;
-    padding: 1.5rem 1.5rem 1.75rem;
+    padding: 1rem 2rem 1.125rem;
   }
 }
 
 .lobby-preview-wrap {
-  padding: 0.35rem;
+  padding: 0.25rem;
 }
 
 .lobby-preview {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 8;
   width: 100%;
+  min-height: 11rem;
   overflow: hidden;
   border-radius: 1rem;
   background: #073e36;
@@ -1871,7 +2141,14 @@ html {
 @media (min-width: 640px) {
   .lobby-preview {
     border-radius: 1.125rem;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 8;
+    min-height: 13.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lobby-preview {
+    min-height: 16rem;
   }
 }
 
@@ -1960,8 +2237,8 @@ html {
 .lobby-preview__avatar {
   display: flex;
   aspect-ratio: 1;
-  width: min(42%, 8rem);
-  max-width: 8rem;
+  width: min(38%, 7rem);
+  max-width: 7rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
@@ -1970,7 +2247,7 @@ html {
 }
 
 .lobby-preview__avatar span {
-  font-size: clamp(2rem, 12vmin, 3.25rem);
+  font-size: clamp(1.75rem, 10vmin, 2.75rem);
   font-weight: 600;
   line-height: 1;
   color: #fff;
@@ -2016,8 +2293,8 @@ html {
 .lobby-card__join-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 1.25rem;
-  padding-bottom: 0.25rem;
+  margin-top: 0.625rem;
+  padding-bottom: 0.125rem;
 }
 
 .lobby-join-btn {
@@ -2054,50 +2331,6 @@ html {
   padding-bottom: max(5.5rem, calc(4.5rem + env(safe-area-inset-bottom)));
 }
 
-.meet-header {
-  background: var(--meet-forest);
-  border-radius: 0 0 1.75rem 1.75rem;
-  padding: 1.25rem 1.25rem 1.5rem;
-  padding-top: max(1.25rem, env(safe-area-inset-top));
-}
-
-@media (min-width: 1024px) {
-  .meet-header {
-    border-radius: 0 0 2rem 2rem;
-    padding: 1.5rem 2rem 1.75rem;
-    padding-top: max(1.5rem, env(safe-area-inset-top));
-  }
-}
-
-.meet-header__inner {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  max-width: 90rem;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.meet-header__title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.875rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.meet-header__icon-wrap {
-  display: flex;
-  height: 2.75rem;
-  width: 2.75rem;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.14);
-}
-
 .meet-header__actions {
   display: flex;
   align-items: center;
@@ -2108,25 +2341,34 @@ html {
 .meet-header__timer-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex-shrink: 0;
   border-radius: 9999px;
   background: #fff;
-  padding: 0.45rem 0.85rem;
+  padding: 0.35rem 0.75rem;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.meet-header__timer-pill svg {
+  height: 0.875rem;
+  width: 0.875rem;
+}
+
+.meet-header__timer-pill span {
+  font-size: 0.8125rem;
 }
 
 .meet-header__exit-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   flex-shrink: 0;
   border-radius: 9999px;
   background: #fff;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.875rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--meet-forest);
+  color: #073e36;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
   transition: background 0.15s ease;
 }
@@ -2135,10 +2377,10 @@ html {
   background: #f4f7f6;
 }
 
-.meet-header__exit-icon {
-  height: 0.95rem;
-  width: 0.95rem;
-  object-fit: contain;
+.meet-header__exit-arrow {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
 }
 
 .meet-header__stars {
@@ -2146,7 +2388,7 @@ html {
   align-items: flex-start;
   gap: 0.35rem;
   flex-shrink: 0;
-  padding-top: 0.15rem;
+  padding-top: 0;
 }
 
 .meet-header__star {

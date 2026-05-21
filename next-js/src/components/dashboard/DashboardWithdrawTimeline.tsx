@@ -59,7 +59,7 @@ function StepBadge({ variant, label }: { variant: 'done' | 'active' | 'pending';
 
 export default function DashboardWithdrawTimeline() {
   return (
-    <article className="dash-panel-card p-4">
+    <article className="dash-panel-card dash-panel-card--tile-shadow p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <h2 className="text-[15px] font-bold text-[var(--dash-text-body)]">Withdraw status</h2>
         <div className="flex items-center gap-2">

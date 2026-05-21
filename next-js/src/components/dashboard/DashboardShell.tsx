@@ -73,6 +73,13 @@ export default function DashboardShell({
   const mainItems = sidebarItems.filter((i) => !isLogout(i.label));
   const logoutItem = sidebarItems.find((i) => isLogout(i.label));
 
+  const navIconClass = (item: DashboardSidebarItem, variant: 'collapsed' | 'expanded') => {
+    if (item.label === 'My doubts') {
+      return variant === 'collapsed' ? 'h-[1.3rem] w-[1.3rem] shrink-0' : 'h-6 w-6 shrink-0';
+    }
+    return variant === 'collapsed' ? 'h-[1.15rem] w-[1.15rem]' : 'h-5 w-5 shrink-0';
+  };
+
   const renderCollapsedIcon = (item: DashboardSidebarItem, index: number) => {
     const Icon = item.icon;
     return (
@@ -92,7 +99,7 @@ export default function DashboardShell({
               aria-hidden
             />
           ) : (
-            <Icon className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.2} />
+            <Icon className={navIconClass(item, 'collapsed')} strokeWidth={2.2} />
           )}
         </span>
       </NavItemHandler>
@@ -105,9 +112,9 @@ export default function DashboardShell({
     return (
       <NavItemHandler key={index} item={item} router={router} align="start">
         <div
-          className={`mb-1 flex w-full min-w-0 items-center gap-2.5 rounded-full px-3 py-2 text-[12px] font-bold transition-colors ${
+          className={`dash-expanded-nav-item flex w-full min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-[12px] font-bold ${
             item.active
-              ? 'text-white shadow-sm'
+              ? 'dash-expanded-nav-item--active text-white'
               : logout
                 ? 'text-red-600 hover:bg-red-50'
                 : 'text-[var(--dash-forest)] hover:bg-[var(--dash-card-mint)]/40'
@@ -118,13 +125,13 @@ export default function DashboardShell({
             <img
               src="/fillStarBottom.png"
               alt=""
-              className="h-4 w-4 shrink-0 object-contain brightness-0 invert"
+              className="h-5 w-5 shrink-0 object-contain brightness-0 invert"
               aria-hidden
             />
           ) : (
-            <Icon className="h-[1.05rem] w-[1.05rem] shrink-0" strokeWidth={2.4} />
+            <Icon className={navIconClass(item, 'expanded')} strokeWidth={2.4} />
           )}
-          <span className="whitespace-normal break-words text-left leading-tight">{item.label}</span>
+          <span className="dash-expanded-nav-item__label text-left leading-snug">{item.label}</span>
           {item.badge ? (
             <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--dash-forest)] px-1 text-[10px] text-white">
               {item.badge}
@@ -136,7 +143,7 @@ export default function DashboardShell({
   };
 
   const expandedNav = (
-    <nav className="flex flex-1 flex-col overflow-y-auto px-1.5 py-3" aria-label="Main navigation">
+    <nav className="dash-expanded-nav flex flex-1 flex-col overflow-y-auto overflow-x-visible pl-1.5 py-3" aria-label="Main navigation">
       {sidebarItems.map(renderExpandedRow)}
     </nav>
   );
@@ -158,35 +165,39 @@ export default function DashboardShell({
             : 'w-[var(--dash-rail-w)] items-center'
         }`}
       >
-        <button
-          type="button"
-          onClick={() => setIsExpanded((o) => !o)}
-          className="relative z-50 mb-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-md transition-opacity hover:opacity-90"
-          style={{ backgroundColor: 'var(--dash-forest)' }}
-          aria-label={isExpanded ? 'Close menu' : 'Open menu'}
-          aria-expanded={isExpanded}
-        >
-          <Menu className="h-5 w-5 text-white" strokeWidth={2.4} />
-        </button>
+        <div className="dash-shell-rail-inner">
+          <div className="dash-shell-menu-toggle-wrap">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((o) => !o)}
+              className="dash-shell-menu-toggle-btn relative z-50 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-md transition-opacity hover:opacity-90"
+              style={{ backgroundColor: 'var(--dash-forest)' }}
+              aria-label={isExpanded ? 'Close menu' : 'Open menu'}
+              aria-expanded={isExpanded}
+            >
+              <Menu className="h-5 w-5 text-white" strokeWidth={2.4} />
+            </button>
+          </div>
 
-        <aside className="dash-expanded-drawer hidden min-h-0 w-full flex-col overflow-hidden bg-white lg:flex">
+          <nav
+            className="dash-shell-collapsed-nav hidden min-h-0 w-[var(--dash-collapsed-nav-w)] flex-1 flex-col items-center gap-0.5 overflow-y-auto rounded-[999px] px-1 py-3 shadow-[0_8px_32px_rgba(7,62,54,0.1)] lg:flex"
+            style={{ backgroundColor: 'var(--dash-sidebar-rail)' }}
+            aria-label="Main navigation"
+          >
+            <div className="flex w-full flex-col items-center gap-0.5">
+              {mainItems.map(renderCollapsedIcon)}
+            </div>
+            {logoutItem ? (
+              <div className="mt-auto flex w-full flex-col items-center pt-2">
+                {renderCollapsedIcon(logoutItem, sidebarItems.length - 1)}
+              </div>
+            ) : null}
+          </nav>
+        </div>
+
+        <aside className="dash-expanded-drawer hidden min-h-0 flex-col bg-white lg:flex">
           {expandedNav}
         </aside>
-
-        <nav
-          className="dash-shell-collapsed-nav hidden min-h-0 w-[4.35rem] flex-1 flex-col items-center gap-0.5 overflow-y-auto rounded-[999px] px-1 py-3 shadow-[0_8px_32px_rgba(7,62,54,0.1)] lg:flex"
-          style={{ backgroundColor: 'var(--dash-sidebar-rail)' }}
-          aria-label="Main navigation"
-        >
-          <div className="flex w-full flex-col items-center gap-0.5">
-            {mainItems.map(renderCollapsedIcon)}
-          </div>
-          {logoutItem ? (
-            <div className="mt-auto flex w-full flex-col items-center pt-2">
-              {renderCollapsedIcon(logoutItem, sidebarItems.length - 1)}
-            </div>
-          ) : null}
-        </nav>
       </div>
 
       {/* Mobile / tablet: overlay + drawer */}
@@ -199,7 +210,7 @@ export default function DashboardShell({
             onClick={() => setIsExpanded(false)}
           />
           <aside
-            className={`dash-shell-mobile-drawer fixed left-2 z-50 flex w-[11.5rem] max-w-[85vw] flex-col rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:hidden ${drawerTopClass} bottom-4`}
+            className={`dash-shell-mobile-drawer fixed left-2 z-50 flex w-[13rem] max-w-[85vw] flex-col rounded-[20px] shadow-[4px_0_28px_rgba(7,62,54,0.14)] lg:hidden ${drawerTopClass} bottom-4`}
             style={{ backgroundColor: 'var(--dash-sidebar-open)' }}
           >
             {expandedNav}
@@ -209,15 +220,15 @@ export default function DashboardShell({
 
       {/* Column 3: main dashboard — width unchanged when sidebar opens */}
       <main
-        className={`dash-shell-main flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-white px-3 pb-6 pt-4 lg:flex-none ${
+        className={`dash-shell-main flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-white pl-0 pr-6 pb-6 pt-4 max-lg:overflow-x-hidden lg:overflow-x-visible lg:flex-none ${
           topBar ? 'dash-shell-main--with-topbar' : ''
         }`}
       >
         {topBar ? <div className="dash-shell-topbar shrink-0">{topBar}</div> : null}
         {contentVariant === 'card' ? (
           <div
-            className="dash-shell-content w-full flex-auto px-4 pb-5 pt-0 md:px-7 md:pb-7 md:pt-0"
-            style={{ paddingTop: '1.5rem' }}
+            className="dash-shell-content w-full flex-auto pl-0 pr-4 pb-5 pt-0 md:pr-7 md:pb-7 md:pt-0"
+            style={isExpanded ? undefined : { paddingTop: '1.5rem' }}
           >
             {children}
           </div>

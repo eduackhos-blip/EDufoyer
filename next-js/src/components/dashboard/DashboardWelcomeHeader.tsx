@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { CtaArrow } from '../CtaArrow';
 import DashboardSplashTitle from './DashboardSplashTitle';
 
 type DashboardWelcomeHeaderProps = {
@@ -9,30 +10,6 @@ type DashboardWelcomeHeaderProps = {
   onSolveDoubt: () => void;
   showSolveDoubt?: boolean;
 };
-
-const CTA_ARROW_SRC = '/Arrow%20up-left.png';
-
-function CtaArrow({ tone }: { tone: 'white' | 'forest-dark' }) {
-  const color = tone === 'white' ? '#ffffff' : '#073E36';
-
-  return (
-    <span
-      aria-hidden
-      className="block h-5 w-5 shrink-0"
-      style={{
-        backgroundColor: color,
-        maskImage: `url("${CTA_ARROW_SRC}")`,
-        WebkitMaskImage: `url("${CTA_ARROW_SRC}")`,
-        maskSize: 'contain',
-        WebkitMaskSize: 'contain',
-        maskRepeat: 'no-repeat',
-        WebkitMaskRepeat: 'no-repeat',
-        maskPosition: 'center',
-        WebkitMaskPosition: 'center',
-      }}
-    />
-  );
-}
 
 export default function DashboardWelcomeHeader({
   userName,
@@ -62,20 +39,20 @@ export default function DashboardWelcomeHeader({
         <button
           type="button"
           onClick={onAskDoubt}
-          className="inline-flex items-center gap-2 rounded-full border-2 border-[var(--dash-forest)] bg-white px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--dash-forest)] shadow-[0_4px_14px_rgba(7,62,54,0.08)] transition-opacity hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-full border-2 border-[var(--dash-forest)] bg-white px-5 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--dash-forest)] shadow-[0_4px_14px_rgba(7,62,54,0.08)] transition-opacity hover:opacity-90"
         >
-          Ask doubt
           <CtaArrow tone="forest-dark" />
+          Ask doubt
         </button>
         {showSolveDoubt ? (
           <button
             type="button"
             onClick={onSolveDoubt}
-            className="inline-flex items-center gap-2 rounded-full border-2 border-[var(--dash-forest)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(7,62,54,0.18)] transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-full border-2 border-[var(--dash-forest)] px-5 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(7,62,54,0.18)] transition-opacity hover:opacity-90"
             style={{ backgroundColor: 'var(--dash-forest)' }}
           >
-            Solve doubt
             <CtaArrow tone="white" />
+            Solve doubt
           </button>
         ) : null}
       </div>
