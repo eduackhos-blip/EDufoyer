@@ -1,8 +1,11 @@
+'use client';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, CheckCircle, MessageSquare, AlertTriangle, User } from 'lucide-react';
 import notificationService from '../services/notificationService';
 import DashboardPageLayout from './dashboard/DashboardPageLayout';
 import DashboardSplashTitle from './dashboard/DashboardSplashTitle';
+import { renderNotificationContent } from './notificationContent';
 
 // Simple date formatting function
 const formatTimeAgo = (date) => {
@@ -21,28 +24,6 @@ const NotificationList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
-
-  const linkifyText = (text) => {
-    if (!text) return text;
-    const urlRegex = /(https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+)/g;
-    const parts = String(text).split(urlRegex);
-    return parts.map((part, idx) => {
-      if (urlRegex.test(part)) {
-        return (
-          <a
-            key={`url-${idx}`}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline break-all transition-colors"
-          >
-            {part}
-          </a>
-        );
-      }
-      return <span key={`text-${idx}`}>{part}</span>;
-    });
-  };
 
   const fetchNotifications = async () => {
     try {
@@ -237,9 +218,9 @@ const NotificationList = () => {
                               ) : null}
                             </div>
                           </div>
-                          <p className="mt-1 text-sm leading-relaxed text-[var(--dash-text-body)]">
-                            {linkifyText(notification.content)}
-                          </p>
+                          <div className="notification-content mt-1 text-sm leading-relaxed text-[var(--dash-text-body)]">
+                            {renderNotificationContent(notification.content)}
+                          </div>
                         </div>
                       </div>
                     </article>
