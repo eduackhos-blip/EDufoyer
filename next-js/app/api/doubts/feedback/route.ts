@@ -61,7 +61,12 @@ async function submitFeedback(formData: unknown, userId: string) {
       return { success: false, error: "You are not authorized to rate this doubt." };
     }
 
-    const endedStatuses = ["session_completed", "ended_solver_left", "ended_asker_timeout"] as const;
+    const endedStatuses = [
+      "session_completed",
+      "ended_solver_left",
+      "ended_asker_timeout",
+      "ended_asker_rated",
+    ] as const;
     const systemEndedStatuses = ["ended_solver_left", "ended_asker_timeout"] as const;
 
     let solverDoubt = (doubt as any).solver_id

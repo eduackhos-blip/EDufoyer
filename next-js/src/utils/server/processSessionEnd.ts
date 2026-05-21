@@ -14,6 +14,8 @@ import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
 export type SessionEndReason =
   | "solver_left"
   | "asker_left_timeout"
+  | "asker_left_rated"
+  | "timer_completed"
   | "solver_left_during_asker_grace";
 
 export type ProcessSessionEndInput = {
@@ -22,6 +24,9 @@ export type ProcessSessionEndInput = {
   elapsedSeconds: number;
   plannedSeconds?: number;
   solverId?: string;
+  /** When asker leaves intentionally after rating the solver on the leave flow. */
+  askerRating?: number;
+  askerComment?: string;
 };
 
 export type ProcessSessionEndResult =
@@ -30,7 +35,7 @@ export type ProcessSessionEndResult =
       alreadyProcessed?: boolean;
       attendancePercent: number;
       feedbackRating: number;
-      ratingSource?: "system_attendance";
+      ratingSource?: "system_attendance" | "asker_intentional";
       askerMessage?: string;
       walletCredited: boolean;
       coins?: number;
@@ -41,6 +46,8 @@ export type ProcessSessionEndResult =
 const resolutionStatusForReason: Record<SessionEndReason, string> = {
   solver_left: "ended_solver_left",
   asker_left_timeout: "ended_asker_timeout",
+  asker_left_rated: "ended_asker_rated",
+  timer_completed: "session_completed",
   solver_left_during_asker_grace: "ended_solver_abandoned_grace",
 };
 
@@ -119,11 +126,31 @@ export async function processSessionEnd(
       : plannedSecondsFromCategory((doubt as { category?: string }).category);
 
   const skipWallet = input.reason === "solver_left_during_asker_grace";
-  const { attendancePercent, feedbackRating, feedbackComment, ratingSource } = buildSystemSessionRating(
-    input.reason,
-    input.elapsedSeconds,
-    plannedSeconds
-  );
+  const attendancePercent = computeAttendancePercent(input.elapsedSeconds, plannedSeconds);
+
+  const askerRated =
+    input.reason === "asker_left_rated" &&
+    typeof input.askerRating === "number" &&
+    input.askerRating >= 1 &&
+    input.askerRating <= 5;
+
+  let feedbackRating: number;
+  let feedbackComment: string;
+  let ratingSource: "system_attendance" | "asker_intentional";
+
+  if (askerRated) {
+    feedbackRating = Math.round(input.askerRating!);
+    ratingSource = "asker_intentional";
+    const trimmed = input.askerComment?.trim();
+    feedbackComment = trimmed
+      ? `Asker ended session with rating: ${trimmed}`
+      : "Asker ended session and rated the solver (intentional leave).";
+  } else {
+    const system = buildSystemSessionRating(input.reason, input.elapsedSeconds, plannedSeconds);
+    feedbackRating = system.feedbackRating;
+    feedbackComment = system.feedbackComment;
+    ratingSource = system.ratingSource;
+  }
 
   const now = new Date();
   const resolutionStatus = resolutionStatusForReason[input.reason];
@@ -149,13 +176,26 @@ export async function processSessionEnd(
     });
   }
 
-  await Doubt.findByIdAndUpdate(doubtId, {
-    status: "open",
-    solver_id: null,
-    rating: feedbackRating,
-    is_solved: false,
-    updatedAt: now,
-  });
+  const sessionCompleted =
+    askerRated || input.reason === "timer_completed";
+
+  const doubtUpdate = sessionCompleted
+    ? {
+        status: "resolved" as const,
+        solver_id: null,
+        rating: feedbackRating,
+        is_solved: true,
+        updatedAt: now,
+      }
+    : {
+        status: "open" as const,
+        solver_id: null,
+        rating: feedbackRating,
+        is_solved: false,
+        updatedAt: now,
+      };
+
+  await Doubt.findByIdAndUpdate(doubtId, doubtUpdate);
 
   await Room.deleteOne({ roomId });
 
@@ -174,17 +214,19 @@ export async function processSessionEnd(
 
   const subject = String((doubt as { subject?: string }).subject || "").toLowerCase();
 
-  void publishSocketEvent({
-    event: "doubt:available",
-    room: `subject:${subject}`,
-    payload: {
-      doubtId: String(doubtId),
-      subject: (doubt as { subject?: string }).subject,
-      description: (doubt as { description?: string }).description,
-      status: "open",
-      reason: input.reason,
-    },
-  });
+  if (input.reason !== "timer_completed" && input.reason !== "asker_left_rated") {
+    void publishSocketEvent({
+      event: "doubt:available",
+      room: `subject:${subject}`,
+      payload: {
+        doubtId: String(doubtId),
+        subject: (doubt as { subject?: string }).subject,
+        description: (doubt as { description?: string }).description,
+        status: "open",
+        reason: input.reason,
+      },
+    });
+  }
 
   const askerId = String((doubt as { doubter_id?: unknown }).doubter_id || "");
 
@@ -200,6 +242,18 @@ export async function processSessionEnd(
         walletCredited ? ` — ${coins} coins credited.` : "."
       }`,
       asker: `You left the session. The doubt has been released back to the pool.`,
+    },
+    asker_left_rated: {
+      solver: `The asker ended the session and rated you ${feedbackRating}/5. No rejoin window.${
+        walletCredited ? ` ${coins} coins credited.` : ""
+      }`,
+      asker: `You rated your solver ${feedbackRating}/5 and left the session.`,
+    },
+    timer_completed: {
+      solver: `Scheduled session time ended. You received ${feedbackRating}/5 (${attendancePercent}% attendance)${
+        walletCredited ? ` and earned ${coins} coins.` : "."
+      }`,
+      asker: `Your session time is complete. Your solver was rated ${feedbackRating}/5 based on attendance.`,
     },
     solver_left_during_asker_grace: {
       solver: `You left while waiting for the asker to rejoin. No wallet credit; session recorded as 1/5.`,

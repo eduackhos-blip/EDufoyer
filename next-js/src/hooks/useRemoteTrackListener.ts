@@ -3,6 +3,8 @@ import { peer } from "../lib/webrtc/peer";
 
 type UseRemoteTrackListenerParams = {
   remoteSocketId: string | null;
+  /** Re-bind when peer connection is recreated after reconnect. */
+  peerConnectionEpoch?: number;
 };
 
 function isRemoteScreenShareTrack(track: MediaStreamTrack): boolean {
@@ -33,10 +35,12 @@ type UseRemoteTrackListenerResult = {
   remoteScreenShareStream: MediaStream | null;
   isRemoteCameraEnabled: boolean;
   clearRemoteScreenShare: () => void;
+  clearRemoteMedia: () => void;
 };
 
 export const useRemoteTrackListener = ({
   remoteSocketId,
+  peerConnectionEpoch = 0,
 }: UseRemoteTrackListenerParams): UseRemoteTrackListenerResult => {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [remoteAudioStream, setRemoteAudioStream] = useState<MediaStream | null>(null);
@@ -137,12 +141,28 @@ export const useRemoteTrackListener = ({
     setRemoteScreenShareStream(null);
   }, []);
 
+  const clearRemoteMedia = useCallback(() => {
+    detachCameraTrackListeners();
+    setRemoteStream(null);
+    setRemoteAudioStream(null);
+    setRemoteVideoStream(null);
+    setRemoteScreenShareStream(null);
+  }, [detachCameraTrackListeners]);
+
   useEffect(() => {
-    peer.peer?.addEventListener("track", handleRemoteStream);
+    if (!remoteSocketId) {
+      clearRemoteMedia();
+    }
+  }, [remoteSocketId, clearRemoteMedia]);
+
+  useEffect(() => {
+    const pc = peer.peer;
+    if (!pc) return;
+    pc.addEventListener("track", handleRemoteStream);
     return () => {
-      peer.peer?.removeEventListener("track", handleRemoteStream);
+      pc.removeEventListener("track", handleRemoteStream);
     };
-  }, [handleRemoteStream, remoteSocketId]);
+  }, [handleRemoteStream, remoteSocketId, peerConnectionEpoch]);
 
   useEffect(() => {
     if (!remoteSocketId) {
@@ -163,5 +183,6 @@ export const useRemoteTrackListener = ({
     remoteScreenShareStream,
     isRemoteCameraEnabled,
     clearRemoteScreenShare,
+    clearRemoteMedia,
   };
 };

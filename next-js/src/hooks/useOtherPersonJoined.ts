@@ -42,6 +42,7 @@ export const useOtherPersonJoined = (
       }
 
       void (async () => {
+        peer.closeConnection();
         await peer.attachLocalStream(myStream);
 
         const offer = await peer.getOffer();

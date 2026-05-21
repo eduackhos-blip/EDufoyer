@@ -5,7 +5,7 @@ import { Doubt } from "../../models/Doubt";
 import { Room } from "../../models/Room";
 import { SOCKET_EVENTS } from "../events";
 
-const DISCONNECT_GRACE_MS = 15_000;
+const DISCONNECT_RECONNECT_GRACE_MS = 7_000;
 const ROOM_ID_PATTERN = /^doubt-([a-fA-F0-9]{24})-solver-([a-fA-F0-9]{24})$/;
 
 /** roomId → true while this session is being finalized (blocks duplicate runs). */
@@ -24,7 +24,24 @@ function isUserStillInRoom(io: Server, roomId: string, userId: string) {
   return false;
 }
 
-type SessionEndReason = "solver_left" | "asker_left_timeout" | "solver_left_during_asker_grace";
+type SessionEndReason =
+  | "solver_left"
+  | "asker_left_timeout"
+  | "asker_left_rated"
+  | "timer_completed"
+  | "solver_left_during_asker_grace";
+
+function isSessionFinalizeReason(
+  value: SessionEndReason | undefined
+): value is SessionEndReason {
+  return (
+    value === "solver_left" ||
+    value === "asker_left_timeout" ||
+    value === "asker_left_rated" ||
+    value === "timer_completed" ||
+    value === "solver_left_during_asker_grace"
+  );
+}
 
 type JoinRoomPayload = {
   roomId?: string;
@@ -35,8 +52,12 @@ type JoinRoomPayload = {
 type LeaveRoomPayload = {
   roomId?: string;
   elapsedSeconds?: number;
-  /** Solver only: end session because asker did not return within grace window. */
+  /** End session with this reason (solver, or asker when timer_completed). */
   finalizeAs?: SessionEndReason;
+  /** Asker rated on leave → end session immediately (no solver grace). */
+  askerRatedOnLeave?: boolean;
+  askerRating?: number;
+  askerComment?: string;
 };
 
 async function finalizeSession(
@@ -47,6 +68,8 @@ async function finalizeSession(
     elapsedSeconds?: number;
     solverId?: string;
     doubtId?: string;
+    askerRating?: number;
+    askerComment?: string;
   }
 ) {
   const parsed = parseSessionRoomId(input.roomId);
@@ -84,6 +107,8 @@ async function finalizeSession(
           reason,
           elapsedSeconds: elapsed,
           solverId,
+          askerRating: input.askerRating,
+          askerComment: input.askerComment,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string };
@@ -124,6 +149,15 @@ async function finalizeSession(
       elapsedSeconds: elapsed,
       ...processedPayload,
     });
+
+    if (reason === "timer_completed") {
+      io.to(input.roomId).emit(SOCKET_EVENTS.SESSION_END_INTIMATION, {
+        roomId: input.roomId,
+        reason,
+        message: "Your session has ended. You will be redirected to the dashboard in 5 seconds.",
+        redirectSeconds: 5,
+      });
+    }
   } finally {
     finalizingRooms.delete(input.roomId);
   }
@@ -244,7 +278,17 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
     const sessionAnchor = updated.sessionStartedAt ?? room.sessionStartedAt;
 
     if (!lobbyOnly && isAsker && hasWaitingParticipant && sessionAnchor) {
-      io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_REJOINED, { roomId });
+      io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_REJOINED, {
+        roomId,
+        message: "Asker has reconnected to the session.",
+      });
+    }
+
+    if (isSolver && hasWaitingParticipant && sessionAnchor) {
+      io.to(roomId).emit(SOCKET_EVENTS.SESSION_SOLVER_REJOINED, {
+        roomId,
+        message: "Solver has reconnected to the session.",
+      });
     }
 
     if (hasWaitingParticipant) {
@@ -261,7 +305,16 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
     }
   });
 
-  socket.on(SOCKET_EVENTS.LEAVE_ROOM, ({ roomId, elapsedSeconds, finalizeAs }: LeaveRoomPayload = {}) => {
+  socket.on(
+    SOCKET_EVENTS.LEAVE_ROOM,
+    ({
+      roomId,
+      elapsedSeconds,
+      finalizeAs,
+      askerRatedOnLeave,
+      askerRating,
+      askerComment,
+    }: LeaveRoomPayload = {}) => {
     if (!roomId) return;
 
     const match = roomId.trim().match(ROOM_ID_PATTERN);
@@ -285,13 +338,29 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
       }
       if (!role) return;
 
+      const elapsed = elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0;
+
       if (role === "solver") {
         await finalizeSession(io, {
           roomId,
           doubtId,
           solverId,
-          reason: finalizeAs,
-          elapsedSeconds: elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0,
+          reason: isSessionFinalizeReason(finalizeAs) ? finalizeAs : "solver_left",
+          elapsedSeconds: elapsed,
+        });
+        return;
+      }
+
+      if (finalizeAs === "timer_completed") {
+        socket.leave(roomId);
+        const askerId = String(roomDoc.doubter_id ?? userId);
+        if (isUserStillInRoom(io, roomId, askerId)) return;
+        await finalizeSession(io, {
+          roomId,
+          doubtId,
+          solverId,
+          reason: "timer_completed",
+          elapsedSeconds: elapsed,
         });
         return;
       }
@@ -300,6 +369,25 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
       const askerId = String(roomDoc.doubter_id ?? userId);
       if (isUserStillInRoom(io, roomId, askerId)) return;
 
+      const rated =
+        askerRatedOnLeave === true &&
+        typeof askerRating === "number" &&
+        askerRating >= 1 &&
+        askerRating <= 5;
+
+      if (rated) {
+        await finalizeSession(io, {
+          roomId,
+          doubtId,
+          solverId,
+          reason: "asker_left_rated",
+          elapsedSeconds: elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0,
+          askerRating: Math.round(askerRating),
+          askerComment: typeof askerComment === "string" ? askerComment : undefined,
+        });
+        return;
+      }
+
       io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_LEFT, {
         roomId,
         graceSeconds: 3 * 60,
@@ -307,7 +395,8 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
           "Asker left. Please wait up to 3 minutes for them to rejoin. If you leave early, wallet credit may be forfeited.",
       });
     })();
-  });
+  }
+  );
 
   socket.on("disconnect", () => {
     const roomId = socket.data.sessionRoomId;
@@ -320,38 +409,87 @@ export const registerRoomSocketHandlers = (socket: Socket, io: Server) => {
     const doubtId = match[1];
     const solverId = match[2];
 
-    setTimeout(() => {
-      if (io.sockets.sockets.has(socket.id)) return;
+    void (async () => {
+      const roomDoc = await Room.findOne({ roomId, status: "active" })
+        .select("roomId doubt_id solver_id doubter_id")
+        .lean();
+      if (!roomDoc) return;
 
-      void (async () => {
-        const roomDoc = await Room.findOne({ roomId, status: "active" }).select(
-          "roomId doubt_id solver_id doubter_id"
-        );
-        if (!roomDoc) return;
+      let role: "solver" | "asker" | null = null;
+      if (userId === solverId || userId === String(roomDoc.solver_id ?? solverId)) {
+        role = "solver";
+      } else if (userId === String(roomDoc.doubter_id ?? "")) {
+        role = "asker";
+      }
+      if (!role) return;
 
-        let role: "solver" | "asker" | null = null;
-        if (userId === solverId || userId === String(roomDoc.solver_id ?? solverId)) {
-          role = "solver";
-        } else if (userId === String(roomDoc.doubter_id ?? "")) {
-          role = "asker";
-        }
-        if (!role) return;
-
-        if (role === "solver") {
-          await finalizeSession(io, { roomId, doubtId, solverId, elapsedSeconds: 0 });
-          return;
-        }
-
-        const askerId = String(roomDoc.doubter_id ?? userId);
-        if (isUserStillInRoom(io, roomId, askerId)) return;
-
-        io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_LEFT, {
+      if (role === "asker") {
+        io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_DISCONNECTED, {
           roomId,
-          graceSeconds: 3 * 60,
+          reconnectGraceSeconds: Math.floor(DISCONNECT_RECONNECT_GRACE_MS / 1000),
           message:
-            "Asker left. Please wait up to 3 minutes for them to rejoin. If you leave early, wallet credit may be forfeited.",
+            "The asker may have reloaded the page or has a temporary connection issue. Please wait a few seconds.",
         });
-      })();
-    }, DISCONNECT_GRACE_MS);
+
+        setTimeout(() => {
+          void (async () => {
+            const activeRoom = await Room.findOne({ roomId, status: "active" })
+              .select("doubter_id")
+              .lean();
+            if (!activeRoom) return;
+
+            const askerId = String(roomDoc.doubter_id ?? userId);
+            if (isUserStillInRoom(io, roomId, askerId)) {
+              io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_REJOINED, {
+                roomId,
+                message: "Asker has reconnected to the session.",
+              });
+              return;
+            }
+
+            io.to(roomId).emit(SOCKET_EVENTS.SESSION_ASKER_LEFT, {
+              roomId,
+              graceSeconds: 3 * 60,
+              message:
+                "Asker left. Please wait up to 3 minutes for them to rejoin. If you leave early, wallet credit may be forfeited.",
+            });
+          })();
+        }, DISCONNECT_RECONNECT_GRACE_MS);
+        return;
+      }
+
+      io.to(roomId).emit(SOCKET_EVENTS.SESSION_SOLVER_DISCONNECTED, {
+        roomId,
+        reconnectGraceSeconds: Math.floor(DISCONNECT_RECONNECT_GRACE_MS / 1000),
+        message:
+          "Your solver may have reloaded the page or has a temporary connection issue. Please wait a few seconds.",
+      });
+
+      setTimeout(() => {
+        void (async () => {
+          const activeRoom = await Room.findOne({ roomId, status: "active" })
+            .select("solver_id")
+            .lean();
+          if (!activeRoom) return;
+
+          const activeSolverId = String(activeRoom.solver_id ?? solverId);
+          if (isUserStillInRoom(io, roomId, activeSolverId)) {
+            io.to(roomId).emit(SOCKET_EVENTS.SESSION_SOLVER_REJOINED, {
+              roomId,
+              message: "Solver has reconnected to the session.",
+            });
+            return;
+          }
+
+          await finalizeSession(io, {
+            roomId,
+            doubtId,
+            solverId,
+            reason: "solver_left",
+            elapsedSeconds: 0,
+          });
+        })();
+      }, DISCONNECT_RECONNECT_GRACE_MS);
+    })();
   });
 };

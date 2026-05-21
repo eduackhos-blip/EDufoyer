@@ -48,10 +48,18 @@ export function useSessionMeeting({
   const [plannedSeconds, setPlannedSeconds] = useState<number | null>(null);
   const [meetingRemainingSecs, setMeetingRemainingSecs] = useState<number | null>(null);
   const [askerGraceRemainingSecs, setAskerGraceRemainingSecs] = useState<number | null>(null);
+  const [askerTemporaryDisconnect, setAskerTemporaryDisconnect] = useState(false);
+  const [solverTemporaryDisconnect, setSolverTemporaryDisconnect] = useState(false);
   const [bothJoinedAt, setBothJoinedAt] = useState<number | null>(null);
   const [sessionProcessed, setSessionProcessed] = useState(false);
+  const [sessionEndReason, setSessionEndReason] = useState<string | null>(null);
+  const [sessionEndNotice, setSessionEndNotice] = useState<{
+    message: string;
+    redirectSeconds: number;
+  } | null>(null);
   const [hasLoadedDuration, setHasLoadedDuration] = useState(false);
   const graceExpiredEmittedRef = useRef(false);
+  const timerExpiredEmittedRef = useRef(false);
 
   const isSolver = Boolean(parsed && currentUser?.userId && parsed.solverId === currentUser.userId);
   const isAsker = Boolean(parsed && currentUser?.userId && !isSolver);
@@ -98,26 +106,62 @@ export function useSessionMeeting({
       applyTimer(payload);
     };
 
+    const onAskerDisconnected = (payload?: { message?: string }) => {
+      if (!isSolver) return;
+      setAskerTemporaryDisconnect(true);
+      toast(
+        payload?.message?.trim() ||
+          "The asker may have reloaded or has a temporary connection issue. Please wait.",
+        { icon: "📡" }
+      );
+    };
+
     const onAskerLeft = (payload?: { graceSeconds?: number }) => {
       if (!isSolver) return;
+      setAskerTemporaryDisconnect(false);
       const secs = payload?.graceSeconds ?? ASKER_REJOIN_GRACE_SECONDS;
       graceExpiredEmittedRef.current = false;
       setAskerGraceRemainingSecs(secs);
       toast("Asker left — please wait up to 3 minutes for them to rejoin.", { icon: "⏳" });
     };
 
-    const onAskerRejoined = () => {
+    const onAskerRejoined = (payload?: { message?: string }) => {
+      if (!isSolver) return;
       graceExpiredEmittedRef.current = false;
+      setAskerTemporaryDisconnect(false);
       setAskerGraceRemainingSecs(null);
-      toast.success("Asker has rejoined the session.");
+      toast.success(payload?.message?.trim() || "Asker has rejoined the session.");
+    };
+
+    const onSolverDisconnected = (payload?: { message?: string }) => {
+      if (!isAsker) return;
+      setSolverTemporaryDisconnect(true);
+      toast(
+        payload?.message?.trim() ||
+          "Your solver may have reloaded or has a temporary connection issue. Please wait.",
+        { icon: "📡" }
+      );
+    };
+
+    const onSolverRejoined = (payload?: { message?: string }) => {
+      if (!isAsker) return;
+      setSolverTemporaryDisconnect(false);
+      toast.success(payload?.message?.trim() || "Solver has rejoined the session.");
     };
 
     const onOtherJoined = (payload?: { user?: { userId?: string } }) => {
-      if (!isSolver || !parsed) return;
+      if (!parsed) return;
       const joinedUserId = payload?.user?.userId;
-      if (joinedUserId && joinedUserId !== parsed.solverId) {
+      if (!joinedUserId) return;
+
+      if (isSolver && joinedUserId !== parsed.solverId) {
         graceExpiredEmittedRef.current = false;
+        setAskerTemporaryDisconnect(false);
         setAskerGraceRemainingSecs(null);
+      }
+
+      if (isAsker && joinedUserId === parsed.solverId) {
+        setSolverTemporaryDisconnect(false);
       }
     };
 
@@ -127,7 +171,10 @@ export function useSessionMeeting({
       walletCredited?: boolean;
     }) => {
       setSessionProcessed(true);
+      setSessionEndReason(payload?.reason ?? null);
       setAskerGraceRemainingSecs(null);
+      setAskerTemporaryDisconnect(false);
+      setSolverTemporaryDisconnect(false);
       if (isSolver && payload?.reason === "solver_left") {
         const rating = payload.feedbackRating;
         const credited = payload.walletCredited;
@@ -137,22 +184,64 @@ export function useSessionMeeting({
             : "Session ended. Your doubt has been released."
         );
       }
+      if (isSolver && payload?.reason === "asker_left_rated") {
+        const rating = payload.feedbackRating;
+        const credited = payload.walletCredited;
+        toast.success(
+          rating != null
+            ? `Asker ended the session · you received ${rating}/5${credited ? " · coins credited" : ""}`
+            : "Asker ended the session and will not return."
+        );
+      }
+      if (payload?.reason === "timer_completed") {
+        const rating = payload.feedbackRating;
+        const credited = payload.walletCredited;
+        toast.success(
+          rating != null
+            ? `Session complete · ${rating}/5 rating${credited && isSolver ? " · coins credited" : ""}`
+            : "Scheduled session time has ended."
+        );
+      }
+    };
+
+    const onSessionEndIntimation = (payload?: {
+      message?: string;
+      redirectSeconds?: number;
+      reason?: string;
+    }) => {
+      setSessionEndNotice({
+        message:
+          payload?.message?.trim() ||
+          "Your session has ended. You will be redirected to the dashboard in 5 seconds.",
+        redirectSeconds:
+          typeof payload?.redirectSeconds === "number" && payload.redirectSeconds > 0
+            ? Math.floor(payload.redirectSeconds)
+            : 5,
+      });
     };
 
     socket.on(SOCKET_EVENTS.SESSION_TIMER_START, onTimerStart);
+    socket.on(SOCKET_EVENTS.SESSION_ASKER_DISCONNECTED, onAskerDisconnected);
     socket.on(SOCKET_EVENTS.SESSION_ASKER_LEFT, onAskerLeft);
     socket.on(SOCKET_EVENTS.SESSION_ASKER_REJOINED, onAskerRejoined);
+    socket.on(SOCKET_EVENTS.SESSION_SOLVER_DISCONNECTED, onSolverDisconnected);
+    socket.on(SOCKET_EVENTS.SESSION_SOLVER_REJOINED, onSolverRejoined);
     socket.on(SOCKET_EVENTS.SESSION_PROCESSED, onProcessed);
+    socket.on(SOCKET_EVENTS.SESSION_END_INTIMATION, onSessionEndIntimation);
     socket.on(SOCKET_EVENTS.OTHER_PERSON_JOINED, onOtherJoined);
 
     return () => {
       socket.off(SOCKET_EVENTS.SESSION_TIMER_START, onTimerStart);
+      socket.off(SOCKET_EVENTS.SESSION_ASKER_DISCONNECTED, onAskerDisconnected);
       socket.off(SOCKET_EVENTS.SESSION_ASKER_LEFT, onAskerLeft);
       socket.off(SOCKET_EVENTS.SESSION_ASKER_REJOINED, onAskerRejoined);
+      socket.off(SOCKET_EVENTS.SESSION_SOLVER_DISCONNECTED, onSolverDisconnected);
+      socket.off(SOCKET_EVENTS.SESSION_SOLVER_REJOINED, onSolverRejoined);
       socket.off(SOCKET_EVENTS.SESSION_PROCESSED, onProcessed);
+      socket.off(SOCKET_EVENTS.SESSION_END_INTIMATION, onSessionEndIntimation);
       socket.off(SOCKET_EVENTS.OTHER_PERSON_JOINED, onOtherJoined);
     };
-  }, [socket, isSolver, parsed, plannedSeconds, maxSessionSecondsFromRoom, initiateConnection]);
+  }, [socket, isSolver, isAsker, parsed, plannedSeconds, maxSessionSecondsFromRoom, initiateConnection]);
 
   useEffect(() => {
     if (
@@ -181,6 +270,20 @@ export function useSessionMeeting({
   }, [askerGraceRemainingSecs]);
 
   useEffect(() => {
+    if (!sessionEndNotice || sessionEndNotice.redirectSeconds <= 0) return;
+    const t = setInterval(() => {
+      setSessionEndNotice((prev) => {
+        if (!prev) return prev;
+        if (prev.redirectSeconds <= 1) {
+          return { ...prev, redirectSeconds: 0 };
+        }
+        return { ...prev, redirectSeconds: prev.redirectSeconds - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [sessionEndNotice]);
+
+  useEffect(() => {
     if (!isSolver || !socket || !roomId) return;
     if (askerGraceRemainingSecs !== 0) return;
     if (graceExpiredEmittedRef.current) return;
@@ -192,6 +295,30 @@ export function useSessionMeeting({
       finalizeAs: "asker_left_timeout",
     });
   }, [askerGraceRemainingSecs, isSolver, socket, roomId, solverElapsedSeconds]);
+
+  const effectivePlannedSeconds = plannedSeconds ?? maxSessionSecondsFromRoom ?? 30 * 60;
+
+  useEffect(() => {
+    if (!socket || !roomId || !bothJoinedAt) return;
+    if (meetingRemainingSecs !== 0) return;
+    if (isInAskerGrace) return;
+    if (timerExpiredEmittedRef.current || sessionProcessed) return;
+
+    timerExpiredEmittedRef.current = true;
+    socket.emit(SOCKET_EVENTS.LEAVE_ROOM, {
+      roomId,
+      elapsedSeconds: effectivePlannedSeconds,
+      finalizeAs: "timer_completed",
+    });
+  }, [
+    socket,
+    roomId,
+    bothJoinedAt,
+    meetingRemainingSecs,
+    isInAskerGrace,
+    sessionProcessed,
+    effectivePlannedSeconds,
+  ]);
 
   const emitParticipantLeave = useCallback(() => {
     if (!socket || !roomId) return;
@@ -205,7 +332,32 @@ export function useSessionMeeting({
     });
   }, [socket, roomId, isInAskerGrace, solverElapsedSeconds]);
 
-  const effectivePlannedSeconds = plannedSeconds ?? maxSessionSecondsFromRoom ?? 30 * 60;
+  const emitAskerLeave = useCallback(
+    (options: { withRating: boolean; rating?: number; comment?: string }) => {
+      if (!socket || !roomId || !isAsker) return;
+      const elapsedSeconds = solverElapsedSeconds();
+      if (options.withRating && options.rating != null && options.rating >= 1) {
+        socket.emit(SOCKET_EVENTS.LEAVE_ROOM, {
+          roomId,
+          elapsedSeconds,
+          askerRatedOnLeave: true,
+          askerRating: options.rating,
+          askerComment: options.comment ?? "",
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.LEAVE_ROOM, {
+          roomId,
+          elapsedSeconds,
+        });
+      }
+    },
+    [socket, roomId, isAsker, solverElapsedSeconds]
+  );
+
+  const clearSessionEndNotice = useCallback(() => {
+    setSessionEndNotice(null);
+  }, []);
+
   const isTimerRunning =
     initiateConnection && bothJoinedAt != null && (meetingRemainingSecs ?? 0) > 0;
   const displaySeconds = isTimerRunning
@@ -222,7 +374,13 @@ export function useSessionMeeting({
     askerGraceLabel:
       askerGraceRemainingSecs != null ? formatCountdown(askerGraceRemainingSecs) : null,
     showAskerGraceBanner: isSolver && isInAskerGrace,
+    showAskerReconnectBanner: isSolver && askerTemporaryDisconnect && !isInAskerGrace,
+    showSolverReconnectBanner: isAsker && solverTemporaryDisconnect,
     sessionProcessed,
+    sessionEndReason,
+    sessionEndNotice,
+    clearSessionEndNotice,
     emitParticipantLeave,
+    emitAskerLeave,
   };
 }

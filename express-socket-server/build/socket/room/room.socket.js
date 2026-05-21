@@ -6,7 +6,7 @@ const roomId_1 = require("../../lib/roomId");
 const Doubt_1 = require("../../models/Doubt");
 const Room_1 = require("../../models/Room");
 const events_1 = require("../events");
-const DISCONNECT_GRACE_MS = 15000;
+const DISCONNECT_RECONNECT_GRACE_MS = 7000;
 const ROOM_ID_PATTERN = /^doubt-([a-fA-F0-9]{24})-solver-([a-fA-F0-9]{24})$/;
 /** roomId → true while this session is being finalized (blocks duplicate runs). */
 const finalizingRooms = new Map();
@@ -21,6 +21,13 @@ function isUserStillInRoom(io, roomId, userId) {
         }
     }
     return false;
+}
+function isSessionFinalizeReason(value) {
+    return (value === "solver_left" ||
+        value === "asker_left_timeout" ||
+        value === "asker_left_rated" ||
+        value === "timer_completed" ||
+        value === "solver_left_during_asker_grace");
 }
 async function finalizeSession(io, input) {
     const parsed = (0, roomId_1.parseSessionRoomId)(input.roomId);
@@ -55,6 +62,8 @@ async function finalizeSession(io, input) {
                     reason,
                     elapsedSeconds: elapsed,
                     solverId,
+                    askerRating: input.askerRating,
+                    askerComment: input.askerComment,
                 }),
             });
             const data = (await res.json().catch(() => ({})));
@@ -92,6 +101,14 @@ async function finalizeSession(io, input) {
             elapsedSeconds: elapsed,
             ...processedPayload,
         });
+        if (reason === "timer_completed") {
+            io.to(input.roomId).emit(events_1.SOCKET_EVENTS.SESSION_END_INTIMATION, {
+                roomId: input.roomId,
+                reason,
+                message: "Your session has ended. You will be redirected to the dashboard in 5 seconds.",
+                redirectSeconds: 5,
+            });
+        }
     }
     finally {
         finalizingRooms.delete(input.roomId);
@@ -191,7 +208,16 @@ const registerRoomSocketHandlers = (socket, io) => {
         }
         const sessionAnchor = updated.sessionStartedAt ?? room.sessionStartedAt;
         if (!lobbyOnly && isAsker && hasWaitingParticipant && sessionAnchor) {
-            io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_REJOINED, { roomId });
+            io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_REJOINED, {
+                roomId,
+                message: "Asker has reconnected to the session.",
+            });
+        }
+        if (isSolver && hasWaitingParticipant && sessionAnchor) {
+            io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_SOLVER_REJOINED, {
+                roomId,
+                message: "Solver has reconnected to the session.",
+            });
         }
         if (hasWaitingParticipant) {
             socket.to(roomId).emit(events_1.SOCKET_EVENTS.OTHER_PERSON_JOINED, {
@@ -206,7 +232,7 @@ const registerRoomSocketHandlers = (socket, io) => {
             });
         }
     });
-    socket.on(events_1.SOCKET_EVENTS.LEAVE_ROOM, ({ roomId, elapsedSeconds, finalizeAs } = {}) => {
+    socket.on(events_1.SOCKET_EVENTS.LEAVE_ROOM, ({ roomId, elapsedSeconds, finalizeAs, askerRatedOnLeave, askerRating, askerComment, } = {}) => {
         if (!roomId)
             return;
         const match = roomId.trim().match(ROOM_ID_PATTERN);
@@ -228,13 +254,28 @@ const registerRoomSocketHandlers = (socket, io) => {
             }
             if (!role)
                 return;
+            const elapsed = elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0;
             if (role === "solver") {
                 await finalizeSession(io, {
                     roomId,
                     doubtId,
                     solverId,
-                    reason: finalizeAs,
-                    elapsedSeconds: elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0,
+                    reason: isSessionFinalizeReason(finalizeAs) ? finalizeAs : "solver_left",
+                    elapsedSeconds: elapsed,
+                });
+                return;
+            }
+            if (finalizeAs === "timer_completed") {
+                socket.leave(roomId);
+                const askerId = String(roomDoc.doubter_id ?? userId);
+                if (isUserStillInRoom(io, roomId, askerId))
+                    return;
+                await finalizeSession(io, {
+                    roomId,
+                    doubtId,
+                    solverId,
+                    reason: "timer_completed",
+                    elapsedSeconds: elapsed,
                 });
                 return;
             }
@@ -242,6 +283,22 @@ const registerRoomSocketHandlers = (socket, io) => {
             const askerId = String(roomDoc.doubter_id ?? userId);
             if (isUserStillInRoom(io, roomId, askerId))
                 return;
+            const rated = askerRatedOnLeave === true &&
+                typeof askerRating === "number" &&
+                askerRating >= 1 &&
+                askerRating <= 5;
+            if (rated) {
+                await finalizeSession(io, {
+                    roomId,
+                    doubtId,
+                    solverId,
+                    reason: "asker_left_rated",
+                    elapsedSeconds: elapsedSeconds !== undefined ? Number(elapsedSeconds) : 0,
+                    askerRating: Math.round(askerRating),
+                    askerComment: typeof askerComment === "string" ? askerComment : undefined,
+                });
+                return;
+            }
             io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_LEFT, {
                 roomId,
                 graceSeconds: 3 * 60,
@@ -259,36 +316,81 @@ const registerRoomSocketHandlers = (socket, io) => {
             return;
         const doubtId = match[1];
         const solverId = match[2];
-        setTimeout(() => {
-            if (io.sockets.sockets.has(socket.id))
+        void (async () => {
+            const roomDoc = await Room_1.Room.findOne({ roomId, status: "active" })
+                .select("roomId doubt_id solver_id doubter_id")
+                .lean();
+            if (!roomDoc)
                 return;
-            void (async () => {
-                const roomDoc = await Room_1.Room.findOne({ roomId, status: "active" }).select("roomId doubt_id solver_id doubter_id");
-                if (!roomDoc)
-                    return;
-                let role = null;
-                if (userId === solverId || userId === String(roomDoc.solver_id ?? solverId)) {
-                    role = "solver";
-                }
-                else if (userId === String(roomDoc.doubter_id ?? "")) {
-                    role = "asker";
-                }
-                if (!role)
-                    return;
-                if (role === "solver") {
-                    await finalizeSession(io, { roomId, doubtId, solverId, elapsedSeconds: 0 });
-                    return;
-                }
-                const askerId = String(roomDoc.doubter_id ?? userId);
-                if (isUserStillInRoom(io, roomId, askerId))
-                    return;
-                io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_LEFT, {
+            let role = null;
+            if (userId === solverId || userId === String(roomDoc.solver_id ?? solverId)) {
+                role = "solver";
+            }
+            else if (userId === String(roomDoc.doubter_id ?? "")) {
+                role = "asker";
+            }
+            if (!role)
+                return;
+            if (role === "asker") {
+                io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_DISCONNECTED, {
                     roomId,
-                    graceSeconds: 3 * 60,
-                    message: "Asker left. Please wait up to 3 minutes for them to rejoin. If you leave early, wallet credit may be forfeited.",
+                    reconnectGraceSeconds: Math.floor(DISCONNECT_RECONNECT_GRACE_MS / 1000),
+                    message: "The asker may have reloaded the page or has a temporary connection issue. Please wait a few seconds.",
                 });
-            })();
-        }, DISCONNECT_GRACE_MS);
+                setTimeout(() => {
+                    void (async () => {
+                        const activeRoom = await Room_1.Room.findOne({ roomId, status: "active" })
+                            .select("doubter_id")
+                            .lean();
+                        if (!activeRoom)
+                            return;
+                        const askerId = String(roomDoc.doubter_id ?? userId);
+                        if (isUserStillInRoom(io, roomId, askerId)) {
+                            io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_REJOINED, {
+                                roomId,
+                                message: "Asker has reconnected to the session.",
+                            });
+                            return;
+                        }
+                        io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_ASKER_LEFT, {
+                            roomId,
+                            graceSeconds: 3 * 60,
+                            message: "Asker left. Please wait up to 3 minutes for them to rejoin. If you leave early, wallet credit may be forfeited.",
+                        });
+                    })();
+                }, DISCONNECT_RECONNECT_GRACE_MS);
+                return;
+            }
+            io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_SOLVER_DISCONNECTED, {
+                roomId,
+                reconnectGraceSeconds: Math.floor(DISCONNECT_RECONNECT_GRACE_MS / 1000),
+                message: "Your solver may have reloaded the page or has a temporary connection issue. Please wait a few seconds.",
+            });
+            setTimeout(() => {
+                void (async () => {
+                    const activeRoom = await Room_1.Room.findOne({ roomId, status: "active" })
+                        .select("solver_id")
+                        .lean();
+                    if (!activeRoom)
+                        return;
+                    const activeSolverId = String(activeRoom.solver_id ?? solverId);
+                    if (isUserStillInRoom(io, roomId, activeSolverId)) {
+                        io.to(roomId).emit(events_1.SOCKET_EVENTS.SESSION_SOLVER_REJOINED, {
+                            roomId,
+                            message: "Solver has reconnected to the session.",
+                        });
+                        return;
+                    }
+                    await finalizeSession(io, {
+                        roomId,
+                        doubtId,
+                        solverId,
+                        reason: "solver_left",
+                        elapsedSeconds: 0,
+                    });
+                })();
+            }, DISCONNECT_RECONNECT_GRACE_MS);
+        })();
     });
 };
 exports.registerRoomSocketHandlers = registerRoomSocketHandlers;

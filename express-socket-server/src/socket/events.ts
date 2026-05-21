@@ -16,8 +16,12 @@ export enum SOCKET_EVENTS {
   SCREEN_SHARE_STOP = "screen_share_stop",
   SESSION_BOTH_JOINED = "session:both-joined",
   SESSION_ASKER_LEFT = "session:asker-left",
+  SESSION_ASKER_DISCONNECTED = "session:asker-disconnected",
   SESSION_ASKER_REJOINED = "session:asker-rejoined",
   SESSION_TIMER_START = "session:timer-start",
+  SESSION_SOLVER_DISCONNECTED = "session:solver-disconnected",
+  SESSION_SOLVER_REJOINED = "session:solver-rejoined",
   SESSION_SOLVER_LEFT = "session:solver-left",
   SESSION_PROCESSED = "session:processed",
+  SESSION_END_INTIMATION = "session:end-intimation",
 }

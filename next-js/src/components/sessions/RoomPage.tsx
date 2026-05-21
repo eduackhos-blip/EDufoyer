@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { peer } from "@/src/lib/webrtc/peer";
 import { LeaveCallModal } from "@/src/components/room/LeaveCallModal";
@@ -23,11 +23,13 @@ import { useUserPreferences } from "@/src/hooks/useUserPreferences";
 import { useWebRtcAnswer } from "@/src/hooks/useWebRtcAnswer";
 import { useWebRtcIceCandidate } from "@/src/hooks/useWebRtcIceCandidate";
 import { useWebRtcOffer } from "@/src/hooks/useWebRtcOffer";
+import { useWebRtcReconnect } from "@/src/hooks/useWebRtcReconnect";
 import { useResolvedSessionRoomId } from "@/src/hooks/useResolvedSessionRoomId";
 import { useLobbyRoomPresence } from "@/src/hooks/useLobbyRoomPresence";
 import { getFirstNameInitial } from "@/src/lib/userInitial";
 import { useSolverLeftRating } from "@/src/hooks/useSolverLeftRating";
 import { SessionRoomUnavailable } from "@/src/components/sessions/SessionRoomUnavailable";
+import { AskerLeaveRatingModal } from "@/src/components/sessions/AskerLeaveRatingModal";
 import { SolverLeftRatingModal } from "@/src/components/sessions/SolverLeftRatingModal";
 
 function resolveRouteParam(rawParams: Record<string, string | string[] | undefined>) {
@@ -56,9 +58,12 @@ export default function RoomPage() {
 
   const [showLobbyScreen, setShowLobbyScreen] = useState<boolean>(true);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showAskerLeaveRatingModal, setShowAskerLeaveRatingModal] = useState(false);
+  const [askerLeaveSubmitting, setAskerLeaveSubmitting] = useState(false);
   const initiateConnection = !showLobbyScreen;
 
   const [remoteSocketId, setRemoteSocketId] = useState<string | null>(null);
+  const [peerConnectionEpoch, setPeerConnectionEpoch] = useState(() => peer.connectionEpoch);
   const { isScreenSharing, userScreenShareStream, toggleScreenShare, stopScreenShare } = useScreenShare({
     roomId,
     toSocketId: remoteSocketId,
@@ -66,7 +71,26 @@ export default function RoomPage() {
   const [remoteUser, setRemoteUser] = useState<{ userId: string; username: string; email: string } | null>(null);
 
   const { myStream, mediaError } = useLocalMediaStream();
-  const { isMicOn, isCameraOn, handleMicToggle, handleCameraToggle } = useUserPreferences(myStream);
+  const {
+    isMicOn,
+    isCameraOn,
+    handleMicToggle: toggleMicPreference,
+    handleCameraToggle: toggleCameraPreference,
+  } = useUserPreferences(myStream);
+
+  const syncLocalMediaToPeer = useCallback(() => {
+    if (!myStream || !peer.peer) return;
+    void peer.attachLocalStream(myStream);
+  }, [myStream]);
+
+  useEffect(() => {
+    peer.onConnectionEpochChange = () => {
+      setPeerConnectionEpoch(peer.connectionEpoch);
+    };
+    return () => {
+      peer.onConnectionEpochChange = null;
+    };
+  }, []);
 
   const sessionMeeting = useSessionMeeting({
     roomId,
@@ -107,9 +131,20 @@ export default function RoomPage() {
   useWebRtcAnswer(activeSocket);
   useNegotiationNeededAnswer(activeSocket);
   useNegotiationRemoteAnswer(activeSocket);
-  useNegotiationNeeded({ socket: activeSocket, roomId, remoteSocketId, enabled: initiateConnection });
+  useNegotiationNeeded({
+    socket: activeSocket,
+    roomId,
+    remoteSocketId,
+    enabled: initiateConnection,
+    peerConnectionEpoch,
+  });
   useWebRtcIceCandidate(activeSocket);
-  useIceCandidateListener({ socket: activeSocket, roomId, remoteSocketId });
+  useIceCandidateListener({
+    socket: activeSocket,
+    roomId,
+    remoteSocketId,
+    peerConnectionEpoch,
+  });
 
   const {
     remoteStream,
@@ -118,7 +153,34 @@ export default function RoomPage() {
     remoteScreenShareStream,
     isRemoteCameraEnabled,
     clearRemoteScreenShare,
-  } = useRemoteTrackListener({ remoteSocketId });
+    clearRemoteMedia,
+  } = useRemoteTrackListener({ remoteSocketId, peerConnectionEpoch });
+
+  const resetWebRtcSession = useCallback(() => {
+    peer.closeConnection();
+    setRemoteSocketId(null);
+    setRemoteUser(null);
+    clearRemoteMedia();
+    setPeerConnectionEpoch(peer.connectionEpoch);
+  }, [clearRemoteMedia]);
+
+  useWebRtcReconnect({
+    socket: activeSocket,
+    enabled: initiateConnection,
+    isSolver: sessionMeeting.isSolver,
+    isAsker: sessionMeeting.isAsker,
+    onReset: resetWebRtcSession,
+  });
+
+  const handleMicToggle = useCallback(() => {
+    toggleMicPreference();
+    syncLocalMediaToPeer();
+  }, [toggleMicPreference, syncLocalMediaToPeer]);
+
+  const handleCameraToggle = useCallback(() => {
+    toggleCameraPreference();
+    syncLocalMediaToPeer();
+  }, [toggleCameraPreference, syncLocalMediaToPeer]);
 
   useScreenShareStopListener({
     socket: activeSocket,
@@ -149,15 +211,78 @@ export default function RoomPage() {
     setShowLeaveModal(false);
   }, []);
 
-  const handleConfirmLeave = useCallback(() => {
-    sessionMeeting.emitParticipantLeave();
+  const leaveCallCleanup = useCallback(() => {
     if (isScreenSharing) {
       stopScreenShare();
     }
     peer.closeConnection();
+  }, [isScreenSharing, stopScreenShare]);
+
+  const handleConfirmLeave = useCallback(() => {
     setShowLeaveModal(false);
+    if (sessionMeeting.isAsker) {
+      setShowAskerLeaveRatingModal(true);
+      return;
+    }
+    sessionMeeting.emitParticipantLeave();
+    leaveCallCleanup();
     router.push("/dashboard");
-  }, [isScreenSharing, router, stopScreenShare, sessionMeeting]);
+  }, [sessionMeeting, leaveCallCleanup, router]);
+
+  const handleAskerLeaveWithRating = useCallback(
+    async (rating: number, comment: string) => {
+      setAskerLeaveSubmitting(true);
+      try {
+        sessionMeeting.emitAskerLeave({ withRating: true, rating, comment });
+        leaveCallCleanup();
+        setShowAskerLeaveRatingModal(false);
+        router.push("/dashboard");
+      } finally {
+        setAskerLeaveSubmitting(false);
+      }
+    },
+    [sessionMeeting, leaveCallCleanup, router]
+  );
+
+  const handleAskerLeaveWithoutRating = useCallback(() => {
+    sessionMeeting.emitAskerLeave({ withRating: false });
+    leaveCallCleanup();
+    setShowAskerLeaveRatingModal(false);
+    router.push("/dashboard");
+  }, [sessionMeeting, leaveCallCleanup, router]);
+
+  useEffect(() => {
+    if (!sessionMeeting.sessionProcessed) return;
+    const reason = sessionMeeting.sessionEndReason;
+    if (reason === "asker_left_rated") {
+      leaveCallCleanup();
+      router.push("/dashboard");
+    }
+  }, [
+    sessionMeeting.sessionProcessed,
+    sessionMeeting.sessionEndReason,
+    leaveCallCleanup,
+    router,
+  ]);
+
+  useEffect(() => {
+    if (!sessionMeeting.sessionEndNotice) return;
+    if (sessionMeeting.sessionEndNotice.redirectSeconds > 0) return;
+    leaveCallCleanup();
+    sessionMeeting.clearSessionEndNotice();
+    router.push("/dashboard");
+  }, [
+    sessionMeeting.sessionEndNotice,
+    sessionMeeting.clearSessionEndNotice,
+    leaveCallCleanup,
+    router,
+  ]);
+
+  const handleManualDashboardReturn = useCallback(() => {
+    leaveCallCleanup();
+    sessionMeeting.clearSessionEndNotice();
+    router.push("/dashboard");
+  }, [leaveCallCleanup, sessionMeeting.clearSessionEndNotice, router]);
 
   if (isResolving) {
     return (
@@ -244,6 +369,8 @@ export default function RoomPage() {
           isTimerRunning={sessionMeeting.isTimerRunning}
           showAskerGraceBanner={sessionMeeting.showAskerGraceBanner}
           askerGraceLabel={sessionMeeting.askerGraceLabel}
+          showAskerReconnectBanner={sessionMeeting.showAskerReconnectBanner}
+          showSolverReconnectBanner={sessionMeeting.showSolverReconnectBanner}
           messages={messages}
           chatInput={chatInput}
           setChatInput={setChatInput}
@@ -256,6 +383,15 @@ export default function RoomPage() {
           variant={sessionMeeting.isSolver ? "solver" : "default"}
           onCancel={handleDismissLeaveModal}
           onConfirm={handleConfirmLeave}
+        />
+      ) : null}
+
+      {showAskerLeaveRatingModal ? (
+        <AskerLeaveRatingModal
+          open={showAskerLeaveRatingModal}
+          submitting={askerLeaveSubmitting}
+          onSubmit={handleAskerLeaveWithRating}
+          onSkip={handleAskerLeaveWithoutRating}
         />
       ) : null}
 
@@ -272,6 +408,29 @@ export default function RoomPage() {
             if (ok) router.push("/dashboard");
           }}
         />
+      ) : null}
+
+      {sessionMeeting.sessionEndNotice ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/40">
+            <h3 className="text-lg font-semibold text-slate-100">Session ended</h3>
+            <p className="mt-2 text-sm text-slate-300">{sessionMeeting.sessionEndNotice.message}</p>
+            <p className="mt-2 text-xs text-slate-400">
+              Redirecting in{" "}
+              <span className="font-mono text-slate-200">
+                {Math.max(0, sessionMeeting.sessionEndNotice.redirectSeconds)}s
+              </span>
+              .
+            </p>
+            <button
+              type="button"
+              onClick={handleManualDashboardReturn}
+              className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500"
+            >
+              Back to dashboard now
+            </button>
+          </div>
+        </div>
       ) : null}
     </main>
   );
