@@ -8,9 +8,18 @@ const envFile = nodeEnv === "production" ? ".env.production" : ".env.development
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
 
+/** Defaults match next-js/proxy.ts so browsers on edufoyer.com can connect. */
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "https://edufoyer.com",
+  "http://edufoyer.com",
+  "https://www.edufoyer.com",
+];
+
 const parseAllowedOrigins = (raw?: string) => {
   if (!raw || raw.trim().length === 0) {
-    return ["http://localhost:3000", "http://localhost:5173"];
+    return DEFAULT_ALLOWED_ORIGINS;
   }
   return raw
     .split(",")

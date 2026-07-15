@@ -33,7 +33,9 @@ declare namespace NodeJS {
 
     // App URLs
     FRONTEND_URL?: string;
+    /** Browser Socket.IO URL; production default: https://e-dufoyer-ip1r.vercel.app */
     NEXT_PUBLIC_SOCKET_URL?: string;
+    NEXT_PUBLIC_API_BASE_URL?: string;
   }
 }
 

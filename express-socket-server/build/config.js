@@ -11,9 +11,17 @@ const envFile = nodeEnv === "production" ? ".env.production" : ".env.development
 // Prefer explicit env files (.env.development/.env.production), fallback to plain .env.
 dotenv_1.default.config({ path: node_path_1.default.resolve(process.cwd(), envFile) });
 dotenv_1.default.config();
+/** Defaults match next-js/proxy.ts so browsers on edufoyer.com can connect. */
+const DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://edufoyer.com",
+    "http://edufoyer.com",
+    "https://www.edufoyer.com",
+];
 const parseAllowedOrigins = (raw) => {
     if (!raw || raw.trim().length === 0) {
-        return ["http://localhost:3000", "http://localhost:5173"];
+        return DEFAULT_ALLOWED_ORIGINS;
     }
     return raw
         .split(",")

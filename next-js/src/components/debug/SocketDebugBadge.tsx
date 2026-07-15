@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getPublicSocketUrl } from "@/src/config/socketUrl";
 import { useSocket } from "@/src/contexts/SocketContext";
-
-const getSocketUrl = () =>
-  process.env.NEXT_PUBLIC_SOCKET_URL?.trim() || "http://localhost:4001";
 
 export function SocketDebugBadge() {
   const { isConnected, socketId, socket, connectSocket } = useSocket();
@@ -66,7 +64,7 @@ export function SocketDebugBadge() {
           <dl className="space-y-1.5">
             <div className="flex justify-between gap-2">
               <dt className="text-slate-500">URL</dt>
-              <dd className="truncate text-right text-slate-200">{getSocketUrl()}</dd>
+              <dd className="truncate text-right text-slate-200">{getPublicSocketUrl()}</dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-slate-500">Socket ID</dt>

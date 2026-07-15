@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import { getPublicSocketUrl } from "@/src/config/socketUrl";
 
 type SocketContextValue = {
   socket: Socket | null;
@@ -12,12 +13,6 @@ type SocketContextValue = {
 };
 
 const SocketContext = createContext<SocketContextValue | undefined>(undefined);
-
-const getSocketUrl = () => {
-  const fromEnv = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
-  if (fromEnv) return fromEnv;
-  return "http://localhost:4001";
-};
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
@@ -33,7 +28,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!socketRef.current) {
-      const socketUrl = getSocketUrl();
+      const socketUrl = getPublicSocketUrl();
       if (!socketUrl) return null;
 
       const socket = io(socketUrl, {

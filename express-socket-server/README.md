@@ -1,27 +1,42 @@
 # Express Socket Server
 
-Standalone Socket.IO service extracted from backend realtime logic.
+Standalone Socket.IO service for Edufoyer live sessions (WebRTC signaling, rooms, chat, solver presence) plus HTTP fan-out for the Next.js app.
 
 ## What it handles
 
-- Socket client connections
-- `registerSolver` event:
-  - joins `solver:{userId}` room
-  - resolves subjects (from payload or Mongo `solvers` collection)
-  - joins `subject:{subject}` rooms
-- Health endpoint: `GET /health`
-- Server-to-server event publishing:
-  - `POST /emit`
-  - `POST /emit-many`
+- Authenticated Socket.IO connections (JWT)
+- `registerSolver` / `join:admin` presence rooms
+- Session rooms: join/leave, timers, disconnect grace
+- WebRTC signaling relay + in-room chat
+- Health: `GET /health`
+- Server-to-server publish: `POST /emit`, `POST /emit-many`
 
 ## Environment
 
-Copy `.env.example` to `.env` and update values.
+Copy `.env.example` to `.env.development` or `.env.production` and fill in values.
 
-- `SOCKET_PORT`
-- `MONGODB_URI`
-- `SOCKET_ALLOWED_ORIGINS` (comma-separated)
-- `SOCKET_SERVER_API_KEY` (optional but recommended)
+| Variable | Description |
+|----------|-------------|
+| `SOCKET_PORT` | Listen port (default `4001`) |
+| `MONGODB_URI` | Same MongoDB as Next.js |
+| `SOCKET_ALLOWED_ORIGINS` | Comma-separated browser origins (must include `https://edufoyer.com` in production) |
+| `SOCKET_SERVER_API_KEY` | Shared secret for `/emit` (set a strong value in production) |
+| `JWT_SECRET` | Same secret as Next.js JWT signing |
+| `NEXT_API_URL` | Next.js base URL for session end processing |
+
+Env file loaded by `NODE_ENV`: `.env.production` or `.env.development`, then fallback `.env`.
+
+### Production origins
+
+For deployment, `SOCKET_ALLOWED_ORIGINS` should include at least:
+
+```text
+https://edufoyer.com,https://www.edufoyer.com
+```
+
+These are also included in code defaults when the env var is unset.
+
+Set `NEXT_API_URL=https://edufoyer.com` so session finalize callbacks hit the live app.
 
 ## Run
 
@@ -31,8 +46,10 @@ npm run dev
 
 ```bash
 npm run build
-npm start
+NODE_ENV=production npm start
 ```
+
+On boot the server logs allowed origins — confirm `https://edufoyer.com` appears.
 
 ## Publish event example
 
