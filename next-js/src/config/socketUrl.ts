@@ -2,7 +2,7 @@
  * Public Socket.IO base URL for the browser client.
  * Prefer NEXT_PUBLIC_SOCKET_URL; fall back by environment.
  */
-export const PRODUCTION_SOCKET_URL = "https://e-dufoyer-ip1r.vercel.app";
+export const PRODUCTION_SOCKET_URL = "https://socket-server-steel.vercel.app";
 
 export function getPublicSocketUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
