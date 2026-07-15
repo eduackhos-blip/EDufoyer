@@ -5,7 +5,9 @@ const defaultAllowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5000",
   "https://edufoyer.com",
+  "https://www.edufoyer.com",
   "http://edufoyer.com",
+  "http://www.edufoyer.com",
 ];
 
 const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || "")
@@ -19,7 +21,7 @@ const corsAllowedOrigins = new Set(
 
 const csp = [
   "default-src 'self'",
-  "connect-src 'self' https://edufoyer.com http://edufoyer.com",
+  "connect-src 'self' https://edufoyer.com https://www.edufoyer.com http://edufoyer.com https://socket-server-steel.vercel.app wss://socket-server-steel.vercel.app",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
