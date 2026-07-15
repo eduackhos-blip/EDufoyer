@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/src/lib/db";
-import { getAuthenticatedUser } from "@/src/utils/server/currentUser";
+import { getAuthenticatedUser, getAuthUserId } from "@/src/utils/server/currentUser";
 import { authErrorResponse } from "@/src/utils/server/errorResponse";
 import { z } from "zod";
 import Doubt from "@/src/models/Doubt";
 import SolverDoubts from "@/src/models/SolverDoubts";
 import Solver from "@/src/models/Solver";
-import Wallet from "@/src/models/Wallet";
 import Notification from "@/src/models/Notification";
 import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
+import { creditCoinsToSolver } from "@/src/utils/server/walletCredits";
 
 export const runtime = "nodejs";
 
@@ -42,90 +42,6 @@ async function createNotification({
   }
 }
 
-function calculateCoins(doubtType: string, averageRating: number) {
-  const baseCoins: Record<string, number> = {
-    small: 40,
-    medium: 60,
-    large: 100,
-  };
-  const base = baseCoins[doubtType] || 40;
-  const coins = base - (base / 5) * (5 - averageRating);
-  return Math.round(coins);
-}
-
-async function recalculateAllCoins(solverId: string) {
-  const solvedDoubts = await SolverDoubts.find({
-    solver_id: solverId,
-    resolution_status: "session_completed",
-    feedback_rating: { $exists: true, $ne: null },
-  }).populate("doubt_id", "category rating");
-
-  if (solvedDoubts.length === 0) {
-    let wallet = await Wallet.findOne({ user_id: solverId });
-    if (wallet) {
-      wallet.balance = 0;
-      wallet.total_earned = 0;
-      wallet.transactions = [];
-      await wallet.save();
-    }
-    return { success: true, totalCoins: 0, balance: 0, averageRating: 0 };
-  }
-
-  const totalRating = solvedDoubts.reduce((sum: number, sd: any) => sum + (sd.feedback_rating || 0), 0);
-  const averageRating = totalRating / solvedDoubts.length;
-  const roundedAverage = Math.round(averageRating * 10) / 10;
-
-  let totalCoins = 0;
-  const transactions: any[] = [];
-
-  for (const solverDoubt of solvedDoubts as any[]) {
-    const doubt = (solverDoubt as any).doubt_id;
-    if (!doubt) continue;
-    const doubtType = (doubt as any).category || "medium";
-    const coinsForThisDoubt = calculateCoins(doubtType, roundedAverage);
-    totalCoins += coinsForThisDoubt;
-    transactions.push({
-      doubt_id: (doubt as any)._id,
-      amount: coinsForThisDoubt,
-      doubt_type: doubtType,
-      rating: (solverDoubt as any).feedback_rating || (doubt as any).rating || 0,
-      average_rating: roundedAverage,
-      createdAt: (solverDoubt as any).resolved_at || (solverDoubt as any).updatedAt || new Date(),
-    });
-  }
-
-  let wallet = await Wallet.findOne({ user_id: solverId });
-  if (!wallet) {
-    wallet = new (Wallet as any)({ user_id: solverId, balance: 0, total_earned: 0, transactions: [] });
-  }
-
-  (wallet as any).balance = totalCoins;
-  (wallet as any).total_earned = totalCoins;
-  (wallet as any).transactions = transactions;
-  await (wallet as any).save();
-
-  return { success: true, totalCoins, balance: (wallet as any).balance, averageRating: roundedAverage };
-}
-
-async function creditCoinsToSolver(solverId: string, doubtId: string) {
-  const doubt = await Doubt.findById(doubtId);
-  if (!doubt) return { success: false, error: "Doubt not found" };
-
-  const result = await recalculateAllCoins(solverId);
-  if (!(result as any).success) return result as any;
-
-  const wallet = await Wallet.findOne({ user_id: solverId });
-  const thisDoubtTransaction = (wallet as any)?.transactions?.find((tx: any) => String(tx.doubt_id) === String(doubtId));
-
-  return {
-    success: true,
-    coins: thisDoubtTransaction?.amount || 0,
-    balance: (result as any).balance,
-    averageRating: (result as any).averageRating,
-    totalCoins: (result as any).totalCoins,
-  };
-}
-
 async function submitFeedback(formData: unknown, userId: string) {
   const validated = SubmitFeedbackSchema.safeParse(formData);
   if (!validated.success) {
@@ -145,53 +61,99 @@ async function submitFeedback(formData: unknown, userId: string) {
       return { success: false, error: "You are not authorized to rate this doubt." };
     }
 
-    if (!(doubt as any).solver_id) {
-      return { success: false, error: "No solver assigned for this doubt." };
+    const endedStatuses = [
+      "session_completed",
+      "ended_solver_left",
+      "ended_asker_timeout",
+      "ended_asker_rated",
+    ] as const;
+    const systemEndedStatuses = ["ended_solver_left", "ended_asker_timeout"] as const;
+
+    let solverDoubt = (doubt as any).solver_id
+      ? await SolverDoubts.findOne({ doubt_id: doubtId, solver_id: (doubt as any).solver_id })
+      : null;
+
+    if (!solverDoubt) {
+      solverDoubt = await SolverDoubts.findOne({
+        doubt_id: doubtId,
+        resolution_status: { $in: [...endedStatuses] },
+      }).sort({ resolved_at: -1, updatedAt: -1 });
     }
 
-    const solverDoubt = await SolverDoubts.findOne({ doubt_id: doubtId, solver_id: (doubt as any).solver_id });
-    const isAlreadyCompleted = solverDoubt && (solverDoubt as any).resolution_status === "session_completed";
+    if (!solverDoubt) {
+      return { success: false, error: "No completed session found to rate for this doubt." };
+    }
+
+    const solverId = String((solverDoubt as any).solver_id);
+    const resolutionStatus = (solverDoubt as any).resolution_status as string;
+    const systemRating = (solverDoubt as any).feedback_rating as number | undefined;
+    const isSystemEndedSession = systemEndedStatuses.includes(
+      resolutionStatus as (typeof systemEndedStatuses)[number]
+    );
 
     const now = new Date();
+
+    if (isSystemEndedSession && systemRating != null) {
+      const trimmedComment = comment?.trim();
+      if (trimmedComment) {
+        const existing = String((solverDoubt as any).feedback_comment || "").trim();
+        const askerNote = `Asker note: ${trimmedComment}`;
+        await SolverDoubts.findByIdAndUpdate((solverDoubt as any)._id, {
+          feedback_comment: existing ? `${existing}\n\n${askerNote}` : askerNote,
+          updatedAt: now,
+        });
+      }
+
+      return {
+        success: true,
+        message: trimmedComment
+          ? "Thank you — your note was saved."
+          : "Session rating was already recorded by the system.",
+        rating: systemRating,
+        systemRated: true,
+      };
+    }
+
+    const skipSolverStatsIncrement = endedStatuses.includes(
+      resolutionStatus as (typeof endedStatuses)[number]
+    );
+
     await Doubt.findByIdAndUpdate(doubtId, { status: "resolved", is_solved: true, rating, updatedAt: now }, { new: true });
 
-    if (solverDoubt) {
-      await SolverDoubts.findByIdAndUpdate(
-        (solverDoubt as any)._id,
-        {
-          resolution_status: "session_completed",
-          resolved_at: (solverDoubt as any).resolved_at || now,
-          feedback_rating: rating,
-          feedback_comment: comment || undefined,
-          updatedAt: now,
-        },
-        { new: true }
-      );
-    }
+    await SolverDoubts.findByIdAndUpdate(
+      (solverDoubt as any)._id,
+      {
+        resolution_status: "session_completed",
+        resolved_at: (solverDoubt as any).resolved_at || now,
+        feedback_rating: rating,
+        feedback_comment: comment || undefined,
+        updatedAt: now,
+      },
+      { new: true }
+    );
 
-    let coinInfo: any = null;
-    if (!isAlreadyCompleted) {
-      const solver = await Solver.findOne({ user_id: (doubt as any).solver_id });
+    if (!skipSolverStatsIncrement) {
+      const solver = await Solver.findOne({ user_id: solverId });
       if (solver) {
-        await Solver.findByIdAndUpdate((solver as any)._id, { $inc: { total_doubts_solved: 1 }, updatedAt: now }, { new: true });
+        await Solver.findByIdAndUpdate(
+          (solver as any)._id,
+          { $inc: { total_doubts_solved: 1 }, updatedAt: now },
+          { new: true }
+        );
       }
-      coinInfo = await creditCoinsToSolver(String((doubt as any).solver_id), String(doubtId));
+      await creditCoinsToSolver(solverId, String(doubtId));
     }
-
-    const notificationContent = coinInfo?.success
-      ? `Your solution has been rated. You earned ${coinInfo.coins} coins! (Balance: ${coinInfo.balance} coins)`
-      : "Your solution has been rated by the student.";
 
     await createNotification({
-      userId: (doubt as any).solver_id,
+      userId: solverId,
       doubtId,
       messageType: "SOLUTION_ACCEPTED",
-      content: notificationContent,
+      content: "Your solution has been rated by the student.",
     });
 
     void publishSocketEvent({
       event: "doubt:rated",
-      room: `solver:${String((doubt as any).solver_id)}`,
+      room: `solver:${solverId}`,
       payload: {
         doubtId: String(doubtId),
         rating,
@@ -209,7 +171,7 @@ export async function POST(req: NextRequest) {
     await connectDb();
     const user = await getAuthenticatedUser(req);
     const body = await req.json();
-    const result = await submitFeedback(body, user.id);
+    const result = await submitFeedback(body, getAuthUserId(user));
     if (result.success) return NextResponse.json({ success: true, message: result.message }, { status: 200 });
     return NextResponse.json(
       { success: false, message: result.error, fieldErrors: result.fieldErrors },

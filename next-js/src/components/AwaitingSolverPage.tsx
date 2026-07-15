@@ -1,13 +1,197 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, User, Bell, CheckCircle, AlertCircle, RefreshCw, Video, Calendar } from 'lucide-react';
+import { ArrowLeft, Bell, BookOpen, Check, Clock, Flag, RefreshCw, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import notificationService from '../services/notificationService';
 import doubtService from '../services/doubtService';
 import SolverAcceptanceNotification from './SolverAcceptanceNotification';
 import { useSocket } from '../contexts/SocketContext';
 
+const PAGE_BG = '#ffffff';
+const FOREST = '#073E36';
+const CARD_SAGE = '#E6EDD7';
+
+/** Elevation for inset white / light panels on sage cards (readable spread, forest tint). */
+const INNER_PANEL_BOX_SHADOW =
+  '0 2px 8px rgba(7, 62, 54, 0.07), 0 10px 32px rgba(7, 62, 54, 0.12), 0 22px 56px -8px rgba(7, 62, 54, 0.16), 0 36px 80px -14px rgba(7, 62, 54, 0.1)';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  small: 'Small',
+  medium: 'Medium',
+  large: 'Large'
+};
+
+function SectionTitle({
+  children,
+  icon,
+  iconPosition = 'start',
+  titleClassName = '',
+  tight = false
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  iconPosition?: 'start' | 'end';
+  titleClassName?: string;
+  /** Less margin below the title row (e.g. before a tightly coupled panel). */
+  tight?: boolean;
+}) {
+  const label = (
+    <span
+      className={`relative inline-block pt-[7px] text-[18px] font-bold leading-tight tracking-tight text-[#1a2e2c] md:text-[20px]${titleClassName ? ` ${titleClassName}` : ''}`}
+    >
+      <img
+        src="/aboveMarks.png"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute left-[-17px] top-0 h-[20px] w-[26px] object-contain"
+        decoding="async"
+      />
+      {children}
+    </span>
+  );
+
+  return (
+    <div className={`flex items-center gap-2 ${tight ? 'mb-1' : 'mb-3'}`}>
+      {iconPosition === 'start' && icon}
+      {label}
+      {iconPosition === 'end' && <span className="inline-flex translate-y-[5px]">{icon}</span>}
+    </div>
+  );
+}
+
+/** Small white sparkles beside hero line art (match mock). */
+function WaitingRoomHeroSparkles() {
+  return (
+    <div
+      className="mb-6 ml-0.5 flex shrink-0 items-end gap-0.5 self-end md:mb-7 md:ml-1"
+      style={{ position: 'relative', top: '-5rem', rotate: '39deg' }}
+      aria-hidden
+    >
+      <img
+        src="/whiteStarBigger.png"
+        alt=""
+        className="h-4 w-auto object-contain opacity-95 drop-shadow-[0_0_10px_rgba(255,255,255,0.35)] md:h-5"
+        decoding="async"
+      />
+      <img
+        src="/whiteStarBigger.png"
+        alt=""
+        className="mb-1 -ml-0.5 h-3 w-auto translate-y-0.5 object-contain opacity-90 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] md:mb-1.5 md:h-3.5"
+        decoding="async"
+      />
+    </div>
+  );
+}
+
+/** Hero art: waiting-room line art (asset in /public). */
+function WaitingRoomIllustration() {
+  return (
+    <img
+      src="/waitingRoomImage.png"
+      alt=""
+      aria-hidden
+      className="pointer-events-none h-auto max-h-[10.5rem] w-auto max-w-[min(88vw,17rem)] shrink-0 select-none object-contain object-bottom md:max-h-[12.5rem] md:max-w-[20rem]"
+      decoding="async"
+    />
+  );
+}
+
+/** Decorative corner stars on white inner panels (match mock). */
+function CardCornerStars({ variant }: { variant: 'how' | 'process' }) {
+  const star = (position: string, heightClass: string) => (
+    <img
+      src="/fillStarBottom.png"
+      alt=""
+      aria-hidden
+      className={`pointer-events-none absolute z-0 object-contain select-none ${position} ${heightClass} w-auto`}
+      decoding="async"
+    />
+  );
+  if (variant === 'how') {
+    return (
+      <>
+        {star('left-2 top-2 md:left-2.5 md:top-2.5', 'h-4 md:h-[18px]')}
+        {star('right-2 top-2 md:right-2.5 md:top-2.5', 'h-[22px] md:h-6')}
+        {star('right-7 top-3 md:right-8 md:top-3', 'h-3 md:h-3.5')}
+      </>
+    );
+  }
+  return (
+    <>
+      {star('right-2 top-2 md:right-2.5 md:top-2.5', 'h-[22px] md:h-6')}
+      {star('right-8 top-3 md:right-9 md:top-3', 'h-3 md:h-3.5')}
+    </>
+  );
+}
+
+/** Curved dotted connectors between three step nodes (matches mock). */
+function HowItWorksTrack() {
+  return (
+    <div className="relative z-[1] px-1 pb-1 pt-2">
+      <svg
+        className="pointer-events-none absolute left-2 right-2 top-[22px] h-[52px] w-[calc(100%-16px)] text-[#a8bdb4]"
+        viewBox="0 0 260 52"
+        fill="none"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <path
+          d="M 38 26 Q 68 46 98 26"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeDasharray="4 6"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d="M 162 26 Q 192 46 222 26"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeDasharray="4 6"
+          strokeLinecap="round"
+          fill="none"
+        />
+      </svg>
+      <div className="relative z-[1] flex justify-between gap-2">
+        {[
+          { Icon: Check, active: true, label: 'Step 1' },
+          { Icon: BookOpen, active: false, label: 'Step 2' },
+          { Icon: Flag, active: false, label: 'Step 3' }
+        ].map(({ Icon, active, label }) => (
+          <div key={label} className="flex flex-1 flex-col items-center gap-2">
+            <div
+              className={`flex h-[46px] w-[46px] items-center justify-center rounded-full shadow-md ${
+                active ? 'bg-[#073E36]' : 'bg-[#dfe6e3]'
+              }`}
+            >
+              <Icon className={`h-[22px] w-[22px] ${active ? 'text-white' : 'text-[#6b7a76]'}`} strokeWidth={active ? 2.6 : 2.2} />
+            </div>
+            <span
+              className={`text-center text-[11px] font-bold tracking-tight ${
+                active ? 'text-[#073E36]' : 'text-[#6b7a76]'
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatSubjectLabel(subject: string | undefined) {
+  if (!subject || !String(subject).trim()) return 'Unknown';
+  return String(subject)
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
 const AwaitingSolverPage = () => {
-  const { doubtId } = useParams();
+  const params = useParams();
+  const doubtId = (Array.isArray(params.doubtId) ? params.doubtId[0] : params.doubtId) as string;
   const router = useRouter();
   const [doubt, setDoubt] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,31 +201,22 @@ const AwaitingSolverPage = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [showAcceptanceNotification, setShowAcceptanceNotification] = useState(false);
   const [solverInfo, setSolverInfo] = useState(null);
+  const [withdrawing, setWithdrawing] = useState(false);
   const socketRef = useRef(null);
   const { socket: sharedSocket, connectSocket } = useSocket();
 
-  // Format time elapsed
-  const formatTimeElapsed = (seconds) => {
+  const formatTimeElapsed = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
+    if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
       return `${secs}s`;
-    }
   };
 
-  // Fetch doubt details
   const fetchDoubtDetails = async () => {
     try {
       const response = await doubtService.getDoubtById(doubtId);
-      console.log('📋 Doubt response:', response);
-      
-      // Handle different response structures
       let doubtData;
       if (response && response.data && response.data.doubt) {
         doubtData = response.data.doubt;
@@ -52,11 +227,7 @@ const AwaitingSolverPage = () => {
       } else {
         throw new Error('Invalid response structure');
       }
-      
-      console.log('📋 Processed doubt data:', doubtData);
       setDoubt(doubtData);
-      
-      // If doubt is assigned, show acceptance modal instead of auto-redirect
       if (doubtData.status === 'assigned') {
         setSolverInfo({ name: 'Solver', doubtTitle: doubtData.subject });
         setShowAcceptanceNotification(true);
@@ -68,33 +239,27 @@ const AwaitingSolverPage = () => {
     }
   };
 
-  // Fetch notifications
   const fetchNotifications = async () => {
     try {
       const notificationData = await notificationService.getNotifications();
-      console.log('📋 Notifications response:', notificationData);
-      
-      // Handle different response structures
-      let notifications = [];
+      let list: unknown[] = [];
       if (Array.isArray(notificationData)) {
-        notifications = notificationData;
-      } else if (notificationData && Array.isArray(notificationData.data)) {
-        notifications = notificationData.data;
-      } else if (notificationData && Array.isArray(notificationData.notifications)) {
-        notifications = notificationData.notifications;
+        list = notificationData;
+      } else if (notificationData && Array.isArray((notificationData as { data?: unknown[] }).data)) {
+        list = (notificationData as { data: unknown[] }).data;
+      } else if (
+        notificationData &&
+        Array.isArray((notificationData as { notifications?: unknown[] }).notifications)
+      ) {
+        list = (notificationData as { notifications: unknown[] }).notifications;
       }
-      
-      setNotifications(notifications);
-      
-      // Check for doubt assignment notification
-      const assignmentNotification = notifications.find(
-        n => n.doubt_id === doubtId && n.message_type === 'DOUBT_ASSIGNED'
+      setNotifications(list as never[]);
+      const assignmentNotification = (list as { doubt_id?: string; message_type?: string }[]).find(
+        (n) => n.doubt_id === doubtId && n.message_type === 'DOUBT_ASSIGNED'
       );
-      
       if (assignmentNotification) {
-        // Show acceptance notification instead of direct redirect
         setSolverInfo({
-          name: 'Solver', // You can extract this from the notification content
+          name: 'Solver',
           doubtTitle: doubt?.subject || 'Your doubt'
         });
         setShowAcceptanceNotification(true);
@@ -105,7 +270,6 @@ const AwaitingSolverPage = () => {
     }
   };
 
-  // Refresh data
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -115,16 +279,27 @@ const AwaitingSolverPage = () => {
     }
   };
 
-  // Auto-refresh every 30 seconds (reduced to avoid rate limiting)
+  const handleWithdraw = async () => {
+    if (!window.confirm('Withdraw this doubt? You can submit a new doubt later.')) return;
+    setWithdrawing(true);
+    try {
+      await doubtService.deleteDoubt(doubtId);
+      router.push('/dashboard/doubts');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not withdraw doubt.';
+      alert(msg);
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       handleRefresh();
     }, 30000);
-
     return () => clearInterval(interval);
   }, [doubtId]);
 
-  // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -134,14 +309,12 @@ const AwaitingSolverPage = () => {
         setIsLoading(false);
       }
     };
-
     loadData();
   }, [doubtId]);
 
-  // Realtime: subscribe to the subject room so the asker gets instant assignment modal
   useEffect(() => {
     if (!doubt?.subject) return;
-    let onDoubtAssigned = null;
+    let onDoubtAssigned: ((p: { doubtId: string }) => void) | null = null;
     try {
       const socket = sharedSocket ?? connectSocket();
       if (socket) {
@@ -156,7 +329,9 @@ const AwaitingSolverPage = () => {
         };
         socket.on('doubt:assigned', onDoubtAssigned);
       }
-    } catch {}
+    } catch {
+      /* socket optional */
+    }
     return () => {
       if (socketRef.current && onDoubtAssigned) {
         socketRef.current.off('doubt:assigned', onDoubtAssigned);
@@ -165,7 +340,6 @@ const AwaitingSolverPage = () => {
     };
   }, [doubtId, doubt?.subject, sharedSocket, connectSocket]);
 
-  // Timer for elapsed time
   useEffect(() => {
     if (doubt?.createdAt) {
       const startTime = new Date(doubt.createdAt).getTime();
@@ -174,17 +348,39 @@ const AwaitingSolverPage = () => {
         const elapsed = Math.floor((now - startTime) / 1000);
         setTimeElapsed(elapsed);
       }, 1000);
-
       return () => clearInterval(timer);
     }
   }, [doubt?.createdAt]);
 
+  const categoryKey = String(doubt?.category || '').toLowerCase();
+  const categoryDisplay = CATEGORY_LABELS[categoryKey] || doubt?.category || '—';
+
+  const doubtNotification = notifications.filter((n: { doubt_id?: string }) => n.doubt_id === doubtId)[0] as
+    | { content?: string; createdAt?: string }
+    | undefined;
+
+  const liveText =
+    doubtNotification?.content ||
+    `Your doubt "${doubt?.subject || 'your subject'}" has been submitted successfully and is awaiting a solver.`;
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <div
+        className="flex min-h-screen w-full items-center justify-center px-[2%] transition-colors"
+        style={{ backgroundColor: PAGE_BG, fontFamily: "Inter, system-ui, sans-serif" }}
+      >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading doubt details...</p>
+          <div
+            className="relative mx-auto mb-5 h-12 w-12 rounded-full border border-[#073E36]/15 bg-[rgba(7,62,54,0.045)] shadow-[0_3px_18px_rgba(7,62,54,0.11)]"
+            aria-hidden
+          >
+            <div className="pointer-events-none absolute inset-[1px] rounded-full border border-[#073E36]/10" />
+            {/* Outer ring: clockwise */}
+            <div className="pointer-events-none absolute inset-0 will-change-transform rounded-full border-[4px] border-[#073E36]/14 border-t-[#073E36] border-r-[#073E36]/55 shadow-[0_0_12px_rgba(7,62,54,0.14)] motion-reduce:animate-none animate-[spin_1.05s_linear_infinite]" />
+            {/* Inner ring: counter-clockwise */}
+            <div className="pointer-events-none absolute inset-[5px] will-change-transform rounded-full border-[4px] border-[#073E36]/10 border-t-[#073E36] border-r-[#073E36]/48 shadow-[inset_0_0_6px_rgba(7,62,54,0.06),0_0_10px_rgba(7,62,54,0.1)] motion-reduce:animate-none animate-[spin_0.85s_linear_infinite_reverse]" />
+          </div>
+          <p className="text-[15px] text-[#1a2e2c]/80">Loading doubt details…</p>
         </div>
       </div>
     );
@@ -192,16 +388,20 @@ const AwaitingSolverPage = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-300 dark:border-gray-600 p-8 text-center max-w-md transition-colors duration-300">
-          <AlertCircle className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Error Loading Doubt</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4 transition-colors duration-300">{error}</p>
+      <div
+        className="flex min-h-screen w-full items-center justify-center px-[2%] transition-colors"
+        style={{ backgroundColor: PAGE_BG, fontFamily: "Inter, system-ui, sans-serif" }}
+      >
+        <div className="max-w-md rounded-2xl border border-[#073E36]/15 bg-white p-8 text-center shadow-lg">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+          <h3 className="mb-2 text-lg font-semibold text-[#1a2e2c]">Error loading doubt</h3>
+          <p className="mb-6 text-[14px] text-[#4b5c57]">{error}</p>
           <button
+            type="button"
             onClick={() => window.location.reload()}
-            className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
+            className="rounded-full bg-[#073E36] px-6 py-2.5 text-[13px] font-bold uppercase tracking-wide text-white shadow-sm transition-opacity hover:opacity-95"
           >
-            Try Again
+            Try again
           </button>
         </div>
       </div>
@@ -209,152 +409,274 @@ const AwaitingSolverPage = () => {
   }
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }} className="min-h-screen bg-gray-100">
-      <div className="mx-auto h-[1035.75px] w-[1071px] overflow-hidden">
-      <p className="px-3 pb-0 pt-2 text-xs text-gray-400">waiting page</p>
-
-      <div className="mx-3 mb-5 mt-1 rounded-xl px-5 py-5" style={{ background: '#2563EB' }}>
-        <h1 className="text-2xl font-bold leading-tight text-white">Awaiting Solver</h1>
-        <p className="mb-4 mt-0.5 text-sm text-blue-200">Your doubt is waiting for a solver to accept it</p>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-white">Please keep refreshing</span>
+    <div
+      className="min-h-screen w-full"
+      style={{ backgroundColor: PAGE_BG, fontFamily: "Inter, system-ui, sans-serif" }}
+    >
+      <div className="flex w-full max-w-none items-start gap-3 px-[2%] pb-12 pt-4 md:gap-4">
+        <div className="flex shrink-0 flex-col pt-[0.65rem] md:pt-[0.7rem]">
           <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 rounded-lg border border-white border-opacity-50 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ background: 'rgba(255,255,255,0.15)' }}
+            type="button"
+            onClick={() => router.back()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-900 transition-colors hover:bg-neutral-900/[0.07]"
+            aria-label="Go back"
           >
-            <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
-            Refresh
+            <ArrowLeft className="h-5 w-5" strokeWidth={2.2} />
           </button>
         </div>
-      </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6">
+          <header className="flex min-h-[52px] w-full items-center justify-between rounded-[18px] border border-[#073E36]/18 bg-[#d8e8cc] px-4 py-3 shadow-sm md:px-6">
+            <Link href="/" className="edu-logo shrink-0" aria-label="Edufoyer home">
+              <span className="edu-logo-text">EDU</span>
+              <span className="edu-logo-f">F</span>
+              <span className="edu-logo-text">OYER</span>
+            </Link>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
+              style={{ backgroundColor: FOREST }}
+            >
+              <RefreshCw className={`h-4 w-4 shrink-0 ${isRefreshing ? 'animate-spin' : ''}`} strokeWidth={2.2} aria-hidden />
+              <span>REFRESH</span>
+            </button>
+          </header>
 
-      <div className="mx-3 flex gap-4">
-        <div className="flex h-[600px] w-[674px] flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-6 py-6 shadow-sm">
-          <div className="flex flex-col items-center gap-3 pt-1 text-center">
-            <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full" style={{ background: '#2563EB' }}>
-              <Clock size={28} color="white" strokeWidth={1.8} />
-            </div>
-            <div>
-              <h2 className="text-[19px] font-bold text-gray-900">Waiting for Solver</h2>
-              <p className="mt-1 text-[13px] leading-snug text-gray-500">
-                Your doubt has been submitted and is being matched with available solvers.
-              </p>
-            </div>
+          <section className="relative overflow-hidden rounded-[22px] bg-[#073E36] px-5 py-6 shadow-[0_18px_50px_rgba(7,62,54,0.22)] md:rounded-[26px] md:px-8 md:py-8">
+          {/* Base stays #073E36; overlays are neutral (white) so the section reads as your brand green */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.14]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                -32deg,
+                transparent,
+                transparent 6px,
+                rgba(255,255,255,0.11) 6px,
+                rgba(255,255,255,0.11) 7px
+              )`
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-90"
+            style={{
+              backgroundImage: `radial-gradient(ellipse 75% 55% at 92% 8%, rgba(255,255,255,0.14) 0%, transparent 55%),
+                radial-gradient(ellipse 65% 50% at 6% 92%, rgba(255,255,255,0.1) 0%, transparent 50%)`
+            }}
+          />
+          {/* Bottom glow stack — subtle; nudged slightly lower */}
+          <div className="pointer-events-none absolute bottom-0 left-[-1.25rem] right-[-1.25rem] top-0 z-0 md:left-[-2rem] md:right-[-2rem]">
+            <img
+              src="/largerGradientWaitingRoom.png"
+              alt=""
+              aria-hidden
+              decoding="async"
+              className="pointer-events-none absolute inset-x-0 top-[6.85rem] h-[clamp(2rem,9vw,3.5rem)] w-full select-none object-cover object-bottom opacity-[0.52] md:top-[7rem] md:h-[clamp(2.25rem,8vw,3.75rem)] md:opacity-[0.5]"
+            />
+            <img
+              src="/Rectangle%20184.png"
+              alt=""
+              aria-hidden
+              decoding="async"
+              className="pointer-events-none absolute inset-x-0 bottom-1 top-[9.25rem] w-full select-none object-cover object-bottom opacity-[0.48] md:bottom-1.5 md:top-[9.5rem] md:opacity-[0.45]"
+            />
           </div>
 
-          <div className="rounded-xl border border-gray-200 px-4 py-4">
-            <p className="mb-3 text-[13px] font-semibold text-gray-800">Doubt Details</p>
-            <div className="mb-2.5 flex items-center gap-3">
-              <span className="w-20 shrink-0 text-[12.5px] text-gray-500">Subject:</span>
-              <span className="rounded-full border border-[#93C5FD] bg-[#EFF6FF] px-3 py-1 text-[12px] font-semibold text-[#2563EB]">
-                {doubt?.subject || 'Unknown Subject'}
+          <div className="absolute right-4 top-4 z-[2] md:right-6 md:top-5">
+            <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[11px] font-semibold text-neutral-900 shadow-md md:text-[12px]">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-neutral-900" strokeWidth={2.4} aria-hidden />
+              <span>
+                Time elapsed : {formatTimeElapsed(timeElapsed)}
               </span>
             </div>
-            <div className="mb-3 flex items-center gap-3">
-              <span className="w-20 shrink-0 text-[12.5px] text-gray-500">Category:</span>
-              <span className="rounded-full border border-[#86EFAC] bg-[#F0FDF4] px-3 py-1 text-[12px] font-semibold text-[#16A34A] capitalize">
-                {doubt?.category || 'unspecified'}
-              </span>
-            </div>
-            <div>
-              <p className="mb-1.5 text-[12.5px] text-gray-500">Description:</p>
-              <div className="rounded-lg border border-[#E5E7EB] bg-[#FAFAFA] px-3 py-2.5 text-[13px] text-gray-700">
-                {doubt?.description || 'Description unavailable'}
-              </div>
-            </div>
           </div>
 
-          <div className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#BFDBFE] bg-[#EFF6FF] py-3 text-[13.5px] font-semibold">
-            <Clock size={15} color="#2563EB" />
-            <span className="text-gray-700">Time Elapsed:</span>
-            <span className="font-bold text-[#2563EB]">{formatTimeElapsed(timeElapsed)}</span>
-          </div>
-
-          <div className="flex items-start gap-2.5 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-[12.5px] leading-relaxed text-[#92400E]">
-            <AlertCircle size={15} className="mt-0.5 shrink-0 text-[#F59E0B]" />
-            <span>Please wait while we find a suitable solver for your doubt. This usually takes a few moments.</span>
-          </div>
-        </div>
-
-        <div className="flex  w-[325px] flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-6 py-6 shadow-sm">
-          <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Bell size={14} className="text-gray-600" />
-              <span className="text-[13px] font-semibold text-gray-800">Live Updates</span>
+          <div className="relative z-[1] flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-6 md:pr-2">
+            <div className="max-w-xl pt-6 md:pt-5">
+              <div className="flex flex-wrap items-center gap-5">
+                <div
+                  className="relative flex h-[3.5rem] w-[3.5rem] shrink-0 items-center justify-center rounded-full border border-white/25 bg-gradient-to-br from-white/[0.16] to-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_4px_20px_rgba(0,0,0,0.14)] md:h-[3.75rem] md:w-[3.75rem]"
+                  aria-hidden
+                >
+                  <div className="pointer-events-none absolute inset-[1px] rounded-full border border-white/12" />
+                  {/* Outer ring: clockwise */}
+                  <div className="pointer-events-none absolute inset-0 z-0 will-change-transform rounded-full border-[5px] border-white/18 border-t-white border-r-white/60 shadow-[0_0_18px_rgba(255,255,255,0.18)] motion-reduce:animate-none animate-[spin_1.1s_linear_infinite]" />
+                  {/* Inner ring: counter-clockwise */}
+                  <div className="pointer-events-none absolute inset-[6px] z-[1] will-change-transform rounded-full border-[4px] border-white/12 border-t-white border-r-white/50 shadow-[inset_0_0_8px_rgba(255,255,255,0.06),0_0_14px_rgba(255,255,255,0.12)] motion-reduce:animate-none animate-[spin_0.85s_linear_infinite_reverse] md:inset-[7px]" />
             </div>
-            <div className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-3">
-              <div className="flex items-start gap-2">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#22C55E]" />
                 <div>
-                  <p className="text-[11.5px] leading-snug text-gray-700">
-                    {notifications.filter((n) => n.doubt_id === doubtId)[0]?.content ||
-                      `Your doubt "${doubt?.subject || 'your subject'}" has been submitted successfully and is awaiting a solver.`}
-                  </p>
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    {notifications.filter((n) => n.doubt_id === doubtId)[0]?.createdAt
-                      ? new Date(notifications.filter((n) => n.doubt_id === doubtId)[0].createdAt).toLocaleTimeString()
-                      : new Date().toLocaleTimeString()}
+                  <h1 className="flex flex-wrap items-center gap-2 text-[28px] font-bold leading-[1.1] tracking-tight text-white md:gap-3 md:text-[36px]">
+                    <span className="inline-block font-bold">Waiting Room</span>
+                    <img
+                      src="/env.d.png"
+                      alt=""
+                      aria-hidden
+                      className="relative -left-[25px] -top-[25px] h-9 w-auto shrink-0 object-contain opacity-95 md:h-11"
+                      decoding="async"
+                    />
+                  </h1>
+                  <p className="mt-2 max-w-md text-[13px] leading-snug text-white/55 md:text-[15px]">
+                    Your doubt is waiting for a solver to accept it
                   </p>
                 </div>
               </div>
             </div>
+            <div
+              className="flex items-end justify-center gap-0.5 pb-1 md:justify-end md:pb-0 md:pr-2"
+              style={{ position: 'relative', bottom: '-52px', right: '14px' }}
+            >
+              <WaitingRoomIllustration />
+              <WaitingRoomHeroSparkles />
+            </div>
           </div>
+          </section>
 
-          <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-            <p className="mb-4 text-[13px] font-semibold text-gray-800">What happens next?</p>
-            <div className="flex flex-col gap-3.5">
-              {[
-                { n: 1, color: '#3B82F6', title: 'Solver Notification', desc: 'Available solvers are notified about your doubt' },
-                { n: 2, color: '#8B5CF6', title: 'Solver Accepts', desc: 'A solver reviews and accepts your doubt' },
-                { n: 3, color: '#EC4899', title: 'Session Ready', desc: 'You can join after clicking Accept/Join in the popup' }
-              ].map(({ n, color, title, desc }) => (
-                <div key={n} className="flex items-start gap-2.5">
-                  <span
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                    style={{ background: color }}
-                  >
-                    {n}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="flex flex-col gap-6">
+            <div
+              className="flex flex-col gap-5 rounded-[22px] border border-[#073E36]/14 px-4 pb-3 pt-4 shadow-[0_10px_36px_rgba(7,62,54,0.08)] md:gap-6 md:px-5 md:pb-4 md:pt-5"
+              style={{ backgroundColor: CARD_SAGE }}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <SectionTitle>Doubt details</SectionTitle>
+                <button
+                  type="button"
+                  onClick={handleWithdraw}
+                  disabled={withdrawing}
+                  className="shrink-0 rounded-full bg-[#073E36] px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
+                >
+                  {withdrawing ? 'Withdrawing…' : 'Withdraw request'}
+                </button>
+              </div>
+              <div
+                className="relative rounded-[18px] border border-[#073E36]/10 bg-white p-4 md:p-5"
+                style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+              >
+                <img
+                  src="/fillStarBottom.png"
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-3 h-5 w-5 object-contain select-none md:right-4 md:top-4"
+                  decoding="async"
+                />
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-semibold text-[#4b5c57]">Subject</span>
+                  <span className="rounded-full bg-[#073E36] px-3 py-1 text-[12px] font-semibold text-white">
+                    {formatSubjectLabel(doubt?.subject)}
                   </span>
+                </div>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-semibold text-[#4b5c57]">Category</span>
+                  <span className="rounded-full bg-[#073E36] px-3 py-1 text-[12px] font-semibold text-white">
+                    {categoryDisplay}
+                  </span>
+                </div>
                   <div>
-                    <p className="text-[12.5px] font-semibold leading-tight text-gray-800">{title}</p>
-                    <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500">{desc}</p>
+                  <p className="mb-1.5 text-[12px] font-semibold text-[#4b5c57]">Description</p>
+                  <div className="min-h-[72px] rounded-[14px] border border-[#c5d5cf] bg-[#f7faf6] px-3 py-2.5 text-[13px] leading-relaxed text-[#1a2e2c]">
+                    {doubt?.description || 'Description unavailable'}
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <SectionTitle
+                  icon={<Bell className="h-4 w-4 shrink-0 text-[#073E36]" strokeWidth={2.2} aria-hidden />}
+                  iconPosition="end"
+                  tight
+                >
+                  Live updates
+                </SectionTitle>
+                <div
+                  className="relative rounded-[16px] border border-[#073E36]/12 bg-[#ecf4e4] px-4 py-3.5"
+                  style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+                >
+                  <img
+                    src="/fillStarBottom.png"
+                    alt=""
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-3 h-5 w-5 object-contain select-none md:right-4 md:top-4"
+                    decoding="async"
+                  />
+                  <div className="flex items-start gap-3 pr-7">
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#073E36]" />
+                    <p className="text-[13px] font-medium leading-snug text-[#073E36]">{liveText}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-[#2563EB] px-4 py-4">
-            <p className="mb-1 text-[13px] font-bold text-white">Need Help?</p>
-            <p className="text-[11.5px] leading-snug text-blue-100">
-              If no solver accepts your doubt within 30 minutes, it will be automatically reassigned to ensure you get help.
-            </p>
-          </div>
+          <div className="flex flex-col gap-6">
+            <div
+              className="rounded-[22px] border border-[#073E36]/14 p-4 shadow-[0_10px_36px_rgba(7,62,54,0.08)] md:p-5"
+              style={{ backgroundColor: CARD_SAGE }}
+            >
+              <SectionTitle>How it works</SectionTitle>
+              <div
+                className="relative overflow-hidden rounded-[18px] border border-[#073E36]/10 bg-white p-3 md:p-4"
+                style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+              >
+                <CardCornerStars variant="how" />
+                <HowItWorksTrack />
+              </div>
+            </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-            <p className="mb-3 text-[13px] font-semibold text-gray-800">Quick Actions</p>
-            <button
-              onClick={() => router.push('/dashboard/doubts')}
-              className="mb-2 w-full rounded-lg bg-[#2563EB] py-2.5 text-[13px] font-semibold text-white"
+            <div
+              className="rounded-[22px] border border-[#073E36]/14 p-4 shadow-[0_10px_36px_rgba(7,62,54,0.08)] md:p-5"
+              style={{ backgroundColor: CARD_SAGE }}
             >
-              Ask Another Question
-            </button>
-            <button
-              onClick={() => router.push('/dashboard/doubts')}
-              className="w-full rounded-lg border border-gray-300 py-2.5 text-[13px] font-medium text-gray-700"
-            >
-              View My Doubts
-            </button>
+              <SectionTitle>Process</SectionTitle>
+              <div
+                className="relative overflow-hidden rounded-[18px] border border-[#073E36]/10 bg-white p-4 md:p-5"
+                style={{ boxShadow: INNER_PANEL_BOX_SHADOW }}
+              >
+                <CardCornerStars variant="process" />
+                <ol className="relative z-[1] space-y-5">
+                  <li className="flex gap-3">
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white"
+                      style={{ backgroundColor: FOREST }}
+                    >
+                      1
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#073E36]">Solver Notification</p>
+                      <p className="mt-0.5 text-[12px] font-medium leading-snug text-[#073E36]">
+                        Your query has been submitted successfully
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#dfe6e3] text-[12px] font-bold text-[#6b7a76]">
+                      2
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#1a2e2c]">Mentor notification</p>
+                      <p className="mt-0.5 text-[12px] leading-snug text-[#6b7a76]">
+                        Solver is here to help you with lore ipsum
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#dfe6e3] text-[12px] font-bold text-[#6b7a76]">
+                      3
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#1a2e2c]">Session ready</p>
+                      <p className="mt-0.5 text-[12px] leading-snug text-[#6b7a76]">
+                        You can join after accept/join in the popup
+                      </p>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="h-6" />
       </div>
 
-      {/* Solver Acceptance Notification */}
       <SolverAcceptanceNotification
         isVisible={showAcceptanceNotification}
         onClose={() => setShowAcceptanceNotification(false)}

@@ -6,6 +6,7 @@ import { io, type Socket } from "socket.io-client";
 type SocketContextValue = {
   socket: Socket | null;
   isConnected: boolean;
+  socketId: string | null;
   connectSocket: () => Socket | null;
   disconnectSocket: () => void;
 };
@@ -20,7 +21,9 @@ const getSocketUrl = () => {
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
+  const lastConnectErrorLogRef = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [socketId, setSocketId] = useState<string | null>(null);
 
   const connectSocket = useCallback(() => {
     if (typeof window === "undefined") return null;
@@ -35,18 +38,33 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       const socket = io(socketUrl, {
         withCredentials: true,
-        transports: ["websocket", "polling"],
+        transports: ["polling", "websocket"],
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 10,
         autoConnect: false,
       });
 
-      socket.on("connect", () => setIsConnected(true));
-      socket.on("disconnect", () => setIsConnected(false));
+      socket.on("connect", () => {
+        setIsConnected(true);
+        setSocketId(socket.id ?? null);
+      });
+      socket.on("disconnect", () => {
+        setIsConnected(false);
+        setSocketId(null);
+      });
       socket.on("connect_error", (error) => {
         setIsConnected(false);
-        console.error("[socket] connect_error:", error?.message ?? error);
+        setSocketId(null);
+        const now = Date.now();
+        if (now - lastConnectErrorLogRef.current > 15000) {
+          lastConnectErrorLogRef.current = now;
+          console.warn(
+            `[socket] connect_error (${socketUrl}):`,
+            error?.message ?? error,
+            "— is express-socket-server running on port 4001?"
+          );
+        }
       });
 
       socketRef.current = socket;
@@ -65,6 +83,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     if (!socketRef.current) return;
     socketRef.current.disconnect();
     setIsConnected(false);
+    setSocketId(null);
   }, []);
 
   useEffect(() => {
@@ -75,6 +94,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socket.disconnect();
       socketRef.current = null;
       setIsConnected(false);
+      setSocketId(null);
     };
   }, [connectSocket]);
 
@@ -82,10 +102,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     () => ({
       socket: socketRef.current,
       isConnected,
+      socketId,
       connectSocket,
       disconnectSocket,
     }),
-    [isConnected, connectSocket, disconnectSocket]
+    [isConnected, socketId, connectSocket, disconnectSocket]
   );
 
   return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;

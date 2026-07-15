@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Mail, BookOpen, CheckCircle, X, Phone, FileText, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { UserPlus, CheckCircle, X, Phone, FileText, Upload, Loader2, AlertCircle } from 'lucide-react';
 import authService from '../services/authService';
+
+const FOREST = '#073E36';
+
+const labelClass = 'block text-sm font-semibold text-[var(--dash-forest)]';
+const inputBaseClass =
+  'w-full rounded-xl border-2 bg-white px-4 py-3 text-[var(--dash-text-body)] outline-none transition-all placeholder:text-[var(--dash-text-muted)] focus:border-[var(--dash-forest)] focus:ring-2 focus:ring-[var(--dash-forest)]/20';
+const inputErrorClass = 'border-red-400 focus:border-red-400 focus:ring-red-400/20';
+const inputOkClass = 'border-[var(--dash-panel-border)]';
 
 const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -281,39 +289,60 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-white/50">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="solver-request-title"
+    >
+      <div className="relative flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden rounded-[22px] border border-[var(--dash-panel-border)] bg-white shadow-[var(--dash-panel-shadow)]">
+        <img
+          src="/fillStarBottom.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute left-4 top-4 z-10 h-4 w-auto object-contain"
+          decoding="async"
+        />
+        <img
+          src="/fillStarBottom.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute right-4 top-4 z-10 h-4 w-auto object-contain"
+          decoding="async"
+        />
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
-          <div className="flex justify-between items-start">
+        <div className="px-5 py-4 md:px-6 md:py-5" style={{ backgroundColor: FOREST }}>
+          <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-lg flex items-center justify-center">
-                <UserPlus className="w-5 h-5 text-white" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                <UserPlus className="h-5 w-5 text-white" strokeWidth={2.2} aria-hidden />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <h2 id="solver-request-title" className="text-xl font-bold text-white md:text-2xl">
                   Solver Request Form
                 </h2>
-                <p className="text-indigo-100 mt-1 text-sm">
-                  Submit your request to become a solver
-                </p>
+                <p className="mt-1 text-sm text-white/75">Submit your request to become a solver</p>
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all"
+              className="rounded-lg p-2 text-white/85 transition-colors hover:bg-white/15 hover:text-white"
+              aria-label="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[60vh]">
+        <form
+          onSubmit={handleSubmit}
+          className="max-h-[60vh] space-y-6 overflow-y-auto bg-[var(--dash-content-canvas)] p-5 md:p-6"
+        >
           {/* Name Field */}
           <div className="space-y-2">
-            <label htmlFor="name" className="block text-gray-700 text-sm font-semibold">
+            <label htmlFor="name" className={labelClass}>
               Full Name *
             </label>
             <input
@@ -322,9 +351,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className={`w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 ${
-                errors.name ? 'border-red-500' : 'border-gray-200'
-              } text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all`}
+              className={`${inputBaseClass} ${errors.name ? inputErrorClass : inputOkClass}`}
               placeholder="Enter your full name"
               required
             />
@@ -338,7 +365,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Email Field */}
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-gray-700 text-sm font-semibold">
+            <label htmlFor="email" className={labelClass}>
               Email Address *
             </label>
             <input
@@ -347,9 +374,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 ${
-                errors.email ? 'border-red-500' : 'border-gray-200'
-              } text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all`}
+              className={`${inputBaseClass} ${errors.email ? inputErrorClass : inputOkClass}`}
               placeholder="Enter your email address"
               required
             />
@@ -363,20 +388,18 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Phone Number Field */}
           <div className="space-y-2">
-            <label htmlFor="phoneNumber" className="block text-gray-700 text-sm font-semibold">
+            <label htmlFor="phoneNumber" className={labelClass}>
               Phone Number *
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--dash-text-muted)]" />
               <input
                 type="tel"
                 id="phoneNumber"
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
-                className={`w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 ${
-                  errors.phoneNumber ? 'border-red-500' : 'border-gray-200'
-                } text-gray-900 rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all`}
+                className={`${inputBaseClass} pl-12 ${errors.phoneNumber ? inputErrorClass : inputOkClass}`}
                 placeholder="Enter your 10-digit phone number"
                 maxLength={10}
                 required
@@ -392,7 +415,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Subjects Selection */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-semibold">
+            <label className={labelClass}>
               Select Your Expertise Areas *
             </label>
             {errors.subjects && (
@@ -401,34 +424,36 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                 {errors.subjects}
               </p>
             )}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-[var(--dash-panel-border)] bg-white p-3 md:p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {availableSubjects.map((subject) => (
                 <label
                   key={subject}
-                  className={`flex items-center space-x-2 p-3 border-2 rounded-xl cursor-pointer transition-all ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 p-3 transition-all ${
                     formData.subjects.includes(subject)
-                      ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-500 text-indigo-700 shadow-md'
-                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:border-purple-300 hover:shadow-sm'
+                      ? 'border-[var(--dash-forest)] bg-[var(--dash-card-mint)] shadow-[var(--dash-inner-shadow)]'
+                      : 'border-[var(--dash-panel-border)] bg-[var(--dash-content-canvas)] hover:border-[var(--dash-forest)]/35'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={formData.subjects.includes(subject)}
                     onChange={() => handleSubjectToggle(subject)}
-                    className="text-indigo-600 focus:ring-indigo-500 rounded"
+                    className="rounded border-[var(--dash-panel-border)] text-[var(--dash-forest)] focus:ring-[var(--dash-forest)]/30"
                   />
-                  <span className="text-sm font-medium">{subject}</span>
+                  <span className="text-sm font-medium text-[var(--dash-text-body)]">{subject}</span>
                 </label>
               ))}
             </div>
-            <p className="text-xs text-gray-500">
+            </div>
+            <p className="text-xs text-[var(--dash-text-muted)]">
               You will receive notifications for doubts in these subjects.
             </p>
           </div>
 
           {/* Resume Upload */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-semibold">
+            <label className={labelClass}>
               Upload Resume * (PDF, JPG, or PNG - Max 5MB)
             </label>
             {errors.resume && (
@@ -437,7 +462,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                 {errors.resume}
               </p>
             )}
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 hover:border-purple-400 transition-colors">
+            <div className="rounded-xl border-2 border-dashed border-[var(--dash-panel-border)] bg-white p-4 transition-colors hover:border-[var(--dash-forest)]/40">
               <input
                 type="file"
                 id="resume-upload"
@@ -448,10 +473,10 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
               {resume ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-indigo-600" />
+                    <FileText className="h-8 w-8 text-[var(--dash-forest)]" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{resume.name}</p>
-                      <p className="text-xs text-gray-500">{(resume.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-sm font-medium text-[var(--dash-text-body)]">{resume.name}</p>
+                      <p className="text-xs text-[var(--dash-text-muted)]">{(resume.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
                   <button
@@ -467,9 +492,9 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                   htmlFor="resume-upload"
                   className="flex flex-col items-center justify-center cursor-pointer"
                 >
-                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload resume</p>
-                  <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG (Max 5MB)</p>
+                  <Upload className="mb-2 h-10 w-10 text-[var(--dash-forest)]/50" />
+                  <p className="text-sm text-[var(--dash-text-body)]">Click to upload resume</p>
+                  <p className="mt-1 text-xs text-[var(--dash-text-muted)]">PDF, JPG, or PNG (Max 5MB)</p>
                 </label>
               )}
             </div>
@@ -482,7 +507,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Marksheet Upload */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-semibold">
+            <label className={labelClass}>
               Upload Marksheet * (PDF, JPG, or PNG - Max 5MB)
             </label>
             {errors.marksheet && (
@@ -491,7 +516,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                 {errors.marksheet}
               </p>
             )}
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 hover:border-purple-400 transition-colors">
+            <div className="rounded-xl border-2 border-dashed border-[var(--dash-panel-border)] bg-white p-4 transition-colors hover:border-[var(--dash-forest)]/40">
               <input
                 type="file"
                 id="marksheet-upload"
@@ -502,10 +527,10 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
               {marksheet ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-purple-600" />
+                    <FileText className="h-8 w-8 text-[var(--dash-forest)]" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{marksheet.name}</p>
-                      <p className="text-xs text-gray-500">{(marksheet.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-sm font-medium text-[var(--dash-text-body)]">{marksheet.name}</p>
+                      <p className="text-xs text-[var(--dash-text-muted)]">{(marksheet.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
                   <button
@@ -521,9 +546,9 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                   htmlFor="marksheet-upload"
                   className="flex flex-col items-center justify-center cursor-pointer"
                 >
-                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload marksheet</p>
-                  <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG (Max 5MB)</p>
+                  <Upload className="mb-2 h-10 w-10 text-[var(--dash-forest)]/50" />
+                  <p className="text-sm text-[var(--dash-text-body)]">Click to upload marksheet</p>
+                  <p className="mt-1 text-xs text-[var(--dash-text-muted)]">PDF, JPG, or PNG (Max 5MB)</p>
                 </label>
               )}
             </div>
@@ -536,7 +561,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Aadhar Upload */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-semibold">
+            <label className={labelClass}>
               Upload Aadhar Card * (PDF, JPG, or PNG - Max 5MB)
             </label>
             {errors.aadhar && (
@@ -545,7 +570,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                 {errors.aadhar}
               </p>
             )}
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 hover:border-purple-400 transition-colors">
+            <div className="rounded-xl border-2 border-dashed border-[var(--dash-panel-border)] bg-white p-4 transition-colors hover:border-[var(--dash-forest)]/40">
               <input
                 type="file"
                 id="aadhar-upload"
@@ -556,10 +581,10 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
               {aadhar ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-blue-600" />
+                    <FileText className="h-8 w-8 text-[var(--dash-forest)]" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{aadhar.name}</p>
-                      <p className="text-xs text-gray-500">{(aadhar.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-sm font-medium text-[var(--dash-text-body)]">{aadhar.name}</p>
+                      <p className="text-xs text-[var(--dash-text-muted)]">{(aadhar.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
                   <button
@@ -575,9 +600,9 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                   htmlFor="aadhar-upload"
                   className="flex flex-col items-center justify-center cursor-pointer"
                 >
-                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload Aadhar card</p>
-                  <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG (Max 5MB)</p>
+                  <Upload className="mb-2 h-10 w-10 text-[var(--dash-forest)]/50" />
+                  <p className="text-sm text-[var(--dash-text-body)]">Click to upload Aadhar card</p>
+                  <p className="mt-1 text-xs text-[var(--dash-text-muted)]">PDF, JPG, or PNG (Max 5MB)</p>
                 </label>
               )}
             </div>
@@ -590,7 +615,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Pancard Upload */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-semibold">
+            <label className={labelClass}>
               Upload Pancard * (PDF, JPG, or PNG - Max 5MB)
             </label>
             {errors.pancard && (
@@ -599,7 +624,7 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                 {errors.pancard}
               </p>
             )}
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 hover:border-purple-400 transition-colors">
+            <div className="rounded-xl border-2 border-dashed border-[var(--dash-panel-border)] bg-white p-4 transition-colors hover:border-[var(--dash-forest)]/40">
               <input
                 type="file"
                 id="pancard-upload"
@@ -610,10 +635,10 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
               {pancard ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-green-600" />
+                    <FileText className="h-8 w-8 text-[var(--dash-forest)]" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{pancard.name}</p>
-                      <p className="text-xs text-gray-500">{(pancard.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-sm font-medium text-[var(--dash-text-body)]">{pancard.name}</p>
+                      <p className="text-xs text-[var(--dash-text-muted)]">{(pancard.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
                   <button
@@ -629,9 +654,9 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
                   htmlFor="pancard-upload"
                   className="flex flex-col items-center justify-center cursor-pointer"
                 >
-                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload Pancard</p>
-                  <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG (Max 5MB)</p>
+                  <Upload className="mb-2 h-10 w-10 text-[var(--dash-forest)]/50" />
+                  <p className="text-sm text-[var(--dash-text-body)]">Click to upload Pancard</p>
+                  <p className="mt-1 text-xs text-[var(--dash-text-muted)]">PDF, JPG, or PNG (Max 5MB)</p>
                 </label>
               )}
             </div>
@@ -644,11 +669,13 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Message Display */}
           {message && (
-            <div className={`p-4 rounded-xl flex items-center space-x-3 ${
-              message.includes('successfully')
-                ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border-2 border-emerald-200'
-                : 'bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-2 border-red-200'
-            }`}>
+            <div
+              className={`flex items-center gap-3 rounded-xl border-2 p-4 ${
+                message.includes('successfully')
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-red-200 bg-red-50 text-red-800'
+              }`}
+            >
               {message.includes('successfully') ? (
                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
               ) : (
@@ -660,11 +687,11 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
         </form>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 bg-gray-50 p-6 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t border-[var(--dash-panel-border)] bg-white p-5 md:p-6">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 hover:bg-white hover:border-gray-400 bg-white rounded-xl font-semibold transition-all"
+            className="rounded-full border border-[var(--dash-panel-border)] bg-white px-6 py-2.5 text-sm font-semibold text-[var(--dash-forest)] transition-colors hover:bg-[var(--dash-card-mint)]"
           >
             Cancel
           </button>
@@ -672,7 +699,8 @@ const SolverRequestForm = ({ isOpen, onClose, onSuccess }) => {
             type="submit"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] disabled:transform-none flex items-center gap-2"
+            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-[var(--dash-inner-shadow)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: FOREST }}
           >
             {isSubmitting ? (
               <>

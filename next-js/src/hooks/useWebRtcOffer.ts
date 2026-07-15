@@ -35,6 +35,7 @@ export const useWebRtcOffer = (
           return;
         }
 
+        peer.closeConnection();
         await peer.attachLocalStream(myStream);
         const answer = await peer.getAnswer(payload.offer as RTCSessionDescriptionInit);
         if (!answer) {

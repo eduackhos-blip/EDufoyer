@@ -3,9 +3,27 @@ import { useEffect } from "react";
 export type LeaveCallModalProps = {
   onCancel: () => void;
   onConfirm: () => void;
+  /** Solver leaving ends the session permanently for this room. */
+  variant?: "default" | "solver";
 };
 
-export function LeaveCallModal({ onCancel, onConfirm }: LeaveCallModalProps) {
+const COPY = {
+  default: {
+    title: "Leave call?",
+    message:
+      "Are you sure you want to leave? Your WebRTC connection will end and you will return to the dashboard.",
+    confirmLabel: "Yes, leave",
+  },
+  solver: {
+    title: "Leave meeting?",
+    message:
+      "If you leave, this session will end and you will no longer be able to join it.",
+    confirmLabel: "Leave",
+  },
+} as const;
+
+export function LeaveCallModal({ onCancel, onConfirm, variant = "default" }: LeaveCallModalProps) {
+  const copy = COPY[variant];
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
@@ -19,11 +37,9 @@ export function LeaveCallModal({ onCancel, onConfirm }: LeaveCallModalProps) {
       <button type="button" aria-label="Dismiss" className="absolute inset-0 bg-black/60" onClick={onCancel} />
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl shadow-black/40">
         <h3 id="leave-call-title" className="text-lg font-semibold text-slate-100">
-          Leave call?
+          {copy.title}
         </h3>
-        <p className="mt-2 text-sm text-slate-400">
-          Are you sure you want to leave? Your WebRTC connection will end and you will return to the dashboard.
-        </p>
+        <p className="mt-2 text-sm text-slate-400">{copy.message}</p>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <button
             type="button"
@@ -37,7 +53,7 @@ export function LeaveCallModal({ onCancel, onConfirm }: LeaveCallModalProps) {
             onClick={onConfirm}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
           >
-            Yes, leave
+            {copy.confirmLabel}
           </button>
         </div>
       </div>

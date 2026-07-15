@@ -8,6 +8,9 @@ const rtcConfig: RTCConfiguration = {
 
 class PeerService {
   peer: RTCPeerConnection | null = null;
+  /** Increments whenever the peer connection is torn down so hooks can re-bind listeners. */
+  connectionEpoch = 0;
+  onConnectionEpochChange: (() => void) | null = null;
   private screenShareSender: RTCRtpSender | null = null;
 
   private bindIceLogging(pc: RTCPeerConnection) {
@@ -99,6 +102,8 @@ class PeerService {
       this.peer = null;
     }
     this.screenShareSender = null;
+    this.connectionEpoch += 1;
+    this.onConnectionEpochChange?.();
   }
 }
 

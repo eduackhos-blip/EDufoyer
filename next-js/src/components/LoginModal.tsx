@@ -1,10 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, X, FileText, Mail, Lock, User, LogIn, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, X, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import authService from '../services/authService';
 import EmailVerification from './EmailVerification';
-import DarkModeToggle from './DarkModeToggle';
+import EduMarketingHeader from './EduMarketingHeader';
+
+const SIGNUP_INPUT_CLASS =
+  'w-full rounded-full border-[1.5px] border-[#073E36]/20 bg-white px-3.5 py-2.5 text-[13px] text-[#111827] shadow-[inset_0_1px_4px_rgba(7,62,54,0.06)] outline-none transition-[border-color,box-shadow] placeholder:text-[#9ca8a4] focus:border-[#073E36]/45 focus:shadow-[inset_0_1px_4px_rgba(7,62,54,0.08),0_0_0_3px_rgba(7,62,54,0.12)]';
+
+function SignupLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} className="mb-1 block">
+      <span className="relative inline-block pt-[8px] text-[13px] font-semibold text-[#1a2e2c]">
+        <img
+          src="/aboveMarks.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute left-[-17px] top-0 h-[20px] w-[27px] object-contain"
+          decoding="async"
+        />
+        {children}
+      </span>
+    </label>
+  );
+}
 
 const LoginModal = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +56,7 @@ const LoginModal = () => {
   useEffect(() => {
     if (authService.isAuthenticated()) {
       const isCacheVerified = localStorage.getItem('cacheVerified') === 'true';
-      router.push(isCacheVerified ? '/dashboard/profile' : '/verify-cache');
+      router.push(isCacheVerified ? '/dashboard' : '/verify-cache');
     }
   }, [router]);
 
@@ -207,332 +226,434 @@ const LoginModal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col relative overflow-hidden transition-colors duration-300">
-      {/* Notebook background overlay (ruled paper) */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(to bottom, rgba(31,41,55,0.06) 0px, rgba(31,41,55,0.06) 1px, transparent 1px, transparent 28px), linear-gradient(to right, rgba(31,41,55,0.10) 0px, rgba(31,41,55,0.10) 3px, transparent 3px)',
-          backgroundSize: '100% 100%',
-        }}
-      />
-      {/* Subtle gradient accent */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 via-transparent to-purple-50/30 dark:from-blue-950/20 dark:via-transparent dark:to-purple-950/20 pointer-events-none z-0" />
-
-      {/* Blurred sticky notes layer - slight blur, large notes with full sentences */}
-      <div aria-hidden className="absolute inset-0 z-[1] pointer-events-none overflow-hidden blur-sm md:blur">
-        {/* Row 1 */}
-        <div className="absolute left-[4%] top-[6%] rotate-[-12deg] w-48 md:w-64 max-w-[200px] md:max-w-[260px]">
-          <div className="bg-[#FFF7CC] rounded-[16px] px-4 py-3.5 border border-[#F3E29A] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">OS scheduling algorithms determine the order of process execution in the CPU.</p>
-          </div>
-        </div>
-        <div className="absolute left-[22%] top-[4%] rotate-[6deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#E0F9FF] rounded-[16px] px-4 py-3.5 border border-[#B9E6F2] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">DBMS normalization reduces data redundancy and improves integrity.</p>
-          </div>
-        </div>
-        <div className="absolute right-[6%] top-[10%] rotate-[10deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#F8E9FF] rounded-[16px] px-4 py-3.5 border border-[#E1C0FF] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">The pumping lemma for CFLs helps prove a language is not context-free.</p>
-          </div>
-        </div>
-        <div className="absolute right-[26%] top-[4%] rotate-[-5deg] w-48 md:w-60 max-w-[200px] md:max-w-[240px]">
-          <div className="bg-[#FFE5F2] rounded-[16px] px-4 py-3.5 border border-[#FFC4E0] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Distance vector routing can suffer from the count-to-infinity problem.</p>
-          </div>
-        </div>
-        {/* Row 2 */}
-        <div className="absolute left-[2%] top-[26%] rotate-[8deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#E7F7EE] rounded-[16px] px-4 py-3.5 border border-[#A7F3D0] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">DSA revision: BFS and DFS differ in how they explore graph vertices.</p>
-          </div>
-        </div>
-        <div className="absolute left-[16%] top-[32%] rotate-[-8deg] w-48 md:w-60 max-w-[200px] md:max-w-[240px]">
-          <div className="bg-[#E0E7FF] rounded-[16px] px-4 py-3.5 border border-[#C7D2FE] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Two-phase locking prevents cascading rollbacks in transaction management.</p>
-          </div>
-        </div>
-        <div className="absolute right-[4%] top-[28%] rotate-[-10deg] w-48 md:w-60 max-w-[200px] md:max-w-[240px]">
-          <div className="bg-[#FEF3C7] rounded-[16px] px-4 py-3.5 border border-[#FDE68A] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Priority inversion occurs when a lower priority task blocks a higher one.</p>
-          </div>
-        </div>
-        <div className="absolute right-[20%] top-[35%] rotate-[4deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#F3E8FF] rounded-[16px] px-4 py-3.5 border border-[#E9D5FF] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">B+ tree indexing is better for range queries than B-tree structures.</p>
-          </div>
-        </div>
-        {/* Row 3 - center area (around login box) */}
-        <div className="absolute left-[6%] top-[50%] rotate-[6deg] w-40 md:w-52 max-w-[160px] md:max-w-[210px]">
-          <div className="bg-[#DBEAFE] rounded-[16px] px-4 py-3.5 border border-[#93C5FD] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Join the community to ask doubts and get answers from peers.</p>
-          </div>
-        </div>
-        <div className="absolute left-[28%] top-[56%] rotate-[-7deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#FECDD3] rounded-[16px] px-4 py-3.5 border border-[#FDA4AF] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Ask your doubts and receive help from authorized peer solvers.</p>
-          </div>
-        </div>
-        <div className="absolute right-[6%] top-[52%] rotate-[-6deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#CCFBF1] rounded-[16px] px-4 py-3.5 border border-[#5EEAD4] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Solve doubts for others and earn while helping the community.</p>
-          </div>
-        </div>
-        <div className="absolute right-[26%] top-[60%] rotate-[9deg] w-40 md:w-52 max-w-[160px] md:max-w-[210px]">
-          <div className="bg-[#FCE7F3] rounded-[16px] px-4 py-3.5 border border-[#F9A8D4] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Learn together and grow with students from across KIIT.</p>
-          </div>
-        </div>
-        {/* Row 4 */}
-        <div className="absolute left-[10%] top-[76%] rotate-[-4deg] w-48 md:w-60 max-w-[200px] md:max-w-[240px]">
-          <div className="bg-[#FFF7CC] rounded-[16px] px-4 py-3.5 border border-[#F3E29A] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Use your official KIIT email address to register and sign in.</p>
-          </div>
-        </div>
-        <div className="absolute left-[38%] top-[80%] rotate-[7deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px]">
-          <div className="bg-[#E0F9FF] rounded-[16px] px-4 py-3.5 border border-[#B9E6F2] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Peer-to-peer learning makes concepts stick faster than solo study.</p>
-          </div>
-        </div>
-        <div className="absolute right-[12%] top-[78%] rotate-[-9deg] w-48 md:w-60 max-w-[200px] md:max-w-[240px]">
-          <div className="bg-[#F8E9FF] rounded-[16px] px-4 py-3.5 border border-[#E1C0FF] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Earn together by solving doubts and helping fellow students.</p>
-          </div>
-        </div>
-        <div className="absolute right-[40%] top-[73%] rotate-[3deg] w-40 md:w-52 max-w-[160px] md:max-w-[210px]">
-          <div className="bg-[#E7F7EE] rounded-[16px] px-4 py-3.5 border border-[#A7F3D0] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">Study tips: practice problems beat rereading the same notes.</p>
-          </div>
-        </div>
-        {/* Extra notes for denser fill */}
-        <div className="absolute left-[52%] top-[16%] rotate-[11deg] w-40 md:w-52 max-w-[160px] md:max-w-[210px] hidden md:block">
-          <div className="bg-[#FEF3C7] rounded-[16px] px-4 py-3.5 border border-[#FDE68A] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">CASCADE in foreign keys deletes related rows when parent is removed.</p>
-          </div>
-        </div>
-        <div className="absolute left-[68%] top-[42%] rotate-[-6deg] w-44 md:w-56 max-w-[180px] md:max-w-[220px] hidden md:block">
-          <div className="bg-[#DBEAFE] rounded-[16px] px-4 py-3.5 border border-[#93C5FD] shadow-lg" style={{ boxShadow: '0 10px 30px rgba(15,23,42,0.14)' }}>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 leading-snug">The TCP four-way handshake ensures graceful connection termination.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Navbar - matches landing page */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-700/60 shadow-sm transition-colors duration-300">
-        <div className="flex items-center justify-between p-4 md:p-6">
-          <Link href="/" className="flex items-center group">
-            <h1 className="font-display text-2xl md:text-3xl font-bold italic transition-colors duration-300 group-hover:opacity-90">
-              <span className="hero-heading-gradient">EDU</span>
-              <span className="relative inline-block mx-1">
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg transform rotate-3" />
-                <span className="relative bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg px-1 py-0.5 text-white font-bold text-xl md:text-2xl">F</span>
-              </span>
-              <span className="hero-heading-gradient">OYER</span>
-            </h1>
-          </Link>
-          <div className="flex items-center gap-4 md:gap-6">
-            <nav className="hidden md:flex items-center gap-4">
-              <Link href="/about" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors">
-                About Us
-              </Link>
-              <Link href="/contact" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors">
-                Contact Us
-              </Link>
-            </nav>
-            <div className="md:hidden flex items-center gap-2">
-              <Link href="/about" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 font-medium px-2">About</Link>
-              <Link href="/contact" className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 font-medium px-2">Contact</Link>
-            </div>
-            <DarkModeToggle className="p-2 md:p-3" />
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content - sharp, in front of blurred notes */}
-      <main className="flex-1 flex items-center justify-center p-4 pt-24 md:pt-28 pb-8 relative z-20">
-        <div className="w-full max-w-md mx-auto relative">
-          {/* Auth Card - tilted, glossy, in focus */}
-          <div
-            className="transform rotate-[1deg] bg-white dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 w-full relative border border-gray-200/80 dark:border-gray-700/80 card-hover overflow-hidden"
-            style={{
-              boxShadow: '0 18px 55px rgba(15,23,42,0.14), 0 1px 0 rgba(255,255,255,0.9) inset',
-            }}
-          >
-            {/* Close button - navigate to landing page */}
-            <button
-              type="button"
-              onClick={() => router.push('/')}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-              aria-label="Close and go to home"
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-white transition-colors duration-300">
+      <div className="edu-hero-bg-grid" aria-hidden />
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        <EduMarketingHeader variant="fixed" />
+        <main className="relative z-20 flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-3 pb-4 pt-32 md:pt-36">
+        {(
+          <div className="relative mx-auto min-h-0 w-full max-w-[min(92vw,56rem)] max-h-[min(92dvh,860px)] overflow-hidden rounded-[28px] bg-white shadow-[0_12px_40px_rgba(7,62,54,0.08),0_28px_72px_rgba(7,62,54,0.1),0_52px_120px_rgba(7,62,54,0.12),0_80px_160px_rgba(7,62,54,0.1)] md:max-h-[min(88dvh,820px)]">
+            <div
+              className="flex min-h-0 w-[200%] transition-[transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transform-none motion-reduce:transition-none will-change-transform"
+              style={{ transform: isRegisterMode ? 'translateX(0)' : 'translateX(-50%)' }}
             >
-              <X size={24} />
-            </button>
+              <div
+                className="flex min-h-0 w-1/2 max-h-[min(92dvh,860px)] shrink-0 grow-0 flex-col overflow-hidden md:max-h-[min(88dvh,820px)] md:flex-row"
+                inert={!isRegisterMode ? true : undefined}
+              >
+              <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-tl-[28px] rounded-bl-[28px] rounded-br-[40px] rounded-tr-[32px] bg-[#E6EDD7] px-5 pb-14 pt-11 dark:bg-[#E6EDD7] md:-mr-4 md:px-8 md:pb-16 md:pt-10 md:shadow-[4px_0_24px_rgba(7,62,54,0.08)]">
+                <button
+                  type="button"
+                  onClick={() => router.push('/')}
+                  className="absolute right-3 top-3 z-30 rounded-full p-1.5 text-[#073E36]/70 transition-colors hover:bg-white/90 hover:text-[#073E36] md:right-5 md:top-5"
+                  aria-label="Close and go to home"
+                >
+                  <X size={22} strokeWidth={2.25} />
+                </button>
+                <span
+                  className="pointer-events-none absolute left-4 top-14 text-base text-[#073E36]/40 md:left-[0.9rem] md:top-[0.6rem] md:text-[#073E36] md:-rotate-[22deg]"
+                  aria-hidden
+                >
+                  ✦
+                </span>
+                <div
+                  className="pointer-events-none absolute bottom-4 right-4 z-0 h-14 w-14 md:bottom-6 md:right-7"
+                  aria-hidden
+                >
+                  <span className="absolute bottom-0 right-0 block origin-center text-[1.65rem] leading-none text-[#073E36] -rotate-[12deg]">
+                    ✦
+                  </span>
+                  <span className="absolute bottom-[1.4rem] -right-0.5 block origin-center text-[0.68rem] leading-none text-[#073E36] rotate-[20deg] md:bottom-[1.55rem] md:-right-1">
+                    ✦
+                  </span>
+                </div>
 
-            {/* Header */}
-            <div className="mb-6">
-              <h1 className="font-display text-3xl font-bold">
-                <span className="hero-heading-gradient">Get Started</span>
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                {isRegisterMode ? 'Create your account to join the community' : 'Welcome back! Sign in to continue'}
-              </p>
-            </div>
+                {successMessage && (
+                  <div className="mb-2 rounded-lg border border-[#073E36]/30 bg-white/95 p-2.5 shadow-sm">
+                    <p className="text-sm font-medium text-[#073E36]">{successMessage}</p>
+                  </div>
+                )}
+                {error && (
+                  <div className="mb-2 rounded-lg border border-[#EF4444]/35 bg-white/95 p-2.5 shadow-sm">
+                    <p className="text-sm text-[#EF4444]">{error}</p>
+                  </div>
+                )}
 
-            {successMessage && (
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                <p className="text-green-600 dark:text-green-400 text-sm">{successMessage}</p>
-              </div>
-            )}
+                <div
+                  className="relative mb-3 flex shrink-0 flex-col justify-center overflow-visible rounded-2xl border border-white/90 px-3 py-2 md:mb-4 md:px-3 md:py-2"
+                  style={{
+                    width: '18rem',
+                    height: '4.5rem',
+                    background: '#F8FFEC',
+                    boxShadow:
+                      '0 1px 2px rgba(0, 0, 0, 0.04), 1px 4px 14px rgba(0, 0, 0, 0.06), 2px 10px 28px rgba(0, 0, 0, 0.07), 3px 16px 40px rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  <span
+                    className="pointer-events-none absolute right-2 top-2 text-sm leading-none text-[#073E36] md:right-[0.3rem] md:top-0 md:text-[0.7rem] md:leading-[1.5rem] md:rotate-45"
+                    aria-hidden
+                  >
+                    ✦
+                  </span>
+                  <h1
+                    className="font-display relative z-0 pr-7 text-lg font-bold leading-tight text-[#073E36] md:pr-8 md:text-[1.8rem] md:leading-[1.75rem]"
+                    style={{
+                      textShadow:
+                        '0 1px 0 rgba(255,255,255,0.32), 0 2px 8px rgba(7, 62, 54, 0.32), 0 4px 16px rgba(7, 62, 54, 0.26), 0 8px 32px rgba(7, 62, 54, 0.2)',
+                    }}
+                  >
+                    Create account
+                  </h1>
+                  <p
+                    className="relative z-0 mt-0.5 pr-7 text-[11px] leading-snug text-[#1a2e2c] md:pr-8 md:text-xs"
+                    style={{
+                      textShadow:
+                        '0 1px 0 rgba(255,255,255,0.28), 0 2px 6px rgba(7, 62, 54, 0.22), 0 4px 14px rgba(7, 62, 54, 0.18)',
+                    }}
+                  >
+                    Create your new account
+                  </p>
+                </div>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isRegisterMode && (
-                <div>
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <form onSubmit={handleSubmit} className="relative z-10 flex min-h-0 flex-1 flex-col space-y-2.5 md:space-y-3">
+                  <div>
+                    <SignupLabel htmlFor="signup-name">Full name</SignupLabel>
                     <input
+                      id="signup-name"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Enter your full name"
+                      className={SIGNUP_INPUT_CLASS}
+                      placeholder="Your full name"
                       required
                     />
                   </div>
-                </div>
-              )}
 
-              <div>
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">
-                  Mail ID <span className="text-xs text-gray-500">(Only @kiit.ac.in)</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="your roll no@kiit.ac.in"
-                    required
-                  />
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Use your official KIIT email</p>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Enter your password"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                <div className="text-right mt-2">
-                  <button
-                    type="button"
-                    onClick={() => { setResetEmail(email); setShowForgotPassword(true); setForgotPasswordStep('email'); setForgotPasswordError(''); }}
-                    className="text-sm hero-heading-gradient font-medium hover:opacity-80 inline-block"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              </div>
-
-              {isRegisterMode && (
-                <div className="mt-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <div>
+                    <SignupLabel htmlFor="signup-email">Mail ID (only university id)</SignupLabel>
                     <input
-                      type="checkbox"
-                      checked={acceptDPDP}
-                      onChange={(e) => setAcceptDPDP(e.target.checked)}
-                      className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                      id="signup-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={SIGNUP_INPUT_CLASS}
+                      placeholder="email"
                       required
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      I accept the{' '}
-                      <button type="button" onClick={(e) => { e.preventDefault(); setShowDPDPModal(true); }} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                        Terms & Privacy Policy
-                      </button>
-                    </span>
-                  </label>
-                </div>
-              )}
+                    <p className="mt-1 pl-1 text-[11px] leading-snug text-[#9ca8a4] md:text-xs">
+                      Please use your official university email address to register
+                    </p>
+                  </div>
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="submit"
-                  disabled={isLoading || (isRegisterMode && !acceptDPDP)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  {isLoading ? 'Loading...' : (isRegisterMode ? <> <UserPlus size={18} /> Sign Up</> : <> <LogIn size={18} /> Login</>)}
-                </button>
+                  <div>
+                    <SignupLabel htmlFor="signup-password">Password</SignupLabel>
+                    <div className="relative">
+                      <input
+                        id="signup-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={`${SIGNUP_INPUT_CLASS} pr-12`}
+                        placeholder="Enter your password"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca8a4] transition-colors hover:text-[#073E36]"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-0">
+                    <label className="flex cursor-pointer items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={acceptDPDP}
+                        onChange={(e) => setAcceptDPDP(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#073E36]/40 text-[#073E36] accent-[#073E36] focus:ring-[#073E36]/30"
+                        required
+                      />
+                      <span className="text-xs leading-snug text-[#1a2e2c] md:text-sm">
+                        I accept the{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowDPDPModal(true);
+                          }}
+                          className="font-bold text-[#073E36] underline-offset-2 hover:underline"
+                        >
+                          Terms & Privacy Policy
+                        </button>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-row gap-2 pt-1 md:gap-3">
+                    <button
+                      type="submit"
+                      disabled={isLoading || !acceptDPDP}
+                      className="min-w-0 flex-1 rounded-full bg-[#073E36] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(7,62,54,0.25)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45 md:py-3 md:text-sm"
+                    >
+                      {isLoading ? 'Loading...' : 'Sign up'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegisterMode(false);
+                        setError('');
+                        setSuccessMessage('');
+                        setEmail('');
+                        setPassword('');
+                        setName('');
+                        setAcceptDPDP(false);
+                      }}
+                      className="min-w-0 flex-1 rounded-full bg-[#1a2e2c] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(26,46,44,0.22)] transition-opacity hover:opacity-95 md:py-3 md:text-sm"
+                    >
+                      Log in
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="relative z-0 hidden min-h-0 w-full md:-ml-8 md:flex md:min-h-0 md:w-[44%] md:min-w-0 md:flex-shrink-0 md:flex-col md:self-stretch md:overflow-hidden md:rounded-r-[28px] md:bg-[#E6EDD7]">
+                <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center overflow-hidden md:min-h-0 md:rounded-xl">
+                  <div className="relative h-[99%] w-full min-h-0 shrink-0 overflow-hidden md:rounded-xl">
+                    <img
+                      src="/centralimage.jpg"
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      decoding="async"
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-black/[0.14]"
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </div>
+              </div>
+              <div
+                className="flex min-h-0 w-1/2 max-h-[min(92dvh,860px)] shrink-0 grow-0 flex-col overflow-hidden md:max-h-[min(88dvh,820px)] md:flex-row"
+                inert={isRegisterMode ? true : undefined}
+              >
+              <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-tl-[28px] rounded-bl-[28px] rounded-br-[40px] rounded-tr-[32px] bg-[#E6EDD7] px-5 pb-14 pt-11 dark:bg-[#E6EDD7] md:-mr-4 md:px-8 md:pb-16 md:pt-10 md:shadow-[4px_0_24px_rgba(7,62,54,0.08)]">
                 <button
                   type="button"
-                  onClick={() => { setIsRegisterMode(!isRegisterMode); setError(''); setSuccessMessage(''); setEmail(''); setPassword(''); setName(''); setAcceptDPDP(false); }}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white dark:bg-gray-700/50 text-blue-600 dark:text-blue-400 py-3 rounded-xl font-semibold border-2 border-blue-500 dark:border-blue-400 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all"
+                  onClick={() => router.push('/')}
+                  className="absolute right-3 top-3 z-30 rounded-full p-1.5 text-[#073E36]/70 transition-colors hover:bg-white/90 hover:text-[#073E36] md:right-5 md:top-5"
+                  aria-label="Close and go to home"
                 >
-                  {isRegisterMode ? <LogIn size={18} /> : <UserPlus size={18} />} {isRegisterMode ? 'Login' : 'Sign Up'}
+                  <X size={22} strokeWidth={2.25} />
                 </button>
+                <span
+                  className="pointer-events-none absolute left-4 top-14 text-base text-[#073E36]/40 md:left-[0.9rem] md:top-[0.6rem] md:text-[#073E36] md:-rotate-[22deg]"
+                  aria-hidden
+                >
+                  ✦
+                </span>
+                <div
+                  className="pointer-events-none absolute bottom-4 right-4 z-0 h-14 w-14 md:bottom-6 md:right-7"
+                  aria-hidden
+                >
+                  <span className="absolute bottom-0 right-0 block origin-center text-[1.65rem] leading-none text-[#073E36] -rotate-[12deg]">
+                    ✦
+                  </span>
+                  <span className="absolute bottom-[1.4rem] -right-0.5 block origin-center text-[0.68rem] leading-none text-[#073E36] rotate-[20deg] md:bottom-[1.55rem] md:-right-1">
+                    ✦
+                  </span>
+                </div>
+
+                {successMessage && (
+                  <div className="mb-2 rounded-lg border border-[#073E36]/30 bg-white/95 p-2.5 shadow-sm">
+                    <p className="text-sm font-medium text-[#073E36]">{successMessage}</p>
+                  </div>
+                )}
+                {error && (
+                  <div className="mb-2 rounded-lg border border-[#EF4444]/35 bg-white/95 p-2.5 shadow-sm">
+                    <p className="text-sm text-[#EF4444]">{error}</p>
+                  </div>
+                )}
+
+                <div
+                  className="relative mb-3 flex shrink-0 flex-col justify-center overflow-visible rounded-2xl border border-white/90 px-3 py-2 md:mb-4 md:px-3 md:py-2"
+                  style={{
+                    width: '18rem',
+                    height: '4.5rem',
+                    background: '#F8FFEC',
+                    boxShadow:
+                      '0 1px 2px rgba(0, 0, 0, 0.04), 1px 4px 14px rgba(0, 0, 0, 0.06), 2px 10px 28px rgba(0, 0, 0, 0.07), 3px 16px 40px rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  <span
+                    className="pointer-events-none absolute right-2 top-2 text-sm leading-none text-[#073E36] md:right-[0.3rem] md:top-0 md:text-[0.7rem] md:leading-[1.5rem] md:rotate-45"
+                    aria-hidden
+                  >
+                    ✦
+                  </span>
+                  <h1
+                    className="font-display relative z-0 pr-7 text-lg font-bold leading-tight text-[#073E36] md:pr-8 md:text-[1.8rem] md:leading-[1.75rem]"
+                    style={{
+                      textShadow:
+                        '0 1px 0 rgba(255,255,255,0.32), 0 2px 8px rgba(7, 62, 54, 0.32), 0 4px 16px rgba(7, 62, 54, 0.26), 0 8px 32px rgba(7, 62, 54, 0.2)',
+                    }}
+                  >
+                    Get started !
+                  </h1>
+                  <p
+                    className="relative z-0 mt-0.5 pr-7 text-[11px] leading-snug text-[#1a2e2c] md:pr-8 md:text-xs"
+                    style={{
+                      textShadow:
+                        '0 1px 0 rgba(255,255,255,0.28), 0 2px 6px rgba(7, 62, 54, 0.22), 0 4px 14px rgba(7, 62, 54, 0.18)',
+                    }}
+                  >
+                    Sign in to your account
+                  </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="relative z-10 flex min-h-0 flex-1 flex-col space-y-2.5 md:space-y-3">
+                  <div>
+                    <SignupLabel htmlFor="login-email">Mail ID (only university id)</SignupLabel>
+                    <input
+                      id="login-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={SIGNUP_INPUT_CLASS}
+                      placeholder="email"
+                      required
+                    />
+                    <p className="mt-1 pl-1 text-[11px] leading-snug text-[#9ca8a4] md:text-xs">
+                      Please use your official university email address to register
+                    </p>
+                  </div>
+
+                  <div>
+                    <SignupLabel htmlFor="login-password">Password</SignupLabel>
+                    <div className="relative">
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={`${SIGNUP_INPUT_CLASS} pr-12`}
+                        placeholder="Enter your password"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca8a4] transition-colors hover:text-[#073E36]"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                    <div className="mt-1 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResetEmail(email);
+                          setShowForgotPassword(true);
+                          setForgotPasswordStep('email');
+                          setForgotPasswordError('');
+                        }}
+                        className="text-xs font-semibold text-[#073E36] underline-offset-2 hover:underline md:text-sm"
+                      >
+                        Forgot password ?
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row gap-2 pt-1 md:gap-3">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="min-w-0 flex-1 rounded-full bg-[#073E36] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(7,62,54,0.25)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45 md:py-3 md:text-sm"
+                    >
+                      {isLoading ? 'Loading...' : 'Log in'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegisterMode(true);
+                        setError('');
+                        setSuccessMessage('');
+                        setEmail('');
+                        setPassword('');
+                        setName('');
+                        setAcceptDPDP(false);
+                      }}
+                      className="min-w-0 flex-1 rounded-full bg-[#1a2e2c] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(26,46,44,0.22)] transition-opacity hover:opacity-95 md:py-3 md:text-sm"
+                    >
+                      Sign up
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+
+              <div className="relative z-0 hidden min-h-0 w-full md:-ml-8 md:flex md:min-h-0 md:w-[44%] md:min-w-0 md:flex-shrink-0 md:flex-col md:self-stretch md:overflow-hidden md:rounded-r-[28px] md:bg-[#E6EDD7]">
+                <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center overflow-hidden md:min-h-0 md:rounded-xl">
+                  <div className="relative h-[99%] w-full min-h-0 shrink-0 overflow-hidden md:rounded-xl">
+                    <img
+                      src="/centralimage.jpg"
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      decoding="async"
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-black/[0.14]"
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
           </div>
-        </div>
+        )}
       </main>
+      </div>
 
       {/* Forgot Password Modal */}
       {showForgotPassword && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md relative border border-gray-200 dark:border-gray-700 shadow-2xl"
-            style={{ boxShadow: '0 25px 60px rgba(15,23,42,0.2)' }}
-          >
-            {/* Close button */}
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md overflow-hidden rounded-[24px] border border-[#073E36]/18 bg-[#E6EDD7] p-6 pb-7 pt-9 shadow-[0_12px_40px_rgba(7,62,54,0.1),0_28px_72px_rgba(7,62,54,0.14),0_52px_100px_rgba(7,62,54,0.1)]">
             <button
+              type="button"
               onClick={handleCloseForgotPassword}
-              className="absolute top-6 right-6 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="absolute right-3 top-3 rounded-full p-1.5 text-[#073E36]/70 transition-colors hover:bg-white/90 hover:text-[#073E36]"
+              aria-label="Close"
             >
-              <X size={24} />
+              <X size={22} strokeWidth={2.25} />
             </button>
 
-            {/* Header */}
-            <div className="mb-6">
-              <h2 className="font-display text-2xl font-bold hero-heading-gradient">
+            <div className="mb-5 pr-10">
+              <h2
+                className="font-display text-2xl font-bold leading-tight text-[#073E36] md:text-[1.65rem]"
+                style={{
+                  textShadow:
+                    '0 1px 0 rgba(255,255,255,0.32), 0 2px 8px rgba(7, 62, 54, 0.22), 0 4px 14px rgba(7, 62, 54, 0.14)',
+                }}
+              >
                 Reset Password
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-colors duration-300">
+              <p className="mt-1.5 text-sm leading-snug text-[#1a2e2c]/90">
                 {forgotPasswordStep === 'email' && 'Enter your email to receive OTP'}
                 {forgotPasswordStep === 'otp' && 'Enter the OTP sent to your email'}
                 {forgotPasswordStep === 'reset' && 'Enter your new password'}
               </p>
             </div>
 
-            {/* Error Message */}
             {forgotPasswordError && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-colors duration-300">
-                <p className="text-red-600 dark:text-red-400 text-sm">{forgotPasswordError}</p>
+              <div className="mb-4 rounded-lg border border-[#EF4444]/35 bg-white/95 p-3 shadow-sm">
+                <p className="text-sm text-[#EF4444]">{forgotPasswordError}</p>
               </div>
             )}
 
@@ -540,30 +661,34 @@ const LoginModal = () => {
             {forgotPasswordStep === 'email' && (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2 transition-colors duration-300">
+                  <label
+                    htmlFor="forgot-reset-email"
+                    className="mb-1 block text-[13px] font-semibold text-[#1a2e2c]"
+                  >
                     Email
                   </label>
                   <input
+                    id="forgot-reset-email"
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className={SIGNUP_INPUT_CLASS}
                     placeholder="Enter your university email"
                     required
                   />
                 </div>
-                <div className="flex gap-3 mt-6">
+                <div className="flex flex-row gap-2 pt-2 md:gap-3">
                   <button
                     type="button"
                     onClick={handleCloseForgotPassword}
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                    className="min-w-0 flex-1 rounded-full bg-[#1a2e2c] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(26,46,44,0.22)] transition-opacity hover:opacity-95 md:py-3 md:text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={forgotPasswordLoading}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="min-w-0 flex-1 rounded-full bg-[#073E36] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(7,62,54,0.25)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45 md:py-3 md:text-sm"
                   >
                     {forgotPasswordLoading ? 'Sending...' : 'Send OTP'}
                   </button>
@@ -575,23 +700,24 @@ const LoginModal = () => {
             {forgotPasswordStep === 'otp' && (
               <form onSubmit={handleVerifyOTP} className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2 transition-colors duration-300">
+                  <label htmlFor="forgot-otp" className="mb-1 block text-[13px] font-semibold text-[#1a2e2c]">
                     OTP
                   </label>
                   <input
+                    id="forgot-otp"
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-center text-2xl tracking-widest"
+                    className={`${SIGNUP_INPUT_CLASS} text-center text-xl tracking-[0.35em] md:text-2xl`}
                     placeholder="000000"
                     maxLength={6}
                     required
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                  <p className="mt-2 text-center text-[11px] leading-snug text-[#073E36]/75 md:text-xs">
                     Enter the 6-digit OTP sent to {resetEmail}
                   </p>
                 </div>
-                <div className="flex gap-3 mt-6">
+                <div className="flex flex-row gap-2 pt-2 md:gap-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -599,14 +725,14 @@ const LoginModal = () => {
                       setOtp('');
                       setForgotPasswordError('');
                     }}
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                    className="min-w-0 flex-1 rounded-full bg-[#1a2e2c] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(26,46,44,0.22)] transition-opacity hover:opacity-95 md:py-3 md:text-sm"
                   >
                     Back
                   </button>
                   <button
                     type="submit"
                     disabled={forgotPasswordLoading || otp.length !== 6}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="min-w-0 flex-1 rounded-full bg-[#073E36] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(7,62,54,0.25)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45 md:py-3 md:text-sm"
                   >
                     {forgotPasswordLoading ? 'Verifying...' : 'Verify OTP'}
                   </button>
@@ -618,15 +744,16 @@ const LoginModal = () => {
             {forgotPasswordStep === 'reset' && (
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2 transition-colors duration-300">
+                  <label htmlFor="forgot-new-password" className="mb-1 block text-[13px] font-semibold text-[#1a2e2c]">
                     New Password
                   </label>
                   <div className="relative">
                     <input
-                      type={showPassword ? "text" : "password"}
+                      id="forgot-new-password"
+                      type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-12"
+                      className={`${SIGNUP_INPUT_CLASS} pr-12`}
                       placeholder="Enter new password"
                       required
                       minLength={6}
@@ -634,22 +761,24 @@ const LoginModal = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca8a4] transition-colors hover:text-[#073E36]"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2 transition-colors duration-300">
+                  <label htmlFor="forgot-confirm-password" className="mb-1 block text-[13px] font-semibold text-[#1a2e2c]">
                     Confirm Password
                   </label>
                   <div className="relative">
                     <input
-                      type={showPassword ? "text" : "password"}
+                      id="forgot-confirm-password"
+                      type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-12"
+                      className={`${SIGNUP_INPUT_CLASS} pr-12`}
                       placeholder="Confirm new password"
                       required
                       minLength={6}
@@ -657,13 +786,14 @@ const LoginModal = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca8a4] transition-colors hover:text-[#073E36]"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
-                <div className="flex gap-3 mt-6">
+                <div className="flex flex-row gap-2 pt-2 md:gap-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -672,14 +802,14 @@ const LoginModal = () => {
                       setConfirmPassword('');
                       setForgotPasswordError('');
                     }}
-                    className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                    className="min-w-0 flex-1 rounded-full bg-[#1a2e2c] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(26,46,44,0.22)] transition-opacity hover:opacity-95 md:py-3 md:text-sm"
                   >
                     Back
                   </button>
                   <button
                     type="submit"
                     disabled={forgotPasswordLoading || newPassword.length < 6 || newPassword !== confirmPassword}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="min-w-0 flex-1 rounded-full bg-[#073E36] py-2.5 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(7,62,54,0.25)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45 md:py-3 md:text-sm"
                   >
                     {forgotPasswordLoading ? 'Resetting...' : 'Reset Password'}
                   </button>
@@ -692,73 +822,75 @@ const LoginModal = () => {
 
       {/* DPDP Act Terms & Privacy Policy Modal */}
       {showDPDPModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
           <div
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] relative flex flex-col border border-gray-200 dark:border-gray-700 shadow-2xl"
-            style={{ boxShadow: '0 25px 60px rgba(15,23,42,0.2)' }}
+            className="relative flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden rounded-[24px] border border-[#073E36]/18 bg-[#E6EDD7] p-6 pb-7 pt-9 shadow-[0_12px_40px_rgba(7,62,54,0.1),0_28px_72px_rgba(7,62,54,0.14),0_52px_100px_rgba(7,62,54,0.1)]"
           >
             {/* Close button */}
             <button
+              type="button"
               onClick={() => setShowDPDPModal(false)}
-              className="absolute top-6 right-6 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10"
+              className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-[#073E36]/70 transition-colors hover:bg-white/90 hover:text-[#073E36]"
+              aria-label="Close"
             >
-              <X size={24} />
+              <X size={22} strokeWidth={2.2} />
             </button>
 
             {/* Header */}
-            <div className="mb-6 pr-10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/40 dark:to-purple-900/40">
-                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="mb-5 pr-10">
+              <div className="mb-2 flex items-center gap-3">
+                <div className="rounded-xl border border-[#073E36]/20 bg-white/90 p-2.5 shadow-[0_4px_14px_rgba(7,62,54,0.12)]">
+                  <FileText className="h-5 w-5 text-[#073E36]" strokeWidth={2.2} />
                 </div>
-                <h2 className="font-display text-2xl font-bold hero-heading-gradient">
+                <h2
+                  className="font-display text-2xl font-bold leading-tight text-[#073E36] md:text-[1.65rem]"
+                  style={{
+                    textShadow:
+                      '0 1px 0 rgba(255,255,255,0.35), 0 2px 8px rgba(7, 62, 54, 0.18), 0 4px 14px rgba(7, 62, 54, 0.12)',
+                  }}
+                >
                   DPDP Act Terms & Privacy Policy
                 </h2>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors duration-300">
+              <p
+                className="text-sm font-medium text-[#1a2e2c]/90"
+                style={{ textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}
+              >
                 Digital Personal Data Protection Act, 2023
               </p>
             </div>
 
             {/* Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto pr-2 mb-6">
-              <div className="space-y-5 text-sm text-gray-700 dark:text-gray-300">
+            <div className="mb-5 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-color:rgba(7,62,54,0.35)_transparent]">
+              <div className="space-y-5 rounded-xl border border-[#073E36]/12 bg-white/85 p-4 text-sm text-[#1a2e2c] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] md:p-5">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    1. Introduction
-                  </h3>
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">1. Introduction</h3>
                   <p className="leading-relaxed">
                     This Privacy Policy applies to the use of the EduFoyer platform (the "Service"). Eduackhos Pvt Ltd ("we", "us", "our") collects, stores, and processes your personal data in accordance with the Digital Personal Data Protection Act, 2023.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    2. Data Collection and Processing
-                  </h3>
-                  <p className="leading-relaxed mb-2">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">2. Data Collection and Processing</h3>
+                  <p className="mb-2 leading-relaxed">
                     By signing up for EduFoyer, you consent to the collection, storage, and processing of your personal data, including but not limited to your:
                   </p>
-                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1 marker:text-[#073E36]">
                     <li>Name</li>
                     <li>Email address</li>
                     <li>University affiliation</li>
                     <li>Academic information</li>
                     <li>Usage and activity data</li>
                   </ul>
-                  <p className="leading-relaxed mt-2">
+                  <p className="mt-2 leading-relaxed">
                     This data is collected to provide educational services, facilitate doubt-solving sessions, manage your account, and improve the platform.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    3. Purpose of Data Processing
-                  </h3>
-                  <p className="leading-relaxed mb-2">
-                    Your personal data will be processed for the following purposes:
-                  </p>
-                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">3. Purpose of Data Processing</h3>
+                  <p className="mb-2 leading-relaxed">Your personal data will be processed for the following purposes:</p>
+                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1 marker:text-[#073E36]">
                     <li>Creating and managing your account</li>
                     <li>Providing educational services and doubt-solving sessions</li>
                     <li>Matching students with appropriate peer solvers</li>
@@ -770,40 +902,28 @@ const LoginModal = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    4. Data Sharing and Disclosure
-                  </h3>
-                  <p className="leading-relaxed mb-2">
-                    We may share your personal data with:
-                  </p>
-                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">4. Data Sharing and Disclosure</h3>
+                  <p className="mb-2 leading-relaxed">We may share your personal data with:</p>
+                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1 marker:text-[#073E36]">
                     <li>Authorized peer solvers and educators for service delivery</li>
                     <li>Payment processors for transaction-related activities</li>
                     <li>Third-party service providers who support platform operations</li>
                     <li>Legal or regulatory authorities when required by law</li>
                   </ul>
-                  <p className="leading-relaxed mt-2">
-                    We do not sell your personal data to any third party.
-                  </p>
+                  <p className="mt-2 leading-relaxed">We do not sell your personal data to any third party.</p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    5. Data Security
-                  </h3>
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">5. Data Security</h3>
                   <p className="leading-relaxed">
                     We implement appropriate technical and organizational measures to safeguard your personal data from unauthorized access, alteration, disclosure, or destruction. However, no method of data transmission over the internet is completely secure, and we cannot guarantee absolute security.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    6. Your Rights Under the DPDP Act
-                  </h3>
-                  <p className="leading-relaxed mb-2">
-                    You have the right to:
-                  </p>
-                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">6. Your Rights Under the DPDP Act</h3>
+                  <p className="mb-2 leading-relaxed">You have the right to:</p>
+                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1 marker:text-[#073E36]">
                     <li>Access your personal data</li>
                     <li>Correct inaccurate or incomplete data</li>
                     <li>Request deletion of your personal data</li>
@@ -813,57 +933,41 @@ const LoginModal = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    7. Data Retention
-                  </h3>
-                  <p className="leading-relaxed mb-2">
-                    We retain your personal data for only as long as necessary to:
-                  </p>
-                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">7. Data Retention</h3>
+                  <p className="mb-2 leading-relaxed">We retain your personal data for only as long as necessary to:</p>
+                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1 marker:text-[#073E36]">
                     <li>Fulfill the purposes outlined in this policy</li>
                     <li>Comply with legal obligations</li>
                     <li>Resolve disputes</li>
                     <li>Enforce our terms and agreements</li>
                   </ul>
-                  <p className="leading-relaxed mt-2">
-                    You may request deletion of your data at any time.
-                  </p>
+                  <p className="mt-2 leading-relaxed">You may request deletion of your data at any time.</p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    8. Cookies and Tracking
-                  </h3>
-                  <p className="leading-relaxed mb-2">
-                    We use cookies and similar technologies to:
-                  </p>
-                  <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">8. Cookies and Tracking</h3>
+                  <p className="mb-2 leading-relaxed">We use cookies and similar technologies to:</p>
+                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1 marker:text-[#073E36]">
                     <li>Enhance platform functionality</li>
                     <li>Analyze usage behavior</li>
                     <li>Improve user experience</li>
                   </ul>
-                  <p className="leading-relaxed mt-2">
-                    You may manage or disable cookies through your browser settings.
-                  </p>
+                  <p className="mt-2 leading-relaxed">You may manage or disable cookies through your browser settings.</p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    9. Contact Information
-                  </h3>
-                  <p className="leading-relaxed mb-2">
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">9. Contact Information</h3>
+                  <p className="mb-2 leading-relaxed">
                     For questions, concerns, or requests related to your personal data, please contact:
                   </p>
-                  <p className="leading-relaxed mt-2">
-                    <strong>Email:</strong> edufoyer2025@gmail.com<br />
-                    <strong>Address:</strong> Jacobpura, Sector 52, Gurugram, Haryana, India
+                  <p className="mt-2 leading-relaxed">
+                    <strong className="font-semibold text-[#073E36]">Email:</strong> edufoyer2025@gmail.com<br />
+                    <strong className="font-semibold text-[#073E36]">Address:</strong> Jacobpura, Sector 52, Gurugram, Haryana, India
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    10. Acceptance of Policy
-                  </h3>
+                  <h3 className="mb-2 text-lg font-semibold text-[#073E36]">10. Acceptance of Policy</h3>
                   <p className="leading-relaxed">
                     By checking the acceptance box or continuing to use the EduFoyer platform, you acknowledge that you have read, understood, and agree to be bound by this Privacy Policy. If you do not agree, please refrain from using the Service.
                   </p>
@@ -872,19 +976,21 @@ const LoginModal = () => {
             </div>
 
             {/* Footer Actions */}
-            <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex gap-3 border-t border-[#073E36]/20 pt-4 md:gap-4">
               <button
+                type="button"
                 onClick={() => {
                   setShowDPDPModal(false);
                   setAcceptDPDP(true);
                 }}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/20"
+                className="min-w-0 flex-1 rounded-full bg-[#073E36] py-3 text-center text-xs font-bold uppercase tracking-wide text-white shadow-[0_6px_16px_rgba(7,62,54,0.25)] transition-opacity hover:opacity-95 md:text-sm"
               >
                 Accept & Continue
               </button>
               <button
+                type="button"
                 onClick={() => setShowDPDPModal(false)}
-                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                className="min-w-0 flex-1 rounded-full border border-[#073E36]/28 bg-white/95 py-3 text-center text-xs font-bold uppercase tracking-wide text-[#073E36] shadow-[0_4px_12px_rgba(7,62,54,0.1)] transition-opacity hover:bg-white hover:opacity-95 md:text-sm"
               >
                 Close
               </button>

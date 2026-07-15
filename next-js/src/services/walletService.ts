@@ -77,6 +77,25 @@ class WalletService {
     }
   }
 
+  // Recalculate wallet coins from completed doubt ratings (solver)
+  async recalculateCoins() {
+    try {
+      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/recalculate`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to recalculate coins");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Recalculate coins error:", error);
+      throw error;
+    }
+  }
+
   // Get user's withdrawal requests
   async getWithdrawals() {
     try {

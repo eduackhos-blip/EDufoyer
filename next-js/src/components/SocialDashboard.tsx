@@ -29,7 +29,6 @@ import {
   ArrowRight as ArrowRightIcon,
   ArrowLeft,
   Clock,
-  Menu,
 } from 'lucide-react';
 import { useRouter, useParams, usePathname, useSearchParams } from 'next/navigation';
 import authService from '../services/authService';
@@ -37,9 +36,7 @@ import socialService from '../services/socialService';
 import StoriesPage from './StoriesPage';
 import FriendsPage from './FriendsPage';
 import UserProfilePage from './UserProfilePage';
-import SharedSidebar from './SharedSidebar';
-import { buildDashboardSidebarItems } from './dashboardSidebarUtils';
-import { DashboardSidebarSuggested, DashboardSidebarUserFooter } from './DashboardSidebarExtras';
+import DashboardPageLayout from './dashboard/DashboardPageLayout';
 
 const SocialDashboard = () => {
   const router = useRouter();
@@ -49,7 +46,6 @@ const SocialDashboard = () => {
   const { userId } = useParams();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState('feed');
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
@@ -259,26 +255,6 @@ const SocialDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 1024) setIsSidebarOpen(true);
-    };
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      router.push('/');
-    } catch {
-      router.push('/');
-    }
-  };
-
-  const handleHelpSupport = () => router.push('/contact');
-
   const demoPages = [
     { id: 'feed', label: 'Feed', badge: 10 },
     { id: 'stories', label: 'Stories' },
@@ -301,15 +277,9 @@ const SocialDashboard = () => {
     );
   }
 
-  const sidebarItems = buildDashboardSidebarItems({
-    user,
-    pathname: location.pathname,
-    search: location.search,
-    onLogout: handleLogout,
-  });
-
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <DashboardPageLayout loadingMessage="Loading social…">
+      <div className="flex min-h-full flex-col overflow-hidden bg-gray-50">
       <div className="shrink-0 bg-gradient-to-r from-purple-100 to-pink-100 border-b-4 border-purple-500 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-center">
           <div className="inline-flex items-center gap-3">
@@ -319,37 +289,8 @@ const SocialDashboard = () => {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <aside
-          className={`fixed inset-y-0 left-0 z-40 w-64 h-full transition-transform duration-300 ease-in-out lg:static lg:h-auto lg:translate-x-0 ${
-            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <SharedSidebar
-            items={sidebarItems}
-            onClose={() => setIsSidebarOpen(false)}
-            showCloseButton={true}
-            belowNav={<DashboardSidebarSuggested />}
-            footer={
-              <DashboardSidebarUserFooter
-                user={user}
-                onLogout={handleLogout}
-                onHelpSupport={handleHelpSupport}
-              />
-            }
-          />
-        </aside>
-
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-            aria-hidden
-          />
-        )}
-
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden lg:ml-0">
-          <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2 flex gap-2 overflow-x-auto">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-2 flex gap-2 overflow-x-auto">
             {demoPages.map((tab) => (
               <button
                 key={tab.id}
@@ -376,14 +317,6 @@ const SocialDashboard = () => {
               {/* Top Search and Post */}
               <div className="bg-white p-6 border-b border-gray-200">
               <div className="flex items-center space-x-4 flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="lg:hidden p-2 text-gray-600 rounded-lg hover:bg-gray-100 shrink-0"
-                  onClick={() => setIsSidebarOpen((o) => !o)}
-                  aria-label="Open menu"
-                >
-                  <Menu className="w-6 h-6" />
-                </button>
                 <button
                   onClick={() => router.push('/dashboard')}
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors shrink-0"
@@ -739,7 +672,6 @@ const SocialDashboard = () => {
         </div>
       </div>
       </div>
-      </div>
 
       {/* Create Post Modal */}
       {showCreatePost && (
@@ -770,7 +702,8 @@ const SocialDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardPageLayout>
   );
 };
 

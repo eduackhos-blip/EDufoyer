@@ -25,4 +25,6 @@ export const config = {
   publishApiKey: process.env.SOCKET_SERVER_API_KEY ?? "",
   /** Same secret as Edufoyer / Next.js API JWT signing (Bearer tokens). */
   jwtSecret: process.env.JWT_SECRET ?? "",
+  /** Next.js app base URL for internal session processing API. */
+  nextApiUrl: process.env.NEXT_API_URL ?? "http://localhost:3000",
 };

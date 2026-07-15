@@ -64,7 +64,6 @@ doubtSchema.index({ doubter_id: 1, createdAt: -1 });
 doubtSchema.index({ status: 1, createdAt: -1 }); // For finding open doubts
 doubtSchema.index({ solver_id: 1, status: 1 }); // For solver's assigned doubts
 doubtSchema.index({ subject: 1, status: 1, createdAt: -1 }); // Compound index for subject-based queries
-doubtSchema.index({ solver_id: 1, status: 1 });
 
 export default mongoose.models.Doubt || mongoose.model('Doubt', doubtSchema);
 

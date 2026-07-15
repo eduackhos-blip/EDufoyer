@@ -22,7 +22,7 @@ const VerifyCache = () => {
       localStorage.setItem('cacheVerified', 'true');
       setStatus('success');
       setMessage('Verified. Redirecting to your profile...');
-      setTimeout(() => router.push('/dashboard/profile'), 800);
+      setTimeout(() => router.push('/dashboard'), 800);
     } catch (e) {
       setStatus('error');
       setMessage('Verification failed. Please log in again.');

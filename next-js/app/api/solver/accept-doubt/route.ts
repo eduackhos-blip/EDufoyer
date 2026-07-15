@@ -11,6 +11,7 @@ import User from "@/src/models/User";
 import Notification from "@/src/models/Notification";
 import { sendEmail } from "@/src/utils/server/email";
 import { publishSocketEvent } from "@/src/utils/server/socketPublisher";
+import { resolveMaxSessionSeconds } from "@/src/lib/session/roomId";
 
 export const runtime = "nodejs";
 
@@ -96,6 +97,10 @@ async function allotDoubt({
     }
 
     const roomId = `doubt-${String(doubtId)}-solver-${String((solverToAssign as any).user_id)}`;
+    const maxSessionSeconds = resolveMaxSessionSeconds(
+      null,
+      (doubtToAssign as { category?: string }).category
+    );
     await Room.findOneAndUpdate(
       {
         doubt_id: doubtId,
@@ -108,6 +113,10 @@ async function allotDoubt({
           subject: String((doubtToAssign as any).subject || ""),
           status: "active",
           closedAt: null,
+          hasSolverEverJoined: false,
+          hasAskerEverJoined: false,
+          maxSessionSeconds,
+          sessionStartedAt: null,
         },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -229,7 +238,13 @@ async function allotDoubt({
       payload: { doubtId: String(doubtId), assignedTo: String(solverId), roomId },
     });
 
-    return { success: true, doubt: updatedDoubt, solverDoubt: solverDoubtLink };
+    return {
+      success: true,
+      doubt: updatedDoubt,
+      solverDoubt: solverDoubtLink,
+      roomId,
+      doubtId: String(doubtId),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "An unknown error occurred during assignment.";
     return { success: false, error: message };
@@ -249,7 +264,12 @@ async function acceptDoubtAssignment(formData: unknown, userId: string, frontend
   try {
     const result = await allotDoubt({ doubtId, solverId: userId, frontendBase });
     if ((result as any).success) {
-      return { success: true, message: "Doubt assigned! Check your email for the session link." };
+      return {
+        success: true,
+        message: "Doubt assigned! Check your email for the session link.",
+        roomId: (result as { roomId?: string }).roomId,
+        doubtId,
+      };
     }
     return { success: false, error: (result as any).error || "Failed to accept the doubt assignment." };
   } catch (error) {
@@ -271,7 +291,16 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-    if (result.success) return NextResponse.json({ success: true, message: result.message }, { status: 200 });
+    if (result.success) {
+      return NextResponse.json(
+        {
+          success: true,
+          message: result.message,
+          data: { roomId: result.roomId, doubtId: result.doubtId },
+        },
+        { status: 200 }
+      );
+    }
     return NextResponse.json({ success: false, message: result.error, fieldErrors: result.fieldErrors }, { status: 400 });
   } catch (error) {
     const authRes = authErrorResponse(error);

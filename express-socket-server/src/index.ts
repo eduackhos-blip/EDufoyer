@@ -113,7 +113,7 @@ const start = async () => {
       console.warn("MONGODB_URI not set. Subject fallback lookup will not work.");
     } else {
       await mongoose.connect(config.mongoUri);
-      console.log("[mongo] connected");
+      console.log(`[mongo] connected db=${mongoose.connection.db?.databaseName ?? "unknown"}`);
     }
   } catch (error) {
     console.error("[mongo] connection failed:", error);

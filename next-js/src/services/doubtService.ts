@@ -59,16 +59,24 @@ class DoubtService {
 
       clearTimeout(timeoutId);
       console.log('📊 Doubt creation response status:', response.status);
-      const data = await response.json();
+
+      const rawText = await response.text();
+      let data = {};
+      if (rawText.trim()) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = { error: rawText };
+        }
+      }
       console.log('📋 Doubt creation response data:', data);
 
       if (!response.ok) {
-        console.error('❌ API Error:', data);
-        // Return error response with all details instead of throwing
-        // This allows the component to handle quota errors properly
+        // Expected business errors (quota, validation) — warn only to avoid Next error overlay
+        console.warn('Doubt create rejected:', response.status, data);
         return {
           success: false,
-          error: data.error || data.message || 'Failed to create doubt',
+          error: data.error || data.message || `Failed to create doubt (${response.status})`,
           message: data.message || data.error,
           quotaDetails: data.quotaDetails || null,
           fieldErrors: data.fieldErrors || null,

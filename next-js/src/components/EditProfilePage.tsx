@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, Eye, EyeOff, Loader2, ArrowLeft, Search, Menu } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, ArrowLeft, Search } from 'lucide-react';
 import authService from '../services/authService';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import SharedSidebar from './SharedSidebar';
 import DarkModeToggle from './DarkModeToggle';
-import { buildDashboardSidebarItems } from './dashboardSidebarUtils';
-import { DashboardSidebarSuggested, DashboardSidebarUserFooter } from './DashboardSidebarExtras';
+import DashboardPageLayout from './dashboard/DashboardPageLayout';
 
 const DEFAULT_PROFILE_COVER_URL = '/cover-photo-profile-page.jpg';
 
@@ -16,7 +14,6 @@ const EditProfilePage = () => {
   const location = { pathname, search: searchParams.toString() ? `?${searchParams.toString()}` : '', hash: typeof window !== 'undefined' ? window.location.hash : '' };
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQ, setSearchQ] = useState('');
 
   const [editProfile, setEditProfile] = useState({
@@ -46,15 +43,6 @@ const EditProfilePage = () => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
-
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 1024) setIsSidebarOpen(true);
-    };
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -212,8 +200,6 @@ const EditProfilePage = () => {
     }
   };
 
-  const handleHelpSupport = () => router.push('/contact');
-
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setPasswordError('');
@@ -242,13 +228,6 @@ const EditProfilePage = () => {
     }
   };
 
-  const sidebarItems = buildDashboardSidebarItems({
-    user,
-    pathname: location.pathname,
-    search: location.search,
-    onLogout: handleLogout,
-  });
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -259,45 +238,10 @@ const EditProfilePage = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden transition-colors duration-300">
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <SharedSidebar
-          items={sidebarItems}
-          onClose={() => setIsSidebarOpen(false)}
-          showCloseButton={true}
-          belowNav={<DashboardSidebarSuggested />}
-          footer={
-            <DashboardSidebarUserFooter
-              user={user}
-              onLogout={handleLogout}
-              onHelpSupport={handleHelpSupport}
-            />
-          }
-        />
-      </aside>
-
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-          aria-hidden
-        />
-      )}
-
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 lg:ml-0">
+    <DashboardPageLayout loadingMessage="Loading profile…">
+      <div className="flex min-h-full flex-col overflow-hidden bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
         <header className="shrink-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center gap-3 max-w-6xl mx-auto">
-            <button
-              type="button"
-              className="lg:hidden p-2 text-gray-600 dark:text-gray-300"
-              onClick={() => setIsSidebarOpen((o) => !o)}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
             <div className="flex-1 max-w-xl relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -592,8 +536,8 @@ const EditProfilePage = () => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardPageLayout>
   );
 };
 

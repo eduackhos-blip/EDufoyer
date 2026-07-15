@@ -20,7 +20,18 @@ const SolverDoubtsSchema = new mongoose.Schema({
   },
   resolution_status: {
     type: String,
-    enum: ['pending', 'session_scheduled', 'session_completed', 'accepted', 'rejected', 'needs_revision'],
+    enum: [
+      'pending',
+      'session_scheduled',
+      'session_completed',
+      'ended_solver_left',
+      'ended_asker_timeout',
+      'ended_asker_rated',
+      'ended_solver_abandoned_grace',
+      'accepted',
+      'rejected',
+      'needs_revision',
+    ],
     default: 'pending'
   },
   room_id: {

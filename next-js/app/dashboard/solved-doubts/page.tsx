@@ -1,9 +1,14 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const Screen = dynamic(() => import("@/src/components/SolvedDoubtsPage"), { ssr: false });
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
-  return <Screen />;
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/dashboard/doubts?tab=solved");
+  }, [router]);
+
+  return null;
 }

@@ -3,6 +3,8 @@ import { peer } from "../lib/webrtc/peer";
 
 type UseRemoteTrackListenerParams = {
   remoteSocketId: string | null;
+  /** Re-bind when peer connection is recreated after reconnect. */
+  peerConnectionEpoch?: number;
 };
 
 function isRemoteScreenShareTrack(track: MediaStreamTrack): boolean {
@@ -25,7 +27,10 @@ type UseRemoteTrackListenerResult = {
   clearRemoteScreenShare: () => void;
 };
 
-export const useRemoteTrackListener = ({ remoteSocketId }: UseRemoteTrackListenerParams): UseRemoteTrackListenerResult => {
+export const useRemoteTrackListener = ({
+  remoteSocketId,
+  peerConnectionEpoch = 0,
+}: UseRemoteTrackListenerParams): UseRemoteTrackListenerResult => {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [remoteAudioStream, setRemoteAudioStream] = useState<MediaStream | null>(null);
   const [remoteVideoStream, setRemoteVideoStream] = useState<MediaStream | null>(null);
@@ -88,12 +93,28 @@ export const useRemoteTrackListener = ({ remoteSocketId }: UseRemoteTrackListene
     setRemoteScreenShareStream(null);
   }, []);
 
+  const clearRemoteMedia = useCallback(() => {
+    remoteCameraTrackRef.current = null;
+    setRemoteStream(null);
+    setRemoteAudioStream(null);
+    setRemoteVideoStream(null);
+    setRemoteScreenShareStream(null);
+  }, []);
+
   useEffect(() => {
-    peer.peer?.addEventListener("track", handleRemoteStream);
+    if (!remoteSocketId) {
+      clearRemoteMedia();
+    }
+  }, [remoteSocketId, clearRemoteMedia]);
+
+  useEffect(() => {
+    const pc = peer.peer;
+    if (!pc) return;
+    pc.addEventListener("track", handleRemoteStream);
     return () => {
-      peer.peer?.removeEventListener("track", handleRemoteStream);
+      pc.removeEventListener("track", handleRemoteStream);
     };
-  }, [handleRemoteStream, remoteSocketId]);
+  }, [handleRemoteStream, remoteSocketId, peerConnectionEpoch]);
 
   return {
     remoteStream,
@@ -101,5 +122,6 @@ export const useRemoteTrackListener = ({ remoteSocketId }: UseRemoteTrackListene
     remoteVideoStream,
     remoteScreenShareStream,
     clearRemoteScreenShare,
+    clearRemoteMedia,
   };
 };

@@ -49,9 +49,8 @@ SolverSchema.pre("save", function () {
   this.set("updatedAt", new Date());
 });
 
-// Indexes for better query performance
+// Indexes for better query performance (user_id already unique)
 SolverSchema.index({ specialities: 1 }); // For finding solvers by subject
-SolverSchema.index({ user_id: 1 }); // For finding solver by user
 SolverSchema.index({ isActive: 1, specialities: 1 }); // For active solvers by subject
 SolverSchema.index({ rating: -1, total_doubts_solved: -1 }); // For ranking solvers
 
