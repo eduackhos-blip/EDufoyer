@@ -8,16 +8,21 @@ const defaultAllowedOrigins = [
   "https://www.edufoyer.com",
   "http://edufoyer.com",
   "http://www.edufoyer.com",
+  "https://localhost",
+  "http://localhost",
+  "capacitor://localhost",
+  "ionic://localhost",
 ];
 
-const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || "")
+const configuredOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const corsAllowedOrigins = new Set(
-  allowedOrigins.length > 0 ? allowedOrigins : defaultAllowedOrigins
-);
+const corsAllowedOrigins = new Set([
+  ...defaultAllowedOrigins,
+  ...configuredOrigins,
+]);
 
 const csp = [
   "default-src 'self'",
